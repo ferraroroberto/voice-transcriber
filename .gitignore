@@ -1,0 +1,31 @@
+# --- Python ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Virtualenvs ----------------------------------------------------------
+.venv/
+venv/
+env/
+
+# --- Downloaded binaries + models (populated by scripts/) -----------------
+vendor/
+models/
+
+# --- Runtime state --------------------------------------------------------
+.whisper_server.pid
+.tray.pid
+*.log
+
+# --- Editor / OS ----------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# --- Config overrides (keep the committed template) -----------------------
+config/config.local.json
