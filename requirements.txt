@@ -1,0 +1,39 @@
+# Runtime deps for the self-contained voice transcriber.
+#
+#   python -m venv .venv
+#   .venv\Scripts\python.exe -m pip install -r requirements.txt
+#
+# A prebuilt whisper.cpp + the ggml model are fetched separately by
+# `python scripts/install_whisper_cpp.py` and `scripts/download_model.py`
+# (both wired into `setup.bat`).
+
+# Audio capture
+numpy>=1.24
+sounddevice>=0.4.6
+
+# HTTP + YAML config
+requests>=2.31
+PyYAML>=6.0
+
+# Process / memory introspection (RSS in the "model details" view)
+psutil>=5.9
+
+# Model download from HuggingFace
+huggingface_hub>=0.23
+
+# Clipboard + global hotkey
+pyperclip>=1.8
+pynput>=1.7
+
+# Tray icon
+pystray>=0.19
+Pillow>=10.0
+
+# Windows toast notifications — modern WinRT toasts stack properly in
+# Action Center; pystray's built-in balloon tips drop subsequent
+# notifications when they arrive in quick succession.
+winotify>=1.1; sys_platform == "win32"
+
+# Intentionally *not* here: openai-whisper, torch, torchaudio,
+# imageio-ffmpeg, scipy. All transcription happens in the whisper.cpp
+# subprocess — there is no in-process Python model.

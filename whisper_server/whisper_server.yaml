@@ -1,0 +1,69 @@
+# whisper-server configuration
+# ----------------------------------------------------------------------------
+# Standalone, self-contained defaults: a whisper.cpp build is expected at
+# `vendor/whisper.cpp/whisper-server[.exe]` and the ggml model at
+# `vendor/whisper.cpp/models/ggml-large-v3-turbo.bin` — both populated by
+# `scripts/install_whisper_cpp.py` and `scripts/download_model.py`.
+#
+# Paths below are relative to the project root (one directory above
+# `whisper_server/`) and resolved at runtime by the manager.
+
+# `mode` drives startup behaviour. Two values:
+#
+#   local    — this project owns the server. At launch, if `host:port` is
+#              already occupied by some other process, refuse to start and
+#              surface a clear error. Otherwise spawn our own binary and
+#              kill it on exit.
+#
+#   external — a whisper-server may already be running (e.g. started by
+#              the sibling `claude-local-calls` hub). At launch, probe
+#              `host:port`; if reachable, reuse it untouched. If nothing
+#              is there, fall back to spawning our own so the app still
+#              works offline. An externally-owned server is never stopped
+#              by this app.
+mode: local
+
+server:
+  host: "127.0.0.1"        # host this app talks to (and, for `local`, binds)
+  bind_host: "0.0.0.0"     # what whisper-server binds to when we spawn it
+  port: 8090               # fixed — collides on purpose with any other instance
+
+binary:
+  # Built by `python scripts/install_whisper_cpp.py` (CMake + CUDA if
+  # available). On Windows the `.exe` suffix is appended automatically when
+  # the bare name is not found.
+  path: "vendor/whisper.cpp/whisper-server"
+
+model:
+  # Downloaded by `python scripts/download_model.py`. Swap the filename
+  # below to try a different size (`ggml-large-v3.bin`, `ggml-small.bin`…);
+  # keep the same location and `scripts/download_model.py --model <name>`
+  # will fetch it.
+  path: "vendor/whisper.cpp/models/ggml-large-v3-turbo.bin"
+
+# Extra CLI flags forwarded after --host/--port/--model. whisper.cpp uses
+# GPU by default when built with CUDA/Metal; pass `-ng` (or `--no-gpu`) here
+# to force CPU. `--inference-path` exposes the OpenAI-shaped transcription
+# route that `core/transcription_client.py` expects.
+args:
+  - "--threads"
+  - "4"
+  - "--processors"
+  - "1"
+  - "--inference-path"
+  - "/v1/audio/transcriptions"
+
+# PID file path, relative to project_root. Written when we spawn the server
+# so a second invocation can tell "is it mine or someone else's?".
+pid_file: ".whisper_server.pid"
+
+# Ring buffer size for captured server stdout/stderr lines — the GUI /
+# CLI "describe" view parses whisper.cpp's one-shot startup diagnostics
+# (backend CPU/CUDA, model type, languages, system_info) out of this buffer.
+log_ring_size: 1000
+
+# Health check timing.
+health:
+  startup_timeout_seconds: 60
+  poll_interval_seconds: 0.5
+  request_timeout_seconds: 1.5

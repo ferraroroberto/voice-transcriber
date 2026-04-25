@@ -1,0 +1,20 @@
+{
+  "language": "english",
+  "max_record_seconds": 300,
+  "sample_rate": 16000,
+  "preferred_mics": null,
+  "machine_specific_mics": {
+    "laptop": [
+      "Micrófono (Realtek(R) Audio)",
+      "Microphone (SplitCam Audio Mixer)"
+    ],
+    "tower": [
+      "el gato wave XLR (Elgato Wave XLR)",
+      "Wave Link Stream (Elgato Wave:XLR)"
+    ]
+  },
+  "hotkey": "<F10>",
+  "auto_copy": true,
+  "auto_start_server": false,
+  "log_level": "INFO"
+}
