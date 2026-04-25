@@ -2,13 +2,15 @@
 
 Mirrors what `ferraroroberto/claude-local-calls` does for its `whisper`
 backend, trimmed to a single-purpose installer: one binary, one model
-location. On Windows we pick the cuBLAS build so CUDA inference works
-out of the box — the release zip already bundles the right CUDA DLLs
-next to `whisper-server.exe`, so no CUDA Toolkit install is required.
+location. On Windows we auto-detect whether an NVIDIA/CUDA GPU is present:
+if yes, we grab the cuBLAS build (CUDA DLLs bundled, no Toolkit needed);
+if no, we fall back to the plain CPU build so it works on any PC including
+AMD/Intel-only laptops. Pass --cpu to force CPU mode regardless.
 
 Usage:
     python scripts/install_whisper_cpp.py
     python scripts/install_whisper_cpp.py --force
+    python scripts/install_whisper_cpp.py --cpu           # force CPU-only build
     python scripts/install_whisper_cpp.py --cuda 12.4.0   # prefer a specific cuBLAS tag
 """
 
@@ -37,9 +39,38 @@ RELEASE_API = "https://api.github.com/repos/ggerganov/whisper.cpp/releases/lates
 WIN_CUDA_PREFS = ("cublas-12.4.0", "cublas-12.2.0", "cublas-11.8.0")
 
 
+def _has_cuda_gpu() -> bool:
+    """Return True when an NVIDIA CUDA-capable GPU is likely present.
+
+    Tries nvidia-smi first (works wherever NVIDIA drivers are installed),
+    then falls back to a DLL probe on Windows.  No CUDA Toolkit required —
+    only the driver-level runtime needs to be present.
+    """
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
+            capture_output=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return True
+    except (FileNotFoundError, subprocess.SubprocessError, OSError):
+        pass
+
+    if sys.platform == "win32":
+        # nvcuda.dll is present whenever an NVIDIA driver is installed, even
+        # without the full CUDA Toolkit.
+        import ctypes.util
+        if ctypes.util.find_library("nvcuda"):
+            return True
+
+    return False
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--force", action="store_true", help="Reinstall even if already present")
+    parser.add_argument("--cpu", action="store_true", help="Force CPU-only build (skip CUDA detection)")
     parser.add_argument("--cuda", default=None, help="Prefer a specific cuBLAS tag (e.g. 12.4.0)")
     args = parser.parse_args()
 
@@ -48,7 +79,7 @@ def main() -> int:
         return 0
 
     VENDOR_DIR.mkdir(parents=True, exist_ok=True)
-    asset = _pick_asset(preferred_cuda=args.cuda)
+    asset = _pick_asset(preferred_cuda=args.cuda, force_cpu=args.cpu)
     if asset is None:
         print("❌ No matching whisper.cpp release asset found for this platform.", file=sys.stderr)
         return 1
@@ -91,27 +122,47 @@ def _already_installed() -> bool:
     return result.returncode in (0, 1)
 
 
-def _pick_asset(preferred_cuda: Optional[str]) -> Optional[dict]:
+def _pick_asset(preferred_cuda: Optional[str], force_cpu: bool = False) -> Optional[dict]:
     with urllib.request.urlopen(RELEASE_API, timeout=60) as resp:
         release = json.loads(resp.read().decode("utf-8"))
     assets: List[dict] = release.get("assets", [])
 
     if sys.platform == "win32":
-        prefs: Iterable[str] = (
-            (f"cublas-{preferred_cuda}", *WIN_CUDA_PREFS)
-            if preferred_cuda
-            else WIN_CUDA_PREFS
-        )
-        for tag in prefs:
-            for asset in assets:
-                name = asset["name"]
-                if (
-                    name.startswith("whisper-")
-                    and tag in name
-                    and "x64" in name
-                    and name.endswith(".zip")
-                ):
-                    return asset
+        use_cuda = not force_cpu and _has_cuda_gpu()
+
+        if use_cuda:
+            prefs: Iterable[str] = (
+                (f"cublas-{preferred_cuda}", *WIN_CUDA_PREFS)
+                if preferred_cuda
+                else WIN_CUDA_PREFS
+            )
+            for tag in prefs:
+                for asset in assets:
+                    name = asset["name"]
+                    if (
+                        name.startswith("whisper-")
+                        and tag in name
+                        and "x64" in name
+                        and name.endswith(".zip")
+                    ):
+                        print(f"🖥️  NVIDIA GPU detected — using CUDA build ({tag})")
+                        return asset
+            print("⚠️  NVIDIA GPU detected but no matching cuBLAS asset found; falling back to CPU build.")
+
+        # CPU-only fallback: any x64 Windows zip that is not a CUDA/cuBLAS build.
+        for asset in assets:
+            name = asset["name"]
+            if (
+                name.startswith("whisper-")
+                and "x64" in name
+                and name.endswith(".zip")
+                and "cublas" not in name.lower()
+            ):
+                if not use_cuda:
+                    reason = "--cpu flag" if force_cpu else "no NVIDIA GPU detected"
+                    print(f"💻 Using CPU build ({reason}): {name}")
+                return asset
+
         return None
 
     if sys.platform == "darwin":

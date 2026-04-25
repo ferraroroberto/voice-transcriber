@@ -207,17 +207,26 @@ If the server doesn't come up, `server.bat logs` prints what
 info). A CUDA-backed build will log `whisper_backend_init: using CUDA
 backend`; a CPU build logs `whisper_backend_init: using CPU backend`.
 
-## 🎯 CUDA
+## 🎯 GPU / CPU compatibility
 
-On Windows, `scripts/install_whisper_cpp.py` grabs the **cuBLAS** prebuilt
-from the latest whisper.cpp GitHub release. That zip already bundles the
-right CUDA DLLs (`cudart64_*.dll`, `cublas64_*.dll`, `cublasLt64_*.dll`)
-right next to `whisper-server.exe` — no CUDA Toolkit install needed, only
-a recent NVIDIA driver. `manager.py` prepends the binary's folder to
-`PATH` when spawning so those DLLs load cleanly.
+`scripts/install_whisper_cpp.py` auto-detects your hardware on Windows:
 
-To force CPU-only inference, add `-ng` (or `--no-gpu`) to the `args` list
-in `whisper_server.yaml`.
+| Hardware | Build chosen |
+|---|---|
+| NVIDIA GPU (any — GTX, RTX, Quadro, Tesla…) | cuBLAS build — CUDA DLLs bundled, no Toolkit needed |
+| AMD / Intel / no discrete GPU | CPU-only build — works on any Windows PC |
+
+Detection runs `nvidia-smi` and, as a fallback, probes for `nvcuda.dll`.
+Only a recent NVIDIA driver is required for the cuBLAS path — no CUDA
+Toolkit install. `manager.py` prepends the binary's folder to `PATH` when
+spawning so the bundled DLLs load cleanly.
+
+**Override flags for `install_whisper_cpp.py`:**
+- `--cpu` — force the CPU build even if an NVIDIA GPU is detected
+- `--cuda 12.4.0` — pin a specific cuBLAS version
+
+To force CPU-only inference at runtime (after install), add `-ng`
+(or `--no-gpu`) to the `args` list in `whisper_server.yaml`.
 
 ## 🔗 See also
 
