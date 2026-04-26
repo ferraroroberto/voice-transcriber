@@ -12,21 +12,17 @@ from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-# Three supported dictation modes. The value drives both the whisper-server
-# `language` hint and whether translation is requested.
-LANGUAGE_MODES: Tuple[str, ...] = ("spanish", "spanish-to-english", "english")
+# Supported dictation modes. The value is the whisper-server `language` hint.
+LANGUAGE_MODES: Tuple[str, ...] = ("english", "spanish")
 
-# (iso_language, translate_to_english) per mode.
-_MODE_TO_WHISPER: Dict[str, Tuple[str, bool]] = {
-    "spanish": ("es", False),
-    "spanish-to-english": ("es", True),
-    "english": ("en", False),
+_MODE_TO_ISO: Dict[str, str] = {
+    "english": "en",
+    "spanish": "es",
 }
 
 LANGUAGE_MODE_LABELS: Dict[str, str] = {
-    "spanish": "Spanish → Spanish",
-    "spanish-to-english": "Spanish → English",
-    "english": "English → English",
+    "english": "English",
+    "spanish": "Spanish",
 }
 
 VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
@@ -45,9 +41,9 @@ class AppConfig:
     log_level: str = "INFO"
 
     @property
-    def whisper_params(self) -> Tuple[str, bool]:
-        """(iso language, translate flag) for the configured dictation mode."""
-        return _MODE_TO_WHISPER[self.language]
+    def whisper_language(self) -> str:
+        """ISO language code for the configured dictation mode."""
+        return _MODE_TO_ISO[self.language]
 
     @property
     def hotkey_label(self) -> str:

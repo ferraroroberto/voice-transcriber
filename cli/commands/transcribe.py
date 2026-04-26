@@ -53,11 +53,11 @@ class TranscribeCommand(BaseCommand):
 
         if args.language:
             self.config.language = args.language
-        iso_lang, translate = self.config.whisper_params
+        iso_lang = self.config.whisper_language
 
         client = TranscriptionClient(status.base_url)
         try:
-            text = client.transcribe_file(args.file, language=iso_lang, translate=translate)
+            text = client.transcribe_file(args.file, language=iso_lang)
         except TranscriptionError as e:
             logger.error(f"❌ {e}")
             return 1

@@ -47,7 +47,7 @@ class RecordCommand(BaseCommand):
     def execute(self, args: argparse.Namespace) -> int:
         if args.language:
             self.config.language = args.language
-        iso_lang, translate = self.config.whisper_params
+        iso_lang = self.config.whisper_language
         max_seconds = args.max_seconds or self.config.max_record_seconds
 
         manager = WhisperServerManager()
@@ -70,7 +70,7 @@ class RecordCommand(BaseCommand):
 
         try:
             text = _record_and_transcribe(
-                self.config, status.base_url, iso_lang, translate, max_seconds,
+                self.config, status.base_url, iso_lang, max_seconds,
             )
         except (RecordingError, TranscriptionError) as e:
             logger.error(f"❌ {e}")
@@ -97,7 +97,7 @@ class RecordCommand(BaseCommand):
 
 
 def _record_and_transcribe(
-    config, base_url: str, language: str, translate: bool, max_seconds: int,
+    config, base_url: str, language: str, max_seconds: int,
 ) -> str:
     recorder = AudioRecorder(
         sample_rate=config.sample_rate,
@@ -116,7 +116,7 @@ def _record_and_transcribe(
     logger.info(f"🔇 Captured {len(result.samples) / result.sample_rate:.1f}s (peak={result.peak_level:.3f})")
     client = TranscriptionClient(base_url)
     return client.transcribe_array(
-        result.samples, result.sample_rate, language=language, translate=translate,
+        result.samples, result.sample_rate, language=language,
     )
 
 
