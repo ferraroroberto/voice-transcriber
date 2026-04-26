@@ -247,12 +247,11 @@ class TranscriberApp:
     def _transcribe_and_show(self, recording) -> None:
         status = self.server.status()
         client = TranscriptionClient(status.base_url)
-        iso_lang, translate = self.config.whisper_params
+        iso_lang = self.config.whisper_language
         try:
             text = client.transcribe_array(
                 recording.samples, recording.sample_rate,
                 language=iso_lang,
-                translate=translate,
             )
         except TranscriptionError as e:
             msg = str(e)
@@ -310,12 +309,11 @@ class TranscriberApp:
     def _transcribe_file_worker(self, path: str) -> None:
         status = self.server.status()
         client = TranscriptionClient(status.base_url)
-        iso_lang, translate = self.config.whisper_params
+        iso_lang = self.config.whisper_language
         try:
             text = client.transcribe_file(
                 path,
                 language=iso_lang,
-                translate=translate,
             )
         except TranscriptionError as e:
             msg = str(e)

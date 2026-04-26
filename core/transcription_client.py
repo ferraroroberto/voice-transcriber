@@ -1,9 +1,7 @@
 """HTTP client for the local whisper.cpp server.
 
 Calls the OpenAI-compatible `/v1/audio/transcriptions` endpoint that
-whisper.cpp's `whisper-server` exposes. Translation is requested via the
-`translate=true` form field on the same endpoint (whisper-server does
-not expose a separate `/v1/audio/translations` route).
+whisper.cpp's `whisper-server` exposes.
 """
 
 from __future__ import annotations
@@ -52,7 +50,6 @@ class TranscriptionClient:
         self,
         wav_bytes: bytes,
         language: Optional[str] = None,
-        translate: bool = False,
         filename: str = "audio.wav",
     ) -> str:
         url = self.base_url + "/v1/audio/transcriptions"
@@ -61,12 +58,10 @@ class TranscriptionClient:
         data = {"response_format": "json"}
         if iso:
             data["language"] = iso
-        if translate:
-            data["translate"] = "true"
 
         files = {"file": (filename, wav_bytes, "audio/wav")}
 
-        logger.info(f"📤 POST {url} (translate={translate}, language={iso or 'auto'})")
+        logger.info(f"📤 POST {url} (language={iso or 'auto'})")
         try:
             response = requests.post(url, data=data, files=files, timeout=self.timeout)
         except requests.RequestException as e:
@@ -84,16 +79,14 @@ class TranscriptionClient:
         samples: np.ndarray,
         sample_rate: int,
         language: Optional[str] = None,
-        translate: bool = False,
     ) -> str:
         wav_bytes = samples_to_wav_bytes(samples, sample_rate)
-        return self.transcribe_wav_bytes(wav_bytes, language=language, translate=translate)
+        return self.transcribe_wav_bytes(wav_bytes, language=language)
 
     def transcribe_file(
         self,
         path: Union[str, Path],
         language: Optional[str] = None,
-        translate: bool = False,
     ) -> str:
         path = Path(path)
         if not path.exists():
@@ -101,7 +94,6 @@ class TranscriptionClient:
         return self.transcribe_wav_bytes(
             path.read_bytes(),
             language=language,
-            translate=translate,
             filename=path.name,
         )
 

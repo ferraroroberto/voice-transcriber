@@ -254,11 +254,10 @@ class TrayApp:
         status = self.server.status()
         client = TranscriptionClient(status.base_url)
         try:
-            iso_lang, translate = self.config.whisper_params
+            iso_lang = self.config.whisper_language
             text = client.transcribe_array(
                 recording.samples, recording.sample_rate,
                 language=iso_lang,
-                translate=translate,
             )
         except TranscriptionError as e:
             self._notify("Transcription failed", str(e))
