@@ -44,11 +44,12 @@ class TranscriberApp:
         config: AppConfig,
         tray_on_close: bool = False,
         tray: Optional["TrayApp"] = None,
+        server: Optional[WhisperServerManager] = None,
     ) -> None:
         self.config = config
         self.tray_on_close = tray_on_close
         self.tray = tray
-        self.server = WhisperServerManager()
+        self.server = server if server is not None else WhisperServerManager()
         self._current_recorder: Optional[AudioRecorder] = None
         self._hotkey_listener: Optional[keyboard.GlobalHotKeys] = None
         # Standalone-mode storage for the most recent transcription. When a

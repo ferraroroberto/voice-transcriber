@@ -286,7 +286,7 @@ class TrayApp:
 
     def _open_window(self) -> None:
         if self._main_window is None or not self._main_window.root.winfo_exists():
-            self._main_window = TranscriberApp(self.config, tray_on_close=True, tray=self)
+            self._main_window = TranscriberApp(self.config, tray_on_close=True, tray=self, server=self.server)
             # Re-parent its close to just hide.
             self._main_window.root.protocol("WM_DELETE_WINDOW", self._main_window._on_close)
         else:
