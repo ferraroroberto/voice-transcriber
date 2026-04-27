@@ -15,7 +15,7 @@ import argparse
 import logging
 import sys
 
-from core import load_app_config
+from core import attach_app_log_handler, load_app_config
 from .commands import COMMANDS, get_command
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,11 @@ def _configure_logging(level_name: str) -> None:
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
         datefmt="%H:%M:%S",
     )
+    # Mirror everything into an in-memory ring buffer so the GUI's
+    # Diagnostics window can show recent app activity without reading
+    # files. Idempotent — safe across `basicConfig` re-runs.
+    attach_app_log_handler()
+    logging.getLogger().setLevel(level)
 
 
 def _build_parser() -> argparse.ArgumentParser:
