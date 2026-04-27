@@ -12,8 +12,11 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import logging
 import sys
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DIR = PROJECT_ROOT / "vendor" / "whisper.cpp" / "models"
@@ -33,29 +36,27 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     try:
         from huggingface_hub import hf_hub_download
     except ImportError:
-        print(
-            "❌ huggingface_hub is not installed. Run `pip install -r requirements.txt`.",
-            file=sys.stderr,
-        )
+        log.error("huggingface_hub is not installed. Run `pip install -r requirements.txt`.")
         return 1
 
     dest = Path(args.dest).resolve()
     dest.mkdir(parents=True, exist_ok=True)
     expected = dest / args.model
     if expected.exists():
-        print(f"✅ Model already present at {expected}")
+        log.info("Model already present at %s", expected)
         return 0
 
-    print(f"⬇️  Downloading {args.model} from {HF_REPO} → {dest}")
+    log.info("Downloading %s from %s → %s", args.model, HF_REPO, dest)
     local_path = hf_hub_download(
         repo_id=HF_REPO,
         filename=args.model,
         local_dir=str(dest),
     )
-    print(f"✅ Downloaded → {local_path}")
+    log.info("Downloaded → %s", local_path)
     return 0
 
 
