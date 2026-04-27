@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,8 @@ import urllib.request
 import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional
+
+log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 VENDOR_DIR = PROJECT_ROOT / "vendor" / "whisper.cpp"
@@ -68,6 +71,7 @@ def _has_cuda_gpu() -> bool:
 
 
 def main() -> int:
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--force", action="store_true", help="Reinstall even if already present")
     parser.add_argument("--cpu", action="store_true", help="Force CPU-only build (skip CUDA detection)")
@@ -75,32 +79,32 @@ def main() -> int:
     args = parser.parse_args()
 
     if not args.force and _already_installed():
-        print(f"✅ whisper-server already installed at {VENDOR_DIR / BINARY_NAME}")
+        log.info("whisper-server already installed at %s", VENDOR_DIR / BINARY_NAME)
         return 0
 
     VENDOR_DIR.mkdir(parents=True, exist_ok=True)
     asset = _pick_asset(preferred_cuda=args.cuda, force_cpu=args.cpu)
     if asset is None:
-        print("❌ No matching whisper.cpp release asset found for this platform.", file=sys.stderr)
+        log.error("No matching whisper.cpp release asset found for this platform.")
         return 1
 
     url = asset["browser_download_url"]
     name = asset["name"]
-    print(f"⬇️  Downloading {name}")
+    log.info("Downloading %s", name)
     with tempfile.TemporaryDirectory() as tmp:
         archive = Path(tmp) / name
         _download(url, archive)
-        print(f"📦 Extracting into {VENDOR_DIR}")
+        log.info("Extracting into %s", VENDOR_DIR)
         _extract(archive, VENDOR_DIR)
 
     _flatten_if_nested(VENDOR_DIR)
     _lift_binary_and_dlls(VENDOR_DIR)
 
     if not _already_installed():
-        print(f"❌ Post-install check failed — {BINARY_NAME} not runnable.", file=sys.stderr)
+        log.error("Post-install check failed — %s not runnable.", BINARY_NAME)
         return 1
 
-    print(f"✅ Installed whisper-server → {VENDOR_DIR / BINARY_NAME}")
+    log.info("Installed whisper-server → %s", VENDOR_DIR / BINARY_NAME)
     return 0
 
 
@@ -145,9 +149,9 @@ def _pick_asset(preferred_cuda: Optional[str], force_cpu: bool = False) -> Optio
                         and "x64" in name
                         and name.endswith(".zip")
                     ):
-                        print(f"🖥️  NVIDIA GPU detected — using CUDA build ({tag})")
+                        log.info("NVIDIA GPU detected — using CUDA build (%s)", tag)
                         return asset
-            print("⚠️  NVIDIA GPU detected but no matching cuBLAS asset found; falling back to CPU build.")
+            log.warning("NVIDIA GPU detected but no matching cuBLAS asset found; falling back to CPU build.")
 
         # CPU-only fallback: any x64 Windows zip that is not a CUDA/cuBLAS build.
         for asset in assets:
@@ -160,7 +164,7 @@ def _pick_asset(preferred_cuda: Optional[str], force_cpu: bool = False) -> Optio
             ):
                 if not use_cuda:
                     reason = "--cpu flag" if force_cpu else "no NVIDIA GPU detected"
-                    print(f"💻 Using CPU build ({reason}): {name}")
+                    log.info("Using CPU build (%s): %s", reason, name)
                 return asset
 
         return None
@@ -196,9 +200,9 @@ def _download(url: str, dest: Path) -> None:
                 if total:
                     pct = int(downloaded * 100 / total)
                     if pct >= next_pct:
-                        print(f"   {pct}% ({downloaded // (1024 * 1024)} MB / {total // (1024 * 1024)} MB)")
+                        log.info("   %d%% (%d MB / %d MB)", pct, downloaded // (1024 * 1024), total // (1024 * 1024))
                         next_pct = pct + 5
-    print(f"   done ({downloaded // (1024 * 1024)} MB)")
+    log.info("   done (%d MB)", downloaded // (1024 * 1024))
 
 
 def _extract(archive: Path, dest: Path) -> None:
