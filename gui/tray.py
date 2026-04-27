@@ -72,6 +72,9 @@ class TrayApp:
         self._current_recorder: Optional[AudioRecorder] = None
         self._icon: Optional[pystray.Icon] = None
         self._hotkey_listener: Optional[keyboard.GlobalHotKeys] = None
+        # Latest non-empty transcription, surfaced in the main window so the
+        # user can re-copy it after the clipboard has been overwritten.
+        self.last_transcription: Optional[str] = None
 
     # ------------------------------------------------------------ run / quit
 
@@ -267,6 +270,8 @@ class TrayApp:
         if not text:
             self._notify("Empty transcription", "The server returned no text.")
             return
+
+        self.last_transcription = text
 
         if self.config.auto_copy:
             try:

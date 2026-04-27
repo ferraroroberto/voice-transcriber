@@ -50,6 +50,13 @@ class TranscriberApp:
         self.server = WhisperServerManager()
         self._current_recorder: Optional[AudioRecorder] = None
         self._hotkey_listener: Optional[keyboard.GlobalHotKeys] = None
+        # Standalone-mode storage for the most recent transcription. When a
+        # tray owns the session, we read from `self.tray.last_transcription`
+        # instead and ignore this slot.
+        self._last_transcription: Optional[str] = None
+        # Tracks what the panel is currently showing so we only redraw on
+        # change (the poll runs every 2 s).
+        self._displayed_last_transcription: Optional[str] = None
 
         # When launched from the tray, live as a Toplevel of the tray's root so
         # both share one tk interpreter — and delegate record/quit/toasts back
@@ -60,8 +67,8 @@ class TranscriberApp:
         else:
             self.root = tk.Tk()
         self.root.title("Voice Transcription")
-        self.root.geometry("420x380")
-        self.root.resizable(False, False)
+        self.root.geometry("420x560")
+        self.root.minsize(420, 480)
         self.root.configure(background="#FFFFFF")
 
         style = ttk.Style(self.root)
@@ -141,6 +148,27 @@ class TranscriberApp:
         file_btn = ttk.Button(self.root, text="📁 Transcribe file…", command=self._transcribe_file_dialog)
         file_btn.pack(fill=tk.X, **pad)
 
+        # Last-transcription panel — survives clipboard overwrites so the user
+        # can always re-copy whatever they dictated last, until the app exits.
+        last_frame = ttk.Frame(self.root)
+        last_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(10, 6))
+
+        header = ttk.Frame(last_frame)
+        header.pack(fill=tk.X)
+        ttk.Label(header, text="Last transcription:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT)
+        self.copy_last_btn = ttk.Button(header, text="📋 Copy", command=self._copy_last, width=10)
+        self.copy_last_btn.pack(side=tk.RIGHT)
+        self.copy_last_btn.state(["disabled"])
+
+        text_wrap = ttk.Frame(last_frame)
+        text_wrap.pack(fill=tk.BOTH, expand=True, pady=(4, 0))
+        self.last_text = tk.Text(text_wrap, wrap=tk.WORD, height=6, font=("Segoe UI", 9),
+                                 background="#FAFAFA", relief=tk.FLAT, borderwidth=1)
+        scroll = ttk.Scrollbar(text_wrap, orient=tk.VERTICAL, command=self.last_text.yview)
+        self.last_text.configure(yscrollcommand=scroll.set, state=tk.DISABLED)
+        self.last_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll.pack(side=tk.RIGHT, fill=tk.Y)
+
         quit_btn = ttk.Button(self.root, text="Quit", command=self._quit)
         quit_btn.pack(fill=tk.X, **pad)
 
@@ -161,7 +189,44 @@ class TranscriberApp:
         self.start_btn.state(["disabled"] if status.running else ["!disabled"])
         self.stop_btn.state(["!disabled"] if status.running and status.ownership == OWNERSHIP_OURS else ["disabled"])
 
+        self._refresh_last_transcription()
+
         self.root.after(POLL_MS, self._poll_status)
+
+    def _current_last_transcription(self) -> Optional[str]:
+        """Source of truth for the panel: the tray when one owns the session,
+        otherwise this window's own slot.
+        """
+        if self.tray is not None:
+            return self.tray.last_transcription
+        return self._last_transcription
+
+    def _refresh_last_transcription(self) -> None:
+        text = self._current_last_transcription()
+        if text == self._displayed_last_transcription:
+            return
+        self._displayed_last_transcription = text
+        self.last_text.configure(state=tk.NORMAL)
+        self.last_text.delete("1.0", tk.END)
+        if text:
+            self.last_text.insert(tk.END, text)
+            self.copy_last_btn.state(["!disabled"])
+            self.copy_last_btn.config(text="📋 Copy")
+        else:
+            self.copy_last_btn.state(["disabled"])
+        self.last_text.configure(state=tk.DISABLED)
+
+    def _copy_last(self) -> None:
+        text = self._current_last_transcription()
+        if not text:
+            return
+        try:
+            pyperclip.copy(text)
+        except Exception as exc:
+            logger.warning(f"⚠️  Clipboard copy failed: {exc}")
+            return
+        self.copy_last_btn.config(text="✓ Copied")
+        self.root.after(1500, lambda: self.copy_last_btn.config(text="📋 Copy"))
 
     def _show_model_details(self) -> None:
         description = self.server.describe()
@@ -259,6 +324,10 @@ class TranscriberApp:
             self.root.after(0, lambda m=msg: messagebox.showerror("Transcription failed", m))
             return
 
+        text = text.strip()
+        if text:
+            self._last_transcription = text
+
         if self.config.auto_copy:
             try:
                 pyperclip.copy(text)
@@ -319,6 +388,9 @@ class TranscriberApp:
             msg = str(e)
             self.root.after(0, lambda m=msg: messagebox.showerror("Transcription failed", m))
             return
+        text = text.strip()
+        if text:
+            self._last_transcription = text
         if self.config.auto_copy:
             try:
                 pyperclip.copy(text)
