@@ -45,7 +45,12 @@ model:
 # GPU by default when built with CUDA/Metal; pass `-ng` (or `--no-gpu`) here
 # to force CPU. `--inference-path` exposes the OpenAI-shaped transcription
 # route that `core/transcription_client.py` expects.
+#
+# `--flash-attn` is a universal speed-up on any CUDA GPU (Pascal-era and
+# newer): typically 1.3-2x faster encoder/decoder with no quality loss.
+# Drop it only if the bundled whisper.cpp build complains.
 args:
+  - "--flash-attn"
   - "--threads"
   - "4"
   - "--processors"
