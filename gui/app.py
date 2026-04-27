@@ -30,6 +30,7 @@ from core import (
     TranscriptionError,
 )
 from whisper_server import OWNERSHIP_OURS, WhisperServerManager
+from .diagnostics_window import DiagnosticsWindow
 from .recording_popup import RecordingPopup
 
 logger = logging.getLogger(__name__)
@@ -121,7 +122,8 @@ class TranscriberApp:
         model_frame = ttk.Frame(self.root)
         model_frame.pack(fill=tk.X, **pad)
         ttk.Label(model_frame, textvariable=self.model_var).pack(side=tk.LEFT)
-        ttk.Button(model_frame, text="ℹ Details", command=self._show_model_details, width=10).pack(side=tk.RIGHT)
+        ttk.Button(model_frame, text="🩺 Diagnostics", command=self._show_diagnostics, width=14).pack(side=tk.RIGHT)
+        ttk.Button(model_frame, text="ℹ Details", command=self._show_model_details, width=10).pack(side=tk.RIGHT, padx=(0, 4))
 
         server_btn_frame = ttk.Frame(self.root)
         server_btn_frame.pack(fill=tk.X, **pad)
@@ -227,6 +229,9 @@ class TranscriberApp:
             return
         self.copy_last_btn.config(text="✓ Copied")
         self.root.after(1500, lambda: self.copy_last_btn.config(text="📋 Copy"))
+
+    def _show_diagnostics(self) -> None:
+        DiagnosticsWindow(self.root, self.server)
 
     def _show_model_details(self) -> None:
         description = self.server.describe()
