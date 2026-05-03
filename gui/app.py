@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 # Third-party imports
 import pyperclip
 from pynput import keyboard
+import sounddevice as sd
 
 from core import (
     AppConfig,
@@ -92,6 +93,26 @@ class TranscriberApp:
         # (hotkey or tray menu) use whatever the user picked in the window.
         self.language_var.trace_add("write", self._on_language_change)
 
+        # Enumerate input devices once; used by the mic combobox.
+        try:
+            self._mic_devices: List[str] = [
+                d["name"]
+                for d in sd.query_devices()
+                if d["max_input_channels"] > 0
+            ]
+        except Exception:
+            self._mic_devices = []
+
+        _initial_mic = "System default"
+        if config.preferred_mics:
+            pref = config.preferred_mics[0].lower()
+            for name in self._mic_devices:
+                if pref in name.lower() or name.lower() in pref:
+                    _initial_mic = name
+                    break
+        self.mic_var = tk.StringVar(value=_initial_mic)
+        self.mic_var.trace_add("write", self._on_mic_change)
+
         self._build_widgets()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
         self._poll_status()
@@ -104,6 +125,13 @@ class TranscriberApp:
             if mode_label == label:
                 self.config.language = mode
                 return
+
+    def _on_mic_change(self, *_: object) -> None:
+        label = self.mic_var.get()
+        if label == "System default":
+            self.config.preferred_mics = None
+        else:
+            self.config.preferred_mics = [label]
 
     def _build_widgets(self) -> None:
         pad = {"padx": 16, "pady": 6}
@@ -142,6 +170,16 @@ class TranscriberApp:
             values=tuple(LANGUAGE_MODE_LABELS[m] for m in LANGUAGE_MODES),
         )
         lang_combo.pack(side=tk.LEFT, padx=8)
+
+        # Mic selector
+        mic_frame = ttk.Frame(self.root)
+        mic_frame.pack(fill=tk.X, **pad)
+        ttk.Label(mic_frame, text="Mic:").pack(side=tk.LEFT)
+        mic_combo = ttk.Combobox(
+            mic_frame, textvariable=self.mic_var, state="readonly", width=28,
+            values=["System default"] + self._mic_devices,
+        )
+        mic_combo.pack(side=tk.LEFT, padx=8)
 
         # Primary actions
         record_btn = ttk.Button(self.root, text="🎤 Record / Stop", command=self._toggle_record)
