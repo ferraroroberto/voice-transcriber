@@ -72,6 +72,10 @@ class TrayApp:
         self._current_recorder: Optional[AudioRecorder] = None
         self._icon: Optional[pystray.Icon] = None
         self._hotkey_listener: Optional[keyboard.GlobalHotKeys] = None
+        self._transcription_client: Optional[TranscriptionClient] = None
+        # Model label is queried by pystray on every menu draw; cache so the
+        # TCP probe + psutil lookup don't fire on each open.
+        self._model_label_cache: tuple[float, str] = (0.0, "🧠 model: ?")
         # Latest non-empty transcription, surfaced in the main window so the
         # user can re-copy it after the clipboard has been overwritten.
         self.last_transcription: Optional[str] = None
@@ -128,17 +132,9 @@ class TrayApp:
 
     def _build_menu(self) -> pystray.Menu:
         record_label = f"🎤 Record / Stop  ({self.config.hotkey_label})"
-        # Compute the model label lazily so it refreshes on every menu open —
-        # pystray re-evaluates callable text each time the menu is drawn.
-        def model_label(_item) -> str:
-            try:
-                desc = self.server.describe()
-                return f"🧠 {desc.model_display_name}"
-            except Exception:
-                return "🧠 model: ?"
 
         return pystray.Menu(
-            pystray.MenuItem(model_label, None, enabled=False),
+            pystray.MenuItem(lambda _item: self._cached_model_label(), None, enabled=False),
             pystray.MenuItem("ℹ Model info…", lambda: self._enqueue(EVT_MODEL_INFO)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(record_label, lambda: self._enqueue(EVT_TOGGLE_RECORD), default=True),
@@ -149,6 +145,21 @@ class TrayApp:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Quit", lambda: self._enqueue(EVT_QUIT)),
         )
+
+    _MODEL_LABEL_TTL = 2.0
+
+    def _cached_model_label(self) -> str:
+        now = time.monotonic()
+        cached_at, label = self._model_label_cache
+        if now - cached_at < self._MODEL_LABEL_TTL:
+            return label
+        try:
+            desc = self.server.describe()
+            label = f"🧠 {desc.model_display_name}"
+        except Exception:
+            label = "🧠 model: ?"
+        self._model_label_cache = (now, label)
+        return label
 
     # ---------------------------------------------------------- hotkey
 
@@ -255,7 +266,9 @@ class TrayApp:
 
     def _transcribe_worker(self, recording: Recording) -> None:
         status = self.server.status()
-        client = TranscriptionClient(status.base_url)
+        if self._transcription_client is None:
+            self._transcription_client = TranscriptionClient(status.base_url)
+        client = self._transcription_client
         try:
             iso_lang = self.config.whisper_language
             text = client.transcribe_array(

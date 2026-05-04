@@ -297,6 +297,7 @@ class WhisperServerManager:
         self._log: Deque[str] = deque(maxlen=self.config.log_ring_size)
         self._lock = threading.Lock()
         self._reader: Optional[threading.Thread] = None
+        self._session = requests.Session()
 
     # ------------------------------------------------------------------ status
 
@@ -304,7 +305,7 @@ class WhisperServerManager:
         """HTTP health check — whisper.cpp server answers 200 on `/`."""
         url = self.config.base_url + "/"
         try:
-            r = requests.get(url, timeout=self.config.request_timeout_seconds)
+            r = self._session.get(url, timeout=self.config.request_timeout_seconds)
             return r.status_code == 200
         except requests.RequestException:
             return False

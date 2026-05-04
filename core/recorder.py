@@ -103,13 +103,14 @@ class AudioRecorder:
                 dtype="float32",
                 callback=callback,
             ):
-                while not self._stop_event.is_set():
+                while True:
                     elapsed = time.time() - start
                     if elapsed >= max_seconds:
                         break
                     if progress is not None:
                         progress(max(0.0, max_seconds - elapsed), last_level[0])
-                    time.sleep(0.05)
+                    if self._stop_event.wait(0.05):
+                        break
         except Exception as e:
             raise RecordingError(f"audio stream failed: {e}") from e
 

@@ -43,6 +43,10 @@ class TranscriptionClient:
     def __init__(self, base_url: str, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        self._session = requests.Session()
+
+    def close(self) -> None:
+        self._session.close()
 
     # ------------------------------------------------------------- public API
 
@@ -63,7 +67,7 @@ class TranscriptionClient:
 
         logger.info(f"📤 POST {url} (language={iso or 'auto'})")
         try:
-            response = requests.post(url, data=data, files=files, timeout=self.timeout)
+            response = self._session.post(url, data=data, files=files, timeout=self.timeout)
         except requests.RequestException as e:
             raise TranscriptionError(f"could not reach {url}: {e}") from e
 
