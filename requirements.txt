@@ -37,3 +37,11 @@ winotify>=1.1; sys_platform == "win32"
 # Intentionally *not* here: openai-whisper, torch, torchaudio,
 # imageio-ffmpeg, scipy. All transcription happens in the whisper.cpp
 # subprocess — there is no in-process Python model.
+
+# Webapp (mobile-first FastAPI UI on :8443)
+fastapi>=0.110
+uvicorn[standard]>=0.27
+python-multipart>=0.0.9
+
+# Self-signed cert + iOS .mobileconfig generation
+cryptography>=42.0

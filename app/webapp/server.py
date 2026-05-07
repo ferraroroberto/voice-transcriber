@@ -1,0 +1,484 @@
+"""FastAPI webapp — mobile-first voice transcriber.
+
+Routes:
+
+    GET  /                          → static/index.html
+    GET  /static/{file}             → CSS / JS / mobileconfig
+    GET  /healthz                   → liveness probe (used by tray)
+    GET  /install-ca                → iOS .mobileconfig (Phase 3)
+
+    GET  /api/config                → current webapp_config.json
+    POST /api/config                → patch + persist
+    GET  /api/status                → whisper + LLM hub reachability
+
+    POST /api/sessions              → create new session
+    POST /api/sessions/{id}/upload  → single-shot upload + transcribe (Phase 2)
+    POST /api/sessions/{id}/chunk   → append a chunk (Phase 4 streaming)
+    POST /api/sessions/{id}/finish  → close + transcode + transcribe (Phase 4)
+    POST /api/sessions/{id}/polish  → run polish on the transcript
+    POST /api/sessions/{id}/retranscribe → re-run whisper on a saved take
+    GET  /api/sessions              → list (newest first)
+    DELETE /api/sessions            → cleanup all
+    DELETE /api/sessions/older-than/{days} → cleanup old
+
+The lifespan hook prunes sessions older than the configured retention
+window on every boot, matching the user's expectation that startup is
+when "the app cleans the history".
+"""
+
+from __future__ import annotations
+
+# Standard library imports
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+# Third-party imports
+from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
+
+from src import (
+    LANGUAGE_MODE_LABELS,
+    TranscriptionClient,
+    TranscriptionError,
+    load_app_config,
+)
+from src.archive import SessionArchive
+from src.polish import PolishClient, PolishError
+from src.webapp_config import (
+    WebappConfig,
+    load_webapp_config,
+    update_webapp_config,
+)
+from src.whisper_server import WhisperServerManager
+
+from .audio import (
+    AudioToolMissing,
+    AudioTranscodeError,
+    find_ffmpeg,
+    transcode_to_wav,
+)
+
+logger = logging.getLogger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+
+
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Startup: prune archive older than retention window. Shutdown: close clients."""
+    cfg: WebappConfig = app.state.webapp_config
+    archive: SessionArchive = app.state.archive
+    try:
+        removed = archive.cleanup_older_than(cfg.history_retention_days)
+        if removed:
+            logger.info(f"🧹 Pruned {removed} old sessions on boot")
+    except Exception as exc:  # noqa: BLE001 — never block startup
+        logger.warning(f"⚠️  Archive prune failed: {exc}")
+
+    if find_ffmpeg(PROJECT_ROOT) is None:
+        logger.warning(
+            "⚠️  ffmpeg not found on PATH or in vendor/ffmpeg/. "
+            "Webm/opus uploads will fail until you install it. "
+            "Suggested: winget install Gyan.FFmpeg"
+        )
+
+    yield
+
+    try:
+        app.state.transcription_client.close()
+    except Exception:
+        pass
+    try:
+        app.state.polish_client.close()
+    except Exception:
+        pass
+
+
+def create_app() -> FastAPI:
+    """Build the FastAPI app — wired with all dependencies."""
+    app_config = load_app_config()
+    webapp_cfg = load_webapp_config()
+    server_manager = WhisperServerManager()
+    archive = SessionArchive()
+    transcription_client = TranscriptionClient(server_manager.config.base_url)
+    polish_client = PolishClient(webapp_cfg.llm_hub_url)
+
+    app = FastAPI(
+        title="Voice Transcriber",
+        version="0.2.0",
+        lifespan=_lifespan,
+    )
+
+    # Stash dependencies on app.state so handlers can reach them without
+    # a global. This also keeps the module import-side-effect-free, which
+    # matters because the tray imports it to start uvicorn programmatically.
+    app.state.app_config = app_config
+    app.state.webapp_config = webapp_cfg
+    app.state.server_manager = server_manager
+    app.state.archive = archive
+    app.state.transcription_client = transcription_client
+    app.state.polish_client = polish_client
+
+    # ----------------------------------------------------- static routes
+
+    if STATIC_DIR.exists():
+        app.mount(
+            "/static",
+            StaticFiles(directory=str(STATIC_DIR)),
+            name="static",
+        )
+
+    @app.get("/")
+    async def index() -> FileResponse:
+        index_path = STATIC_DIR / "index.html"
+        if not index_path.exists():
+            raise HTTPException(status_code=500, detail="index.html missing")
+        return FileResponse(str(index_path))
+
+    @app.get("/healthz")
+    async def healthz() -> Dict[str, Any]:
+        return {"ok": True, "service": "voice-transcriber-webapp"}
+
+    @app.get("/install-ca")
+    async def install_ca() -> FileResponse:
+        """Serve the iOS .mobileconfig for one-tap CA install (Phase 3)."""
+        profile = STATIC_DIR / "voice-transcriber-ca.mobileconfig"
+        if not profile.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=(
+                    "CA profile not generated yet. Run "
+                    "`scripts/gen_ssl_cert.py` from the project root."
+                ),
+            )
+        return FileResponse(
+            str(profile),
+            media_type="application/x-apple-aspen-config",
+            filename="voice-transcriber-ca.mobileconfig",
+        )
+
+    # ------------------------------------------------------ config API
+
+    @app.get("/api/config")
+    async def get_config(request: Request) -> Dict[str, Any]:
+        cfg: WebappConfig = request.app.state.webapp_config
+        app_cfg = request.app.state.app_config
+        return {
+            "polish_model_default": cfg.polish_model_default,
+            "polish_models_available": cfg.polish_models_available,
+            "history_retention_days": cfg.history_retention_days,
+            "force_builtin_mic_default": cfg.force_builtin_mic_default,
+            "preferred_mic_id": cfg.preferred_mic_id,
+            "languages": list(LANGUAGE_MODE_LABELS.keys()),
+            "language_default": app_cfg.language,
+        }
+
+    @app.post("/api/config")
+    async def patch_config(request: Request) -> Dict[str, Any]:
+        body = await request.json()
+        allowed = {
+            "polish_model_default",
+            "force_builtin_mic_default",
+            "preferred_mic_id",
+            "history_retention_days",
+        }
+        patch = {k: v for k, v in body.items() if k in allowed}
+        try:
+            new_cfg = update_webapp_config(**patch)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        request.app.state.webapp_config = new_cfg
+        return {"ok": True, "config": _config_dict(new_cfg)}
+
+    @app.get("/api/status")
+    async def status(request: Request) -> Dict[str, Any]:
+        sm: WhisperServerManager = request.app.state.server_manager
+        polish: PolishClient = request.app.state.polish_client
+        whisper_status = sm.status()
+        return {
+            "whisper": {
+                "running": whisper_status.running,
+                "ownership": whisper_status.ownership,
+                "base_url": whisper_status.base_url,
+                "detail": whisper_status.detail,
+            },
+            "llm_hub": {
+                "reachable": polish.is_reachable(),
+                "base_url": polish.base_url,
+            },
+            "ffmpeg_present": find_ffmpeg(PROJECT_ROOT) is not None,
+        }
+
+    # ------------------------------------------------------ session API
+
+    @app.post("/api/sessions")
+    async def create_session(request: Request) -> Dict[str, Any]:
+        body = await _maybe_json(request)
+        archive: SessionArchive = request.app.state.archive
+        app_cfg = request.app.state.app_config
+        language = body.get("language") or app_cfg.language
+        session = archive.new_session(
+            language=language,
+            sample_rate=app_cfg.sample_rate,
+        )
+        return {
+            "session_id": session.session_id,
+            "folder": str(session.folder),
+            "created_at": session.meta.created_at,
+        }
+
+    @app.post("/api/sessions/{session_id}/upload")
+    async def upload_and_transcribe(
+        session_id: str,
+        request: Request,
+        file: UploadFile = File(...),
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Single-shot upload — receive whole audio blob, transcribe, return.
+
+        Phase 4 adds chunked uploads via /chunk + /finish.
+        """
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+
+        # Persist the raw upload so it survives any subsequent failure.
+        raw_bytes = await file.read()
+        if not raw_bytes:
+            raise HTTPException(status_code=400, detail="empty upload")
+
+        raw_path = session.raw_path()
+        raw_path.write_bytes(raw_bytes)
+        session.meta.raw_bytes = len(raw_bytes)
+        session.meta.raw_format = file.content_type or "audio/webm;codecs=opus"
+        session.write_meta()
+
+        return await _transcribe_session_payload(request, session, language)
+
+    @app.post("/api/sessions/{session_id}/chunk")
+    async def append_chunk(session_id: str, request: Request) -> Dict[str, Any]:
+        """Append a streamed audio chunk to the session's raw file.
+
+        Body is the raw chunk bytes (no multipart wrapping — the client
+        sends the binary blob directly so latency stays low and the
+        server can persist it to disk before the recording even ends).
+        """
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        body = await request.body()
+        if not body:
+            return {"session_id": session_id, "raw_bytes": session.meta.raw_bytes}
+        size = session.append_raw_chunk(body)
+        ctype = request.headers.get("content-type")
+        if ctype and not session.meta.raw_format:
+            session.meta.raw_format = ctype
+        # Don't rewrite meta.json on every chunk — too much I/O. /finish writes it.
+        return {"session_id": session_id, "raw_bytes": size}
+
+    @app.post("/api/sessions/{session_id}/finish")
+    async def finish_session(
+        session_id: str,
+        request: Request,
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Close a chunked session, transcode, transcribe, return text."""
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        raw_path = session.raw_path()
+        if not raw_path.exists() or raw_path.stat().st_size == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="no chunks received — nothing to transcribe",
+            )
+        # Sync the on-disk reality back into meta (chunk endpoint skips this).
+        session.meta.raw_bytes = raw_path.stat().st_size
+        body = await _maybe_json(request)
+        duration = body.get("duration_seconds")
+        if isinstance(duration, (int, float)):
+            session.meta.duration_seconds = float(duration)
+        session.write_meta()
+        return await _transcribe_session_payload(request, session, language)
+
+    @app.post("/api/sessions/{session_id}/retranscribe")
+    async def retranscribe(
+        session_id: str,
+        request: Request,
+        language: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Re-run whisper on an existing raw audio file (crash-recovery flow)."""
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        if not session.raw_path().exists():
+            raise HTTPException(
+                status_code=404,
+                detail="raw audio missing — nothing to re-transcribe",
+            )
+        return await _transcribe_session_payload(request, session, language)
+
+    @app.post("/api/sessions/{session_id}/polish")
+    async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
+        body = await _maybe_json(request)
+        cfg: WebappConfig = request.app.state.webapp_config
+        model = str(body.get("model") or cfg.polish_model_default)
+
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+
+        transcript = session.read_transcript()
+        if not transcript:
+            raise HTTPException(
+                status_code=400,
+                detail="no transcript yet — record first",
+            )
+
+        polish_client: PolishClient = request.app.state.polish_client
+        try:
+            result = polish_client.polish(transcript, model=model)
+        except PolishError as exc:
+            session.mark_polish_failed(model, str(exc))
+            session.write_meta()
+            raise HTTPException(status_code=502, detail=str(exc))
+
+        session.write_polished(
+            result.polished_text,
+            model=result.model,
+            request_payload=result.request_payload,
+            response_payload=result.response_payload,
+        )
+        session.write_meta()
+        return {
+            "session_id": session.session_id,
+            "polished": result.polished_text,
+            "model": result.model,
+        }
+
+    @app.get("/api/sessions")
+    async def list_sessions(
+        request: Request, limit: int = 50
+    ) -> Dict[str, Any]:
+        archive: SessionArchive = request.app.state.archive
+        sessions = archive.list_sessions(limit=limit)
+        return {
+            "sessions": [
+                {
+                    "session_id": s.session_id,
+                    "created_at": s.meta.created_at,
+                    "language": s.meta.language,
+                    "transcript_chars": s.meta.transcript_chars,
+                    "polish_model": s.meta.polish_model,
+                    "polish_succeeded": s.meta.polish_succeeded,
+                    "raw_bytes": s.meta.raw_bytes,
+                    "duration_seconds": s.meta.duration_seconds,
+                    "transcript_preview": _preview(s.read_transcript(), 200),
+                    "polished_preview": _preview(s.read_polished(), 200),
+                }
+                for s in sessions
+            ]
+        }
+
+    @app.delete("/api/sessions")
+    async def delete_all_sessions(request: Request) -> Dict[str, Any]:
+        archive: SessionArchive = request.app.state.archive
+        removed = archive.cleanup_all()
+        return {"removed": removed}
+
+    @app.delete("/api/sessions/older-than/{days}")
+    async def delete_old_sessions(
+        days: int, request: Request
+    ) -> Dict[str, Any]:
+        if days < 1:
+            raise HTTPException(status_code=400, detail="days must be >= 1")
+        archive: SessionArchive = request.app.state.archive
+        removed = archive.cleanup_older_than(days)
+        return {"removed": removed}
+
+    return app
+
+
+# --------------------------------------------------------------- helpers
+
+
+async def _maybe_json(request: Request) -> Dict[str, Any]:
+    if request.headers.get("content-type", "").startswith("application/json"):
+        try:
+            data = await request.json()
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+    return {}
+
+
+async def _transcribe_session_payload(
+    request: Request,
+    session,
+    language: Optional[str],
+) -> Dict[str, Any]:
+    """Shared finish path: transcode → whisper → write transcript → meta."""
+    app_cfg = request.app.state.app_config
+    raw_path = session.raw_path()
+    wav_path = session.wav_path()
+
+    try:
+        transcode_to_wav(raw_path, wav_path, sample_rate=app_cfg.sample_rate)
+    except AudioToolMissing as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+    except AudioTranscodeError as exc:
+        session.meta.error = str(exc)
+        session.write_meta()
+        raise HTTPException(status_code=500, detail=f"transcode failed: {exc}")
+
+    chosen_lang = language or session.meta.language or app_cfg.language
+    iso = _iso_language(chosen_lang)
+
+    client: TranscriptionClient = request.app.state.transcription_client
+    try:
+        text = client.transcribe_file(wav_path, language=iso)
+    except TranscriptionError as exc:
+        session.meta.error = str(exc)
+        session.write_meta()
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    text = (text or "").strip()
+    session.write_transcript(text)
+    session.meta.language = chosen_lang
+    session.write_meta()
+
+    return {
+        "session_id": session.session_id,
+        "transcript": text,
+        "language": chosen_lang,
+    }
+
+
+def _iso_language(name: str) -> Optional[str]:
+    table = {"english": "en", "spanish": "es"}
+    return table.get(name, name)
+
+
+def _preview(text: Optional[str], n: int) -> Optional[str]:
+    if not text:
+        return None
+    text = text.strip().replace("\n", " ")
+    return text if len(text) <= n else text[: n - 1] + "…"
+
+
+def _config_dict(cfg: WebappConfig) -> Dict[str, Any]:
+    return {
+        "polish_model_default": cfg.polish_model_default,
+        "polish_models_available": cfg.polish_models_available,
+        "history_retention_days": cfg.history_retention_days,
+        "force_builtin_mic_default": cfg.force_builtin_mic_default,
+        "preferred_mic_id": cfg.preferred_mic_id,
+    }
+
+
+# Module-level app for `uvicorn app.webapp.server:app`.
+app = create_app()

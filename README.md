@@ -27,13 +27,13 @@ server it started.
 
 | Command                  | What it does                                                              |
 |--------------------------|---------------------------------------------------------------------------|
-| `tray.bat`               | Resident tray icon + global hotkey (default: `Ctrl+Alt+Space`). Default. |
-| `transcribe_voice.bat`   | Classic tkinter main window with Start/Stop server, Record, file pick.   |
-| `quick_record.bat`       | One-shot record → transcribe → copy → exit. For Stream Deck.              |
-| `quick_record_english.bat` / `quick_record_spanish.bat` | Language-pinned wrappers.     |
+| `tray.bat`               | Resident tray icon + global hotkey (default: `Ctrl+Alt+Space`). Day-to-day default. Also boots the mobile webapp on `:8443` when enabled. |
+| `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
+| `webapp_tunnel.bat`      | Webapp + Cloudflare quick tunnel — public HTTPS URL for use from outside Tailscale (e.g. at the office). |
 | `server.bat start|stop|status|logs` | Direct control of the whisper-server process.             |
+| `setup.bat`              | One-shot installer (venv + deps + whisper.cpp + ggml model).             |
 
-Or use the launcher directly:
+Or use the Python entry point directly:
 
 ```bash
 python launcher.py                  # defaults to tray
@@ -149,35 +149,56 @@ confirm it without grepping logs.
 
 ## 🗂️ Layout
 
+The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — same convention used by `local-llm-hub`, `grocery-shopping-automation`, and `facilitation-shuffle`.
+
 ```
-transcribe_voice/
+voice-transcriber/
 ├── launcher.py                    # entry point (python launcher.py tray|record|gui|…)
 ├── setup.bat                      # one-shot: venv + pip + whisper.cpp + model
-├── tray.bat                       # default daily launcher
-├── transcribe_voice.bat           # main window launcher
-├── quick_record*.bat              # Stream-Deck one-shots
+├── tray.bat                       # default daily launcher (also boots the webapp)
+├── webapp.bat                     # standalone FastAPI webapp launcher
+├── webapp_tunnel.bat              # webapp + Cloudflare quick tunnel
 ├── server.bat                     # raw server start|stop|status|logs
 ├── requirements.txt
 ├── .gitignore
-├── config/
-│   └── config.json                # app config (language, hotkey, mics)
-├── cli/
-│   ├── main.py                    # argparse dispatcher
-│   └── commands/                  # record, transcribe, gui, tray, server
-├── core/
+├── src/                           # ── LOGIC layer (no UI imports) ──
 │   ├── app_config.py              # AppConfig loader
 │   ├── recorder.py                # sounddevice capture
-│   └── transcription_client.py    # HTTP → whisper server
-├── gui/
-│   ├── app.py                     # tkinter main window
-│   ├── tray.py                    # pystray + pynput hotkey
-│   └── recording_popup.py         # compact VU popup
-├── whisper_server/
-│   ├── manager.py                 # spawn / kill / health / PID / describe
-│   └── whisper_server.yaml        # mode, paths, port, CLI args
+│   ├── transcription_client.py    # HTTP → whisper server
+│   ├── diagnostics.py             # log ring + port-owner introspection
+│   ├── polish.py                  # local-llm-hub client (filler-word polish)
+│   ├── archive.py                 # dated session folders + 30-day cleanup
+│   ├── webapp_config.py           # typed loader for config/webapp_config.json
+│   └── whisper_server/
+│       ├── manager.py             # spawn / kill / health / PID / describe
+│       └── whisper_server.yaml    # mode, paths, port, CLI args
+├── app/                           # ── UI surfaces ──
+│   ├── gui/
+│   │   ├── app.py                 # tkinter main window (with polish row)
+│   │   ├── tray.py                # pystray + pynput hotkey + webapp lifecycle
+│   │   ├── recording_popup.py     # compact VU popup
+│   │   └── diagnostics_window.py
+│   ├── cli/
+│   │   ├── main.py                # argparse dispatcher
+│   │   └── commands/              # record, transcribe, gui, tray, server
+│   └── webapp/                    # FastAPI mobile-first web UI
+│       ├── server.py              # routes + lifespan (cleanup on boot)
+│       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
+│       └── static/
+│           ├── index.html         # single-page UI, big-button mobile-first
+│           ├── app.js             # MediaRecorder + chunked upload + clipboard
+│           └── styles.css         # touch targets ≥ 56 px
+├── config/
+│   ├── config.json                # app config (language, hotkey, mics, webapp section)
+│   ├── webapp_config.json         # gitignored — polish model, retention, mic prefs
+│   └── webapp_config.sample.json  # committed schema example
+├── docs/
+│   └── 2026-05-07-mobile-webapp-and-repo-cleanup.md   # design doc
 ├── scripts/
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
-│   └── download_model.py          # fetch ggml model from HF
+│   ├── download_model.py          # fetch ggml model from HF
+│   └── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
+├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
         ├── whisper-server(.exe)
@@ -226,6 +247,158 @@ spawning so the bundled DLLs load cleanly.
 
 To force CPU-only inference at runtime (after install), add `-ng`
 (or `--no-gpu`) to the `args` list in `whisper_server.yaml`.
+
+## 📱 Mobile web app
+
+A FastAPI web interface lives at `https://<host>:8443`. It is a
+WhisperFlow-equivalent for the iPhone (and any other browser): one big
+button to record, audio streams to the PC as you speak, the transcript
+comes back, one tap copies it. An optional second tap polishes through
+the local LLM hub (filler-word removal, no rephrasing).
+
+### Where to launch from, where to reach it
+
+| Where you are | What to launch | How to reach it |
+|---|---|---|
+| Sitting at the PC | `tray.bat` (or already running) | `https://127.0.0.1:8443` |
+| iPhone, on tailnet | `tray.bat` on the PC | `https://<pc-tailscale-name>:8443` |
+| iPhone, no tailnet (work) | `webapp_tunnel.bat` on the PC | URL printed by cloudflared, also written to `webapp/last_tunnel_url.txt` |
+| Headless box / dev | `webapp.bat` | `https://127.0.0.1:8443` |
+
+In the daily flow you never touch `webapp.bat`. The tray adopts-or-spawns
+uvicorn the same way it adopts-or-spawns whisper-server. To opt out, set
+`"webapp": {"enabled": false}` in `config/config.json`.
+
+### First-time setup (one-time per device)
+
+The webapp uses HTTPS with a self-signed CA so iOS Safari will allow
+microphone access. Three one-time steps to make a phone "remember"
+everything:
+
+#### 1. PC: generate the certificate
+
+```powershell
+& .\.venv\Scripts\python.exe scripts\gen_ssl_cert.py
+```
+
+This writes `webapp/certificates/{ca.pem,cert.pem,key.pem}`, copies the
+iOS profile (`voice-transcriber-ca.mobileconfig`) and Android-friendly
+DER (`ca.crt`) into `app/webapp/static/`, and installs the CA into the
+Windows user trust store via `certutil` (no admin required). The cert
+covers `127.0.0.1`, your LAN IP, your Tailscale IPv4, `localhost`, your
+hostname, and your tailnet DNS name. Valid 10 years. Re-run this if any
+of those addresses change.
+
+Then restart the tray (right-click tray icon → Quit, then `tray.bat`)
+so uvicorn picks up the cert. From then on it runs HTTPS automatically
+whenever the cert files exist.
+
+#### 2. iPhone: trust the CA (so Safari doesn't warn)
+
+1. Open Tailscale on your iPhone, confirm the green dot.
+2. Safari → `https://<pc-tailscale-name>:8443/install-ca`
+   (e.g. `https://tower.tail1121fd.ts.net:8443/install-ca`).
+   First connection may show "Not Secure" — tap **Advanced → Proceed**
+   once to download the profile.
+3. iOS shows "Profile Downloaded".
+4. **Settings → General → VPN & Device Management** → tap
+   *Voice Transcriber Trust* → **Install** (Face ID + passcode).
+5. **Settings → General → About → Certificate Trust Settings** →
+   toggle on **Voice Transcriber Local CA**.
+6. Reload `https://<pc-tailscale-name>:8443` — green padlock, no
+   warnings, ever.
+
+> **Always type `https://`** when entering the URL by hand. Without the
+> scheme, Chrome/Safari default to `http://` and uvicorn (which is
+> serving TLS) will close the connection — you'll see
+> `ERR_CONNECTION_CLOSED`.
+
+#### 3. iPhone: persistent microphone permission
+
+Mobile Safari prompts for the mic on every fresh page load by default.
+Two ways around that:
+
+**Best — Add to Home Screen (PWA mode).**
+In Safari, share sheet → **Add to Home Screen** → name it (e.g.
+"Voice"). Launch from that icon from now on. iOS treats it as a
+standalone app and persists mic permission across launches —
+WhisperFlow-style.
+
+**Belt + suspenders — whitelist the site.**
+Settings → Safari → Settings for Websites → **Microphone** → tap your
+host → set to **Allow**. Same for **Camera** while you're there.
+
+Within a single page session the app already keeps the mic stream alive
+between recordings, so back-to-back records never re-prompt regardless
+of these steps.
+
+### Daily use
+
+Open the home-screen icon → tap the big red **⬤ RECORD** circle →
+speak → tap **◼︎ STOP**. The transcript appears, auto-copied to the
+clipboard, ready to paste anywhere. Optional second tap on **✨ Polish**
+runs the transcript through the local LLM hub for filler-word removal,
+auto-copies the polished version.
+
+While recording, audio is streamed to the PC every second and persisted
+to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
+the connection drops mid-record, the partial recording is still on the
+PC — the **📜 History** view's *🔁 Re-transcribe* button replays whisper
+on any saved take.
+
+### What the status line tells you
+
+The line under the record button reports exactly which step is running
+so a long take never feels stuck:
+
+| Phase | Message |
+|---|---|
+| Live recording | `Recording · 24.3 KB streamed to PC` (live byte counter) |
+| Stop, chunks pending | `Finalising upload · 2 chunks left` |
+| Server processing | `Server: ffmpeg → whisper · 1m 4s of audio…` |
+| Done | `Done in 3.2 s · 20.0× realtime — tap Copy or Polish` |
+| Polish in flight | `LLM hub → claude-haiku-4-5 · polishing…` |
+| Polish done | `Polished in 1.4 s — tap Copy` |
+
+### Polish models
+
+Defaults to `gemma4-e4b-it` (smallest, fastest model in
+[`local-llm-hub`](#-see-also)). Larger options: `gemma4-26b-a4b-it`,
+`claude-haiku-4-5`. The dropdown in the polish row lets you pick
+per-take. The **⭐** button persists your choice to
+`config/webapp_config.json` so the next launch defaults to it.
+
+The polish prompt is hard-coded:
+
+> Remove filler words (uh, um, like, you know, sort of, kind of), false
+> starts, and word repetitions. Do not summarize. Do not rephrase. Do
+> not reorder sentences. Do not add new ideas. Do not remove any ideas.
+
+The same polish step is available in the tk main window
+(`python launcher.py gui`) — both surfaces share `webapp_config.json`,
+so setting a default from one syncs to the other.
+
+### History and cleanup
+
+Every recording lands in `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with
+`raw.webm`, transcoded `audio.wav`, `transcript.txt`, `polished.txt`,
+and `meta.json`. The directory is gitignored. Sessions older than 30
+days are auto-deleted on app start (configurable in
+`webapp_config.json`). A **🗑️ Clean all** button in the History view
+nukes everything.
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| `ERR_CONNECTION_CLOSED` on iPhone | Typed without `https://` — Chrome tried HTTP, uvicorn closed the TLS port | Type the full `https://...:8443` URL |
+| `Init failed: Load failed` toast | Tailscale on iPhone briefly dropped while Safari held a stale TLS connection | Pull down on the page to reload — init now retries automatically and falls back to defaults |
+| iOS prompts for mic on every record | Loaded from Safari URL bar, not from a Home Screen icon | **Add to Home Screen** and launch from the icon. Or whitelist the site under Settings → Safari → Settings for Websites → Microphone |
+| Polish fails with `502 hub returned…upstream :8086 unreachable` | Selected polish model's local llama-server isn't running | Start it from the local-llm-hub tray (Models submenu → toggle on), or pick `claude-haiku-4-5` in the dropdown — that one routes via your Claude subscription and doesn't need a local backend |
+| Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings (best-effort — iOS doesn't always expose enough info to override its routing) |
+| Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button now writes a single `text/plain` MIME type via `ClipboardItem` and clears any active selection first |
+| Cert worked yesterday, browser warns today | Your LAN IP or Tailscale name changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the webapp |
+| Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |
 
 ## 🔗 See also
 

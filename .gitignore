@@ -29,3 +29,11 @@ Thumbs.db
 
 # --- Config overrides (keep the committed template) -----------------------
 config/config.local.json
+config/webapp_config.json
+
+# --- Webapp runtime data --------------------------------------------------
+archive/
+webapp/last_tunnel_url.txt
+webapp/certificates/
+app/webapp/static/voice-transcriber-ca.mobileconfig
+app/webapp/static/ca.crt

@@ -1,0 +1,16 @@
+{
+  "_comment": "Copy this file to webapp_config.json (gitignored) or let the webapp create it on the first 'Set as default' tap. All keys are optional — missing keys fall back to the defaults documented in src/webapp_config.py.",
+  "polish_model_default": "gemma4-e4b-it",
+  "polish_models_available": [
+    "gemma4-e4b-it",
+    "gemma4-26b-a4b-it",
+    "claude-haiku-4-5"
+  ],
+  "llm_hub_url": "http://127.0.0.1:8000",
+  "host": "0.0.0.0",
+  "port": 8443,
+  "history_retention_days": 30,
+  "force_builtin_mic_default": false,
+  "preferred_mic_id": null,
+  "auth_token": ""
+}

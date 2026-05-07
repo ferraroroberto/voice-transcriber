@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Voice">
+  <meta name="theme-color" content="#0a0a0a">
+  <link rel="manifest" href="/static/manifest.webmanifest">
+  <link rel="stylesheet" href="/static/styles.css">
+  <title>🎙️ Voice Transcribe</title>
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1>🎙️ Voice Transcribe</h1>
+      <button id="settingsToggle" class="icon-btn" type="button" aria-label="Settings">⚙️</button>
+    </header>
+
+    <section id="recordZone" class="record-zone">
+      <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
+        <span id="recordLabel" class="record-label">⬤ RECORD</span>
+        <span id="recordTimer" class="record-timer" hidden>00:00</span>
+      </button>
+      <div id="recordStatus" class="record-status">Tap to start</div>
+      <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+    </section>
+
+    <section class="card transcript-card">
+      <div class="card-header">
+        <h2>Transcript</h2>
+        <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
+      </div>
+      <div id="transcript" class="text-out" placeholder="Your dictation will appear here"></div>
+    </section>
+
+    <section class="card polish-card">
+      <div class="card-header">
+        <h2>✨ Polish</h2>
+        <div class="row">
+          <select id="polishModel" class="select-native"></select>
+          <button id="setDefaultModel" type="button" class="ghost-btn" title="Set selected as default">⭐</button>
+        </div>
+      </div>
+      <div class="row">
+        <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>✨ Polish transcript</button>
+        <button id="copyPolished" class="copy-btn" type="button" disabled>📋 Copy</button>
+      </div>
+      <div id="polished" class="text-out"></div>
+    </section>
+
+    <details class="card history-card">
+      <summary>📜 History (<span id="historyCount">0</span>)</summary>
+      <div class="history-actions">
+        <button id="refreshHistory" type="button" class="ghost-btn">🔄 Refresh</button>
+        <button id="cleanAll" type="button" class="danger-btn">🗑️ Clean all</button>
+      </div>
+      <ul id="historyList" class="history-list"></ul>
+    </details>
+
+    <aside id="settingsPanel" class="settings-panel" hidden>
+      <h2>Settings</h2>
+      <label class="row">
+        <span>Language</span>
+        <select id="languageSelect" class="select-native"></select>
+      </label>
+      <label class="row">
+        <span>Microphone</span>
+        <select id="micSelect" class="select-native"></select>
+      </label>
+      <label class="row toggle">
+        <span>Force built-in mic (skip Bluetooth)</span>
+        <input id="forceBuiltinMic" type="checkbox">
+      </label>
+      <label class="row">
+        <span>Auto-clean older than (days)</span>
+        <input id="retentionDays" type="number" min="1" max="365" class="input-native">
+      </label>
+      <div class="row">
+        <button id="saveSettings" type="button" class="big-btn">💾 Save</button>
+        <button id="closeSettings" type="button" class="ghost-btn">Close</button>
+      </div>
+      <hr>
+      <p class="muted small">
+        First time on iPhone? Install the trust profile:
+        <a href="/install-ca">/install-ca</a>
+      </p>
+      <p id="statusReadout" class="muted small"></p>
+    </aside>
+
+    <div id="toast" class="toast" hidden></div>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
