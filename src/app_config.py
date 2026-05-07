@@ -13,16 +13,18 @@ from typing import Dict, List, Optional, Tuple
 logger = logging.getLogger(__name__)
 
 # Supported dictation modes. The value is the whisper-server `language` hint.
-LANGUAGE_MODES: Tuple[str, ...] = ("english", "spanish")
+LANGUAGE_MODES: Tuple[str, ...] = ("english", "spanish", "italian")
 
 _MODE_TO_ISO: Dict[str, str] = {
     "english": "en",
     "spanish": "es",
+    "italian": "it",
 }
 
 LANGUAGE_MODE_LABELS: Dict[str, str] = {
     "english": "English",
     "spanish": "Spanish",
+    "italian": "Italian",
 }
 
 VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")

@@ -588,7 +588,7 @@ async def _transcribe_session_payload(
 
 
 def _iso_language(name: str) -> Optional[str]:
-    table = {"english": "en", "spanish": "es"}
+    table = {"english": "en", "spanish": "es", "italian": "it"}
     return table.get(name, name)
 
 

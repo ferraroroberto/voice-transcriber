@@ -75,6 +75,7 @@ Two config files live under the repo: one for the app, one for the server.
 |------------------------|------------|------------------|
 | `english` *(default)*  | English    | English          |
 | `spanish`              | Spanish    | Spanish          |
+| `italian`              | Italian    | Italian          |
 
 Hotkey uses [`pynput.keyboard.GlobalHotKeys`](https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys)
 syntax: angle-bracketed modifiers + a key, `+`-separated.
