@@ -340,6 +340,15 @@ clipboard, ready to paste anywhere. Optional second tap on **✨ Polish**
 runs the transcript through the local LLM hub for filler-word removal,
 auto-copies the polished version.
 
+The transcript and polished boxes are both editable — fix a misheard
+word before polishing, or tweak the polished output before copying.
+Edits are sent to the server on the next polish call so History matches
+what's on screen. You can also skip recording entirely: paste any text
+into the transcript box and tap **✨ Polish** — a text-only session is
+created and shows up in History alongside dictated takes. The
+**🧽 Reset** button under the record circle clears both boxes and the
+current session so the next record starts fresh.
+
 While recording, audio is streamed to the PC every second and persisted
 to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
 the connection drops mid-record, the partial recording is still on the

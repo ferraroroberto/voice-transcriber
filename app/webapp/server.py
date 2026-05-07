@@ -16,6 +16,7 @@ Routes:
     POST /api/sessions/{id}/chunk   → append a chunk (Phase 4 streaming)
     POST /api/sessions/{id}/finish  → close + transcode + transcribe (Phase 4)
     POST /api/sessions/{id}/polish  → run polish on the transcript
+    POST /api/polish-text           → polish pasted text (creates text-only session)
     POST /api/sessions/{id}/retranscribe → re-run whisper on a saved take
     GET  /api/sessions              → list (newest first)
     DELETE /api/sessions            → cleanup all
@@ -332,7 +333,15 @@ def create_app() -> FastAPI:
         if session is None:
             raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
 
-        transcript = session.read_transcript()
+        # The client may send the (possibly user-edited) transcript so the
+        # archive matches what's on screen. Persist it before polishing.
+        edited = body.get("transcript")
+        if isinstance(edited, str) and edited.strip():
+            session.write_transcript(edited)
+            session.write_meta()
+            transcript = edited
+        else:
+            transcript = session.read_transcript()
         if not transcript:
             raise HTTPException(
                 status_code=400,
@@ -342,6 +351,49 @@ def create_app() -> FastAPI:
         polish_client: PolishClient = request.app.state.polish_client
         try:
             result = polish_client.polish(transcript, model=model)
+        except PolishError as exc:
+            session.mark_polish_failed(model, str(exc))
+            session.write_meta()
+            raise HTTPException(status_code=502, detail=str(exc))
+
+        session.write_polished(
+            result.polished_text,
+            model=result.model,
+            request_payload=result.request_payload,
+            response_payload=result.response_payload,
+        )
+        session.write_meta()
+        return {
+            "session_id": session.session_id,
+            "polished": result.polished_text,
+            "model": result.model,
+        }
+
+    @app.post("/api/polish-text")
+    async def polish_text(request: Request) -> Dict[str, Any]:
+        """Polish arbitrary pasted text without a recording.
+
+        Creates a text-only session (no raw audio) so the result lands in
+        History alongside dictated takes.
+        """
+        body = await _maybe_json(request)
+        cfg: WebappConfig = request.app.state.webapp_config
+        text = body.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise HTTPException(status_code=400, detail="text is required")
+        model = str(body.get("model") or cfg.polish_model_default)
+        language = body.get("language")
+        if language is not None and not isinstance(language, str):
+            language = None
+
+        archive: SessionArchive = request.app.state.archive
+        session = archive.new_session(language=language)
+        session.write_transcript(text)
+        session.write_meta()
+
+        polish_client: PolishClient = request.app.state.polish_client
+        try:
+            result = polish_client.polish(text, model=model)
         except PolishError as exc:
             session.mark_polish_failed(model, str(exc))
             session.write_meta()

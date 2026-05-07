@@ -25,6 +25,7 @@
       </button>
       <div id="recordStatus" class="record-status">Tap to start</div>
       <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+      <button id="resetBtn" type="button" class="ghost-btn reset-btn">🧽 Reset</button>
     </section>
 
     <section class="card transcript-card">
@@ -32,7 +33,7 @@
         <h2>Transcript</h2>
         <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
       </div>
-      <div id="transcript" class="text-out" placeholder="Your dictation will appear here"></div>
+      <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Polish" rows="2"></textarea>
     </section>
 
     <section class="card polish-card">
@@ -47,7 +48,7 @@
         <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>✨ Polish transcript</button>
         <button id="copyPolished" class="copy-btn" type="button" disabled>📋 Copy</button>
       </div>
-      <div id="polished" class="text-out"></div>
+      <textarea id="polished" class="text-out editable" placeholder="Polished text will appear here — you can edit before copying" rows="2"></textarea>
     </section>
 
     <details class="card history-card">

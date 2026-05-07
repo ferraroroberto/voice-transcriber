@@ -32,6 +32,8 @@
     refreshHistory:   document.getElementById('refreshHistory'),
     cleanAll:         document.getElementById('cleanAll'),
 
+    resetBtn:         document.getElementById('resetBtn'),
+
     settingsToggle:   document.getElementById('settingsToggle'),
     settingsPanel:    document.getElementById('settingsPanel'),
     languageSelect:   document.getElementById('languageSelect'),
@@ -147,6 +149,18 @@
     els.copyTranscript.addEventListener('click', () => copyText(state.transcript, els.copyTranscript));
     els.copyPolished.addEventListener('click', () => copyText(state.polished, els.copyPolished));
 
+    // Keep state in sync with manual edits — paste, typing, deletion all flow through here.
+    els.transcript.addEventListener('input', () => {
+      state.transcript = els.transcript.value;
+      els.copyTranscript.disabled = !state.transcript;
+      els.polishBtn.disabled = !state.transcript;
+    });
+    els.polished.addEventListener('input', () => {
+      state.polished = els.polished.value;
+      els.copyPolished.disabled = !state.polished;
+    });
+
+    els.resetBtn.addEventListener('click', onReset);
     els.polishBtn.addEventListener('click', onPolish);
     els.setDefaultModel.addEventListener('click', onSetDefaultModel);
 
@@ -393,8 +407,8 @@
       const serverMs = Date.now() - t0;
       state.transcript = data.transcript || '';
       state.polished = '';
-      els.transcript.textContent = state.transcript || '(empty result)';
-      els.polished.textContent = '';
+      els.transcript.value = state.transcript;
+      els.polished.value = '';
       els.copyTranscript.disabled = !state.transcript;
       els.copyPolished.disabled = true;
       els.polishBtn.disabled = !state.transcript;
@@ -513,23 +527,41 @@
   // ----------------------------------------------------- polish
 
   async function onPolish() {
-    if (!state.transcript || !state.sessionId) return;
+    if (!state.transcript) return;
     const model = els.polishModel.value;
     els.polishBtn.disabled = true;
     els.polishBtn.textContent = '✨ Polishing…';
     els.recordStatus.textContent = `LLM hub → ${model} · polishing…`;
     const t0 = Date.now();
     try {
-      const r = await fetch(`/api/sessions/${state.sessionId}/polish`, {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({model}),
-      });
+      let r;
+      if (state.sessionId) {
+        // Send the (possibly edited) transcript so the archive matches
+        // what's on screen, then polish runs on it.
+        r = await fetch(`/api/sessions/${state.sessionId}/polish`, {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({model, transcript: state.transcript}),
+        });
+      } else {
+        // No recording yet — paste-and-polish flow. Backend creates a
+        // text-only session so it shows up in History.
+        r = await fetch('/api/polish-text', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            text: state.transcript,
+            model,
+            language: els.languageSelect.value,
+          }),
+        });
+      }
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
+      if (data.session_id) state.sessionId = data.session_id;
       const ms = Date.now() - t0;
       state.polished = data.polished || '';
-      els.polished.textContent = state.polished;
+      els.polished.value = state.polished;
       els.copyPolished.disabled = !state.polished;
       if (state.polished) await tryAutoCopy(state.polished);
       els.recordStatus.textContent =
@@ -543,6 +575,19 @@
       els.polishBtn.disabled = false;
       els.polishBtn.textContent = '✨ Polish transcript';
     }
+  }
+
+  function onReset() {
+    state.sessionId = null;
+    state.transcript = '';
+    state.polished = '';
+    els.transcript.value = '';
+    els.polished.value = '';
+    els.copyTranscript.disabled = true;
+    els.copyPolished.disabled = true;
+    els.polishBtn.disabled = true;
+    els.recordStatus.textContent = 'Tap to start';
+    els.levelFill.style.width = '0%';
   }
 
   async function onSetDefaultModel() {
@@ -636,8 +681,8 @@
       state.sessionId = id;
       state.transcript = data.transcript || '';
       state.polished = '';
-      els.transcript.textContent = state.transcript;
-      els.polished.textContent = '';
+      els.transcript.value = state.transcript;
+      els.polished.value = '';
       els.copyTranscript.disabled = !state.transcript;
       els.copyPolished.disabled = true;
       els.polishBtn.disabled = !state.transcript;
