@@ -1,9 +1,9 @@
 @echo off
 chcp 65001 >nul
 REM ============================================================================
-REM  WEBAPP — standalone FastAPI launcher (HTTPS on :8443)
+REM  WEBAPP - standalone FastAPI launcher (HTTPS on :8443)
 REM ----------------------------------------------------------------------------
-REM  Daily use: launch tray.bat instead — it adopt-or-spawns the webapp for
+REM  Daily use: launch tray.bat instead - it adopt-or-spawns the webapp for
 REM  you. This bat is for headless boxes, dev iteration, or when you want
 REM  the webapp without the tray icon and global hotkey.
 REM ============================================================================

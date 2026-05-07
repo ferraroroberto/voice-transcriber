@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 REM ============================================================================
-REM  WHISPER SERVER — start / stop / status / logs
+REM  WHISPER SERVER - start / stop / status / logs
 REM ----------------------------------------------------------------------------
 REM  Usage:
 REM    server.bat start

@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 REM ============================================================================
-REM  SETUP — one-shot installer for a fresh clone
+REM  SETUP - one-shot installer for a fresh clone
 REM ----------------------------------------------------------------------------
 REM  1. Creates .venv (if missing).
 REM  2. Installs Python deps from requirements.txt.
