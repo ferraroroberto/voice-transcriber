@@ -41,6 +41,7 @@ from src import (
     TranscriptionError,
 )
 from src.recorder import Recording
+from src.webapp_config import append_auth_token, load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from app.webapp.manager import WebappManager, load_config as load_webapp_runtime_config
 from .app import TranscriberApp
@@ -252,7 +253,13 @@ class TrayApp:
             self.root.quit()
 
     def _copy_webapp_url(self) -> None:
-        url = self.webapp.base_url
+        # Re-read the webapp config at copy-time so a freshly rotated
+        # token lands in the URL without needing a tray restart.
+        try:
+            token = load_webapp_config().auth_token
+        except Exception:
+            token = ""
+        url = append_auth_token(self.webapp.base_url, token)
         try:
             pyperclip.copy(url)
             self._notify("📋 Copied", url)

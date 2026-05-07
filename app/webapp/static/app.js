@@ -70,6 +70,44 @@
 
   // -------------------------------------------------------- bootstrap
 
+  // Pick up a `?token=…` from the URL on first load (typical when the
+  // user opens the tokenised URL the tray copied or `last_tunnel_url.txt`
+  // emitted), persist it to localStorage, and strip it from the visible
+  // URL so the bookmark / Home Screen icon stays clean. From then on
+  // every API fetch attaches `Authorization: Bearer <token>`.
+  const TOKEN_KEY = 'vt_auth_token';
+
+  function getStoredToken() {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; }
+    catch (_) { return ''; }
+  }
+
+  function captureTokenFromURL() {
+    try {
+      const url = new URL(window.location.href);
+      const tok = url.searchParams.get('token');
+      if (!tok) return;
+      try { localStorage.setItem(TOKEN_KEY, tok); } catch (_) {}
+      url.searchParams.delete('token');
+      const clean = url.pathname + (url.search ? url.search : '') + url.hash;
+      window.history.replaceState({}, '', clean);
+    } catch (_) {}
+  }
+
+  function authFetch(input, init) {
+    const tok = getStoredToken();
+    if (!tok) return fetch(input, init);
+    const opts = Object.assign({}, init || {});
+    const headers = new Headers(opts.headers || {});
+    if (!headers.has('Authorization')) {
+      headers.set('Authorization', 'Bearer ' + tok);
+    }
+    opts.headers = headers;
+    return fetch(input, opts);
+  }
+
+  captureTokenFromURL();
+
   init().catch(err => {
     console.error(err);
     showToast('Init failed: ' + err.message + ' — pull down to retry', 'error');
@@ -97,7 +135,7 @@
     let lastErr;
     for (let i = 0; i < (attempts || 2); i++) {
       try {
-        const r = await fetch(url, init || {});
+        const r = await authFetch(url, init || {});
         if (!r.ok) throw new Error(`${url} → ${r.status}`);
         return await r.json();
       } catch (err) {
@@ -214,7 +252,7 @@
 
   async function refreshStatus() {
     try {
-      const r = await fetch('/api/status');
+      const r = await authFetch('/api/status');
       if (!r.ok) return;
       const s = await r.json();
       const bits = [];
@@ -291,7 +329,7 @@
     // Re-enumerate now that labels may be visible (iOS reveals after grant).
     populateMics();
 
-    const sessionRes = await fetch('/api/sessions', {
+    const sessionRes = await authFetch('/api/sessions', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({language: els.languageSelect.value}),
@@ -354,7 +392,7 @@
     state.pendingUploads += 1;
     state.uploadChain = state.uploadChain.then(async () => {
       try {
-        const r = await fetch(`/api/sessions/${state.sessionId}/chunk`, {
+        const r = await authFetch(`/api/sessions/${state.sessionId}/chunk`, {
           method: 'POST',
           headers: { 'Content-Type': chunk.type || state.mimeType || 'audio/webm' },
           body: chunk,
@@ -391,7 +429,7 @@
       els.recordStatus.textContent =
         `Server: ffmpeg → whisper · ${formatDuration(elapsedSec)} of audio…`;
       const t0 = Date.now();
-      const r = await fetch(
+      const r = await authFetch(
         `/api/sessions/${state.sessionId}/finish?language=${encodeURIComponent(els.languageSelect.value)}`,
         {
           method: 'POST',
@@ -538,7 +576,7 @@
       if (state.sessionId) {
         // Send the (possibly edited) transcript so the archive matches
         // what's on screen, then polish runs on it.
-        r = await fetch(`/api/sessions/${state.sessionId}/polish`, {
+        r = await authFetch(`/api/sessions/${state.sessionId}/polish`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({model, transcript: state.transcript}),
@@ -546,7 +584,7 @@
       } else {
         // No recording yet — paste-and-polish flow. Backend creates a
         // text-only session so it shows up in History.
-        r = await fetch('/api/polish-text', {
+        r = await authFetch('/api/polish-text', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
           body: JSON.stringify({
@@ -593,7 +631,7 @@
   async function onSetDefaultModel() {
     const model = els.polishModel.value;
     try {
-      const r = await fetch('/api/config', {
+      const r = await authFetch('/api/config', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({polish_model_default: model}),
@@ -620,7 +658,7 @@
       history_retention_days: parseInt(els.retentionDays.value, 10) || 30,
     };
     try {
-      const r = await fetch('/api/config', {
+      const r = await authFetch('/api/config', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(patch),
@@ -637,7 +675,7 @@
 
   async function refreshHistory() {
     try {
-      const r = await fetch('/api/sessions?limit=50');
+      const r = await authFetch('/api/sessions?limit=50');
       const data = await r.json();
       const list = data.sessions || [];
       els.historyCount.textContent = list.length;
@@ -675,7 +713,7 @@
   async function retranscribe(id) {
     showToast('Re-transcribing…', 'success');
     try {
-      const r = await fetch(`/api/sessions/${id}/retranscribe`, { method: 'POST' });
+      const r = await authFetch(`/api/sessions/${id}/retranscribe`, { method: 'POST' });
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       state.sessionId = id;
@@ -696,7 +734,7 @@
   async function onCleanAll() {
     if (!confirm('Delete every saved recording and transcript?')) return;
     try {
-      const r = await fetch('/api/sessions', { method: 'DELETE' });
+      const r = await authFetch('/api/sessions', { method: 'DELETE' });
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       showToast(`Removed ${data.removed}`, 'success');

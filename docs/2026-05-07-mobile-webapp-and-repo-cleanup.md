@@ -443,3 +443,96 @@ the new one comes up. Hardened `init()`:
 
 No backend changes. No new dependencies. No new HTML elements. The whole
 afternoon was localised to `app.js` plus docs.
+
+---
+
+## Follow-up — bearer-token auth for the public tunnel (same day)
+
+Closes item #1 of `docs/todo.md`.
+
+### Why
+
+`webapp_tunnel.bat` puts the recorder on a public
+`https://*.trycloudflare.com` URL. Anyone who guesses or intercepts
+that URL while the tunnel is up can record / transcribe / polish on
+the home PC, burning local hardware and (for the `claude-*` models)
+Claude subscription quota. Tailscale-only / loopback paths are
+already gated by Tailscale's ACL, so this only matters when the
+tunnel is the exposure path — but it matters enough that the gate
+shouldn't be opt-in via a bespoke change. A built-in, dormant-by-
+default token gate covers it.
+
+### Design
+
+- **Default off.** `auth_token` defaults to `""` (already in the
+  dataclass before this change). With an empty token the middleware
+  short-circuits — every existing flow (tk window, Tailscale phone,
+  cloudflared) keeps working unchanged. Zero config required to
+  upgrade.
+- **Loopback always bypasses.** `client.host in {"127.0.0.1", "::1"}`
+  goes straight through. The tk main window's reuse of the API and
+  any local probe / script keeps working without the token. Per the
+  TODO's "simplest first cut": no Tailnet IP-range bypass — Tailscale
+  callers must carry the token too.
+- **Page boot is exempt.** `/`, `/static/*`, `/healthz`, `/install-ca`
+  remain reachable so the JS can load and pick up the token from
+  `?token=…` before any API call fires.
+- **Token accepted from header or query string.** Header is the
+  steady state (`Authorization: Bearer <token>`). Query string is the
+  bootstrap path: a phone navigating to `…/?token=…` for the very
+  first time. The JS strips `?token=` from the URL via
+  `history.replaceState` after stashing it in `localStorage`, so the
+  Home Screen icon stays clean.
+- **Constant-time compare.** `hmac.compare_digest` not `==`.
+
+### Files touched
+
+- `src/webapp_config.py` — added `append_auth_token(url, token)`
+  helper used by both the tray and the tunnel launcher.
+- `app/webapp/server.py` — `BearerTokenMiddleware` + `app.add_middleware(...)`,
+  reading the token via `getattr(app.state.webapp_config, ...)` so a
+  `/api/config` patch that rotates it takes effect without a restart.
+- `app/webapp/static/app.js` — boot-time `captureTokenFromURL()`,
+  `authFetch` wrapper, every `fetch(...)` call replaced with
+  `authFetch(...)`.
+- `app/gui/tray.py` — `_copy_webapp_url` now appends `?token=…` from a
+  fresh `load_webapp_config()` read at copy-time so a rotation
+  doesn't require a tray restart.
+- `scripts/run_tunnel.py` — when writing `last_tunnel_url.txt`,
+  appends `?token=…` and logs a hint if the token is set. Stale
+  follow-up note removed from the docstring.
+- `scripts/gen_token.py` (new) — `secrets.token_urlsafe(32)` →
+  `webapp_config.json` via `update_webapp_config(...)`. Flags:
+  `--force` rotates, `--clear` disables. Print-out includes the
+  full onboarding flow so the user doesn't need to dig through docs.
+- `config/webapp_config.sample.json` — `_comment_auth_token` line
+  pointing at the README section.
+- `README.md` — new "Optional: bearer-token auth" section under
+  "Mobile web app", plus two troubleshooting rows (401 vs 502).
+- `docs/todo.md` — item #1 marked shipped, original spec preserved
+  in a `<details>` block.
+
+### Validation
+
+- `py_compile` on every changed Python file.
+- The auth gate is dormant on this branch (the user did not run
+  `gen_token.py`), so the manual-test flow recorded above on the same
+  date continues to apply unchanged. Token-on flow was not exercised
+  end-to-end — to be tested when the user enables the gate. Test
+  matrix when they do:
+  - tk window: still works (loopback bypass).
+  - Tailscale phone without token: 401 → open the tokenised URL once
+    → all later visits work from `localStorage`.
+  - Cloudflare tunnel: same flow via `webapp/last_tunnel_url.txt`.
+  - Rotation (`gen_token.py --force`): old phones 401, new tokenised
+    URL re-bootstraps them.
+  - `gen_token.py --clear`: gate off again, behaviour identical to
+    pre-change.
+
+### Out of scope (intentionally)
+
+- Tailnet IP-range bypass — keeping it loopback-only forces the
+  Tailscale phone through the same auth path as a tunnel visitor,
+  which is the simpler mental model.
+- Any work on `automation/launcher` (item #2 of the TODO) — lives in
+  a different repo, kept separate per `docs/todo.md` process notes.

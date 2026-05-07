@@ -13,10 +13,11 @@ surface it. Streams cloudflared output to the console live.
 
 Press Ctrl+C to stop both processes cleanly.
 
-Note: a Cloudflare quick tunnel exposes the webapp publicly until the
-tunnel closes — set `WEBAPP_TOKEN` in `config/webapp_config.json` (or
-`auth_token`) to require a bearer token. (Token enforcement on inbound
-requests will land in a follow-up; today the tunnel is open auth.)
+When `auth_token` is set in `config/webapp_config.json`, the URL we
+persist already includes `?token=…` so the phone bootstraps its
+localStorage on the first visit. Token enforcement is performed
+server-side by `app/webapp/server.py`. Run `scripts/gen_token.py` to
+generate / rotate the token.
 """
 
 from __future__ import annotations
@@ -122,6 +123,16 @@ def _spawn_cloudflared(port: int) -> subprocess.Popen:
     )
 
 
+def _read_auth_token() -> str:
+    """Best-effort read of the bearer token without importing heavy deps."""
+    try:
+        from src.webapp_config import load_webapp_config  # local import — keep startup light
+        return (load_webapp_config().auth_token or "").strip()
+    except Exception as exc:
+        logger.debug(f"could not read auth_token: {exc}")
+        return ""
+
+
 def _stream_and_capture_url(proc: subprocess.Popen) -> None:
     """Tail cloudflared's stdout, echo to console, persist any URL match."""
     captured: str | None = None
@@ -133,11 +144,22 @@ def _stream_and_capture_url(proc: subprocess.Popen) -> None:
         match = URL_PATTERN.search(line)
         if match:
             captured = match.group(0)
+            token = _read_auth_token()
+            if token:
+                from src.webapp_config import append_auth_token
+                persisted = append_auth_token(captured, token)
+            else:
+                persisted = captured
             try:
                 TUNNEL_URL_FILE.parent.mkdir(parents=True, exist_ok=True)
-                TUNNEL_URL_FILE.write_text(captured + "\n", encoding="utf-8")
+                TUNNEL_URL_FILE.write_text(persisted + "\n", encoding="utf-8")
                 logger.info(f"📡 Tunnel URL → {TUNNEL_URL_FILE}")
-                logger.info(f"   {captured}")
+                logger.info(f"   {persisted}")
+                if token:
+                    logger.info(
+                        "🔐 auth_token is set — the URL above includes "
+                        "?token=… so the phone bootstraps on first load."
+                    )
             except OSError as exc:
                 logger.warning(f"⚠️  Could not write {TUNNEL_URL_FILE}: {exc}")
 

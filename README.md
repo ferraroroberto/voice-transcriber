@@ -396,6 +396,44 @@ days are auto-deleted on app start (configurable in
 `webapp_config.json`). A **🗑️ Clean all** button in the History view
 nukes everything.
 
+### Optional: bearer-token auth (for the public Cloudflare tunnel)
+
+The webapp ships with the auth gate **off** by default — `auth_token`
+is `""` in `config/webapp_config.json` and every caller (tk window,
+Tailscale phone, tunnel visitor) reaches the API freely. That's fine
+on a LAN. When you expose the webapp via `webapp_tunnel.bat`, the URL
+is public until the tunnel closes, and anyone who guesses or
+intercepts it can record / transcribe / polish on your hardware. Turn
+the gate on:
+
+```powershell
+& .\.venv\Scripts\python.exe scripts\gen_token.py
+```
+
+The script writes a strong `secrets.token_urlsafe(32)` into
+`webapp_config.json`. From then on:
+
+- **Loopback bypass.** The tk window and any local probe still hit the
+  API without the token. Local UX is unchanged.
+- **Tailscale + tunnel callers must present the token.** They pick it
+  up automatically the first time they open a tokenised URL:
+  - **Tray → 📋 Copy mobile URL** appends `?token=…` to the URL it
+    copies (works for both LAN/Tailscale and Cloudflare URLs).
+  - **`webapp_tunnel.bat`** writes the tokenised URL to
+    `webapp/last_tunnel_url.txt`.
+  - Open that URL once on the phone — the page stashes the token in
+    `localStorage` and strips `?token=…` from the visible URL so the
+    Home Screen icon stays clean. All later visits authenticate from
+    `localStorage`. Nothing to type.
+- **Rotation.** `python scripts/gen_token.py --force` writes a fresh
+  token. Re-open the new tokenised URL once on each device that should
+  keep working. Other devices stop working immediately.
+- **Disable.** `python scripts/gen_token.py --clear` returns the
+  webapp to no-auth.
+
+After enabling, rotating, or clearing the token, restart the tray /
+webapp process so the new config is loaded.
+
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -408,6 +446,8 @@ nukes everything.
 | Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button now writes a single `text/plain` MIME type via `ClipboardItem` and clears any active selection first |
 | Cert worked yesterday, browser warns today | Your LAN IP or Tailscale name changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the webapp |
 | Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |
+| `401 missing or invalid bearer token` on the phone | Token rotated (or never bootstrapped) on this device | Re-open the tokenised URL — Tray → 📋 Copy mobile URL, or `webapp/last_tunnel_url.txt`. The page extracts `?token=…` and stashes it in localStorage |
+| `502` instead of `401` on the phone | Tunnel down or webapp not listening — auth never ran | Start `webapp_tunnel.bat` (or the tray webapp), then retry |
 
 ## 🔗 See also
 

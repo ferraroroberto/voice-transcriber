@@ -15,6 +15,7 @@ import os
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import List, Optional
+from urllib.parse import urlencode, urlparse, urlunparse
 
 logger = logging.getLogger(__name__)
 
@@ -132,6 +133,23 @@ def update_webapp_config(**fields) -> WebappConfig:
     _validate(patched)
     save_webapp_config(patched)
     return patched
+
+
+def append_auth_token(url: str, token: Optional[str]) -> str:
+    """Return ``url`` with ``?token=<token>`` appended when ``token`` is set.
+
+    Used by the tray's "Copy mobile URL" and the cloudflared launcher so a
+    phone opening the link bootstraps its localStorage on the first visit
+    without the user typing anything. Falls through unchanged when the
+    token is empty (the auth gate is then disabled server-side anyway).
+    """
+    if not token:
+        return url
+    parsed = urlparse(url)
+    existing = parsed.query
+    extra = urlencode({"token": token})
+    new_query = f"{existing}&{extra}" if existing else extra
+    return urlunparse(parsed._replace(query=new_query))
 
 
 def _validate(cfg: WebappConfig) -> None:

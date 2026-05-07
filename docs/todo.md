@@ -7,7 +7,14 @@ in this folder.
 
 ---
 
-## 1. Cloudflare tunnel: enforce bearer-token auth
+## 1. Cloudflare tunnel: enforce bearer-token auth ✅ shipped 2026-05-07
+
+See the dated follow-up note in
+`docs/2026-05-07-mobile-webapp-and-repo-cleanup.md` and the
+"Optional: bearer-token auth" section of the README.
+
+<details>
+<summary>Original spec (kept for traceability)</summary>
 
 **Why.** `webapp_tunnel.bat` exposes the webapp on a public
 `https://*.trycloudflare.com` URL. Right now anyone who guesses or
@@ -57,6 +64,8 @@ here; an opaque bearer is enough since the webapp has no concept of
   unchanged).
 - README troubleshooting row added explaining 401 vs 502 for someone
   who forgets to update the token on the phone after rotating it.
+
+</details>
 
 ---
 
