@@ -50,6 +50,11 @@ from src import (
 )
 from src.archive import SessionArchive
 from src.polish import PolishClient, PolishError
+from src.polish_prompts import (
+    PolishPrompt,
+    get_prompt,
+    load_polish_prompts,
+)
 from src.webapp_config import (
     WebappConfig,
     load_webapp_config,
@@ -245,9 +250,20 @@ def create_app() -> FastAPI:
     async def get_config(request: Request) -> Dict[str, Any]:
         cfg: WebappConfig = request.app.state.webapp_config
         app_cfg = request.app.state.app_config
+        prompts = load_polish_prompts()
         return {
             "polish_model_default": cfg.polish_model_default,
             "polish_models_available": cfg.polish_models_available,
+            "polish_prompt_default": cfg.polish_prompt_default,
+            "polish_prompts": [
+                {
+                    "id": p.id,
+                    "label": p.label,
+                    "description": p.description,
+                    "system": p.system,
+                }
+                for p in prompts
+            ],
             "history_retention_days": cfg.history_retention_days,
             "force_builtin_mic_default": cfg.force_builtin_mic_default,
             "preferred_mic_id": cfg.preferred_mic_id,
@@ -260,6 +276,7 @@ def create_app() -> FastAPI:
         body = await request.json()
         allowed = {
             "polish_model_default",
+            "polish_prompt_default",
             "force_builtin_mic_default",
             "preferred_mic_id",
             "history_retention_days",
@@ -405,6 +422,7 @@ def create_app() -> FastAPI:
         body = await _maybe_json(request)
         cfg: WebappConfig = request.app.state.webapp_config
         model = str(body.get("model") or cfg.polish_model_default)
+        prompt = _resolve_prompt(body.get("prompt_id"), cfg)
 
         session = request.app.state.archive.get(session_id)
         if session is None:
@@ -427,9 +445,11 @@ def create_app() -> FastAPI:
 
         polish_client: PolishClient = request.app.state.polish_client
         try:
-            result = polish_client.polish(transcript, model=model)
+            result = polish_client.polish(
+                transcript, model=model, system=prompt.system,
+            )
         except PolishError as exc:
-            session.mark_polish_failed(model, str(exc))
+            session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
             session.write_meta()
             raise HTTPException(status_code=502, detail=str(exc))
 
@@ -438,12 +458,14 @@ def create_app() -> FastAPI:
             model=result.model,
             request_payload=result.request_payload,
             response_payload=result.response_payload,
+            prompt_id=prompt.id,
         )
         session.write_meta()
         return {
             "session_id": session.session_id,
             "polished": result.polished_text,
             "model": result.model,
+            "prompt_id": prompt.id,
         }
 
     @app.post("/api/polish-text")
@@ -459,6 +481,7 @@ def create_app() -> FastAPI:
         if not isinstance(text, str) or not text.strip():
             raise HTTPException(status_code=400, detail="text is required")
         model = str(body.get("model") or cfg.polish_model_default)
+        prompt = _resolve_prompt(body.get("prompt_id"), cfg)
         language = body.get("language")
         if language is not None and not isinstance(language, str):
             language = None
@@ -470,9 +493,9 @@ def create_app() -> FastAPI:
 
         polish_client: PolishClient = request.app.state.polish_client
         try:
-            result = polish_client.polish(text, model=model)
+            result = polish_client.polish(text, model=model, system=prompt.system)
         except PolishError as exc:
-            session.mark_polish_failed(model, str(exc))
+            session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
             session.write_meta()
             raise HTTPException(status_code=502, detail=str(exc))
 
@@ -481,12 +504,14 @@ def create_app() -> FastAPI:
             model=result.model,
             request_payload=result.request_payload,
             response_payload=result.response_payload,
+            prompt_id=prompt.id,
         )
         session.write_meta()
         return {
             "session_id": session.session_id,
             "polished": result.polished_text,
             "model": result.model,
+            "prompt_id": prompt.id,
         }
 
     @app.get("/api/sessions")
@@ -503,6 +528,7 @@ def create_app() -> FastAPI:
                     "language": s.meta.language,
                     "transcript_chars": s.meta.transcript_chars,
                     "polish_model": s.meta.polish_model,
+                    "polish_prompt_id": s.meta.polish_prompt_id,
                     "polish_succeeded": s.meta.polish_succeeded,
                     "raw_bytes": s.meta.raw_bytes,
                     "duration_seconds": s.meta.duration_seconds,
@@ -603,10 +629,23 @@ def _config_dict(cfg: WebappConfig) -> Dict[str, Any]:
     return {
         "polish_model_default": cfg.polish_model_default,
         "polish_models_available": cfg.polish_models_available,
+        "polish_prompt_default": cfg.polish_prompt_default,
         "history_retention_days": cfg.history_retention_days,
         "force_builtin_mic_default": cfg.force_builtin_mic_default,
         "preferred_mic_id": cfg.preferred_mic_id,
     }
+
+
+def _resolve_prompt(
+    prompt_id: Optional[str],
+    cfg: WebappConfig,
+) -> PolishPrompt:
+    """Pick the prompt the client asked for, falling back to config default
+    and finally to the first available entry."""
+    pid = prompt_id if isinstance(prompt_id, str) and prompt_id else None
+    if not pid:
+        pid = cfg.polish_prompt_default
+    return get_prompt(pid)
 
 
 # Module-level app for `uvicorn app.webapp.server:app`.

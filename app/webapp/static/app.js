@@ -21,11 +21,12 @@
     transcript:       document.getElementById('transcript'),
     copyTranscript:   document.getElementById('copyTranscript'),
 
-    polishModel:      document.getElementById('polishModel'),
-    setDefaultModel:  document.getElementById('setDefaultModel'),
-    polishBtn:        document.getElementById('polishBtn'),
-    copyPolished:     document.getElementById('copyPolished'),
-    polished:         document.getElementById('polished'),
+    polishModel:        document.getElementById('polishModel'),
+    polishStyle:        document.getElementById('polishStyle'),
+    polishPromptPreview: document.getElementById('polishPromptPreview'),
+    polishBtn:          document.getElementById('polishBtn'),
+    copyPolished:       document.getElementById('copyPolished'),
+    polished:           document.getElementById('polished'),
 
     historyCount:     document.getElementById('historyCount'),
     historyList:      document.getElementById('historyList'),
@@ -34,14 +35,12 @@
 
     resetBtn:         document.getElementById('resetBtn'),
 
-    settingsToggle:   document.getElementById('settingsToggle'),
     settingsPanel:    document.getElementById('settingsPanel'),
     languageSelect:   document.getElementById('languageSelect'),
     micSelect:        document.getElementById('micSelect'),
     forceBuiltinMic:  document.getElementById('forceBuiltinMic'),
     retentionDays:    document.getElementById('retentionDays'),
     saveSettings:     document.getElementById('saveSettings'),
-    closeSettings:    document.getElementById('closeSettings'),
     statusReadout:    document.getElementById('statusReadout'),
 
     toast:            document.getElementById('toast'),
@@ -152,6 +151,13 @@
     state.config = state.config || {
       polish_model_default: 'gemma4-e4b-it',
       polish_models_available: ['gemma4-e4b-it', 'gemma4-26b-a4b-it', 'claude-haiku-4-5'],
+      polish_prompt_default: 'filler-words',
+      polish_prompts: [{
+        id: 'filler-words',
+        label: 'Filler-word cleanup',
+        description: 'Remove uh/um/like, false starts, repetitions. No rephrasing.',
+        system: '(prompt unavailable — server is offline)',
+      }],
       languages: ['english', 'spanish', 'italian'],
       language_default: 'english',
       force_builtin_mic_default: false,
@@ -170,6 +176,16 @@
       if (model === state.config.polish_model_default) opt.selected = true;
       els.polishModel.appendChild(opt);
     }
+    els.polishStyle.innerHTML = '';
+    const prompts = state.config.polish_prompts || [];
+    for (const p of prompts) {
+      const opt = document.createElement('option');
+      opt.value = p.id;
+      opt.textContent = p.label || p.id;
+      if (p.id === state.config.polish_prompt_default) opt.selected = true;
+      els.polishStyle.appendChild(opt);
+    }
+    refreshPromptPreview();
     els.languageSelect.innerHTML = '';
     for (const lang of state.config.languages || []) {
       const opt = document.createElement('option');
@@ -180,6 +196,13 @@
     }
     els.forceBuiltinMic.checked = !!state.config.force_builtin_mic_default;
     els.retentionDays.value = state.config.history_retention_days;
+  }
+
+  function refreshPromptPreview() {
+    const prompts = (state.config && state.config.polish_prompts) || [];
+    const id = els.polishStyle.value;
+    const hit = prompts.find(p => p.id === id);
+    els.polishPromptPreview.value = hit ? hit.system : '';
   }
 
   function bindEvents() {
@@ -200,10 +223,11 @@
 
     els.resetBtn.addEventListener('click', onReset);
     els.polishBtn.addEventListener('click', onPolish);
-    els.setDefaultModel.addEventListener('click', onSetDefaultModel);
+    els.polishStyle.addEventListener('change', refreshPromptPreview);
 
-    els.settingsToggle.addEventListener('click', toggleSettings);
-    els.closeSettings.addEventListener('click', toggleSettings);
+    els.settingsPanel.addEventListener('toggle', () => {
+      if (els.settingsPanel.open) refreshStatus();
+    });
     els.saveSettings.addEventListener('click', onSaveSettings);
 
     els.refreshHistory.addEventListener('click', refreshHistory);
@@ -567,8 +591,9 @@
   async function onPolish() {
     if (!state.transcript) return;
     const model = els.polishModel.value;
+    const promptId = els.polishStyle.value || undefined;
     els.polishBtn.disabled = true;
-    els.polishBtn.textContent = '✨ Polishing…';
+    els.polishBtn.textContent = '…';
     els.recordStatus.textContent = `LLM hub → ${model} · polishing…`;
     const t0 = Date.now();
     try {
@@ -579,7 +604,11 @@
         r = await authFetch(`/api/sessions/${state.sessionId}/polish`, {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({model, transcript: state.transcript}),
+          body: JSON.stringify({
+            model,
+            prompt_id: promptId,
+            transcript: state.transcript,
+          }),
         });
       } else {
         // No recording yet — paste-and-polish flow. Backend creates a
@@ -590,6 +619,7 @@
           body: JSON.stringify({
             text: state.transcript,
             model,
+            prompt_id: promptId,
             language: els.languageSelect.value,
           }),
         });
@@ -611,7 +641,7 @@
       showToast('Polish failed: ' + truncate(err.message, 80), 'error');
     } finally {
       els.polishBtn.disabled = false;
-      els.polishBtn.textContent = '✨ Polish transcript';
+      els.polishBtn.textContent = 'Go';
     }
   }
 
@@ -628,31 +658,12 @@
     els.levelFill.style.width = '0%';
   }
 
-  async function onSetDefaultModel() {
-    const model = els.polishModel.value;
-    try {
-      const r = await authFetch('/api/config', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({polish_model_default: model}),
-      });
-      if (!r.ok) throw new Error(await r.text());
-      showToast(`Default → ${model}`, 'success');
-      await loadConfig();
-    } catch (err) {
-      showToast('Save failed: ' + err.message, 'error');
-    }
-  }
-
   // ----------------------------------------------------- settings
-
-  function toggleSettings() {
-    els.settingsPanel.hidden = !els.settingsPanel.hidden;
-    if (!els.settingsPanel.hidden) refreshStatus();
-  }
 
   async function onSaveSettings() {
     const patch = {
+      polish_model_default: els.polishModel.value,
+      polish_prompt_default: els.polishStyle.value,
       force_builtin_mic_default: els.forceBuiltinMic.checked,
       preferred_mic_id: els.micSelect.value || null,
       history_retention_days: parseInt(els.retentionDays.value, 10) || 30,

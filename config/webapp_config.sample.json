@@ -7,6 +7,8 @@
     "gemma4-26b-a4b-it",
     "claude-haiku-4-5"
   ],
+  "_comment_polish_prompts": "polish_prompt_default picks one of the entries in config/polish_prompts.json (committed). Add new entries there to expose more polish styles in the webapp + tk window — no code change needed.",
+  "polish_prompt_default": "filler-words",
   "llm_hub_url": "http://127.0.0.1:8000",
   "host": "0.0.0.0",
   "port": 8443,

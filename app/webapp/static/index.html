@@ -15,7 +15,7 @@
   <main class="app">
     <header class="header">
       <h1>🎙️ Voice Transcribe</h1>
-      <button id="settingsToggle" class="icon-btn" type="button" aria-label="Settings">⚙️</button>
+      <button id="resetBtn" type="button" class="ghost-btn header-reset-btn">🧽 Reset</button>
     </header>
 
     <section id="recordZone" class="record-zone">
@@ -25,43 +25,42 @@
       </button>
       <div id="recordStatus" class="record-status">Tap to start</div>
       <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
-      <button id="resetBtn" type="button" class="ghost-btn reset-btn">🧽 Reset</button>
     </section>
 
     <section class="card transcript-card">
       <div class="card-header">
-        <h2>Transcript</h2>
+        <h2>🎙️ Transcript</h2>
         <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
       </div>
-      <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Polish" rows="2"></textarea>
+      <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Go" rows="5"></textarea>
     </section>
 
     <section class="card polish-card">
       <div class="card-header">
         <h2>✨ Polish</h2>
-        <div class="row">
-          <select id="polishModel" class="select-native"></select>
-          <button id="setDefaultModel" type="button" class="ghost-btn" title="Set selected as default">⭐</button>
+        <div class="row card-header-actions">
+          <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>Go</button>
+          <button id="copyPolished" class="copy-btn" type="button" disabled>📋 Copy</button>
         </div>
       </div>
-      <div class="row">
-        <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>✨ Polish transcript</button>
-        <button id="copyPolished" class="copy-btn" type="button" disabled>📋 Copy</button>
-      </div>
-      <textarea id="polished" class="text-out editable" placeholder="Polished text will appear here — you can edit before copying" rows="2"></textarea>
+      <textarea id="polished" class="text-out editable" placeholder="Polished text will appear here — you can edit before copying" rows="5"></textarea>
     </section>
 
-    <details class="card history-card">
-      <summary>📜 History (<span id="historyCount">0</span>)</summary>
-      <div class="history-actions">
-        <button id="refreshHistory" type="button" class="ghost-btn">🔄 Refresh</button>
-        <button id="cleanAll" type="button" class="danger-btn">🗑️ Clean all</button>
-      </div>
-      <ul id="historyList" class="history-list"></ul>
-    </details>
-
-    <aside id="settingsPanel" class="settings-panel" hidden>
-      <h2>Settings</h2>
+    <details id="settingsPanel" class="card settings-card">
+      <summary>⚙️ Settings</summary>
+      <label class="row">
+        <span>Polish model</span>
+        <select id="polishModel" class="select-native"></select>
+      </label>
+      <label class="row">
+        <span>Polish style</span>
+        <select id="polishStyle" class="select-native"></select>
+      </label>
+      <label class="stacked">
+        <span class="muted small">Prompt sent to the LLM (read-only preview)</span>
+        <textarea id="polishPromptPreview" class="text-out prompt-preview" rows="6" readonly></textarea>
+      </label>
+      <hr>
       <label class="row">
         <span>Language</span>
         <select id="languageSelect" class="select-native"></select>
@@ -80,7 +79,6 @@
       </label>
       <div class="row">
         <button id="saveSettings" type="button" class="big-btn">💾 Save</button>
-        <button id="closeSettings" type="button" class="ghost-btn">Close</button>
       </div>
       <hr>
       <p class="muted small">
@@ -88,7 +86,16 @@
         <a href="/install-ca">/install-ca</a>
       </p>
       <p id="statusReadout" class="muted small"></p>
-    </aside>
+    </details>
+
+    <details class="card history-card">
+      <summary>📜 History (<span id="historyCount">0</span>)</summary>
+      <div class="history-actions">
+        <button id="refreshHistory" type="button" class="ghost-btn">🔄 Refresh</button>
+        <button id="cleanAll" type="button" class="danger-btn">🗑️ Clean all</button>
+      </div>
+      <ul id="historyList" class="history-list"></ul>
+    </details>
 
     <div id="toast" class="toast" hidden></div>
   </main>

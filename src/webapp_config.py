@@ -32,6 +32,7 @@ DEFAULT_POLISH_MODELS = (
     "gemma4-26b-a4b-it",
     "claude-haiku-4-5",
 )
+DEFAULT_POLISH_PROMPT_ID = "filler-words"
 DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8443
@@ -46,6 +47,7 @@ class WebappConfig:
     polish_models_available: List[str] = field(
         default_factory=lambda: list(DEFAULT_POLISH_MODELS)
     )
+    polish_prompt_default: str = DEFAULT_POLISH_PROMPT_ID
     llm_hub_url: str = DEFAULT_LLM_HUB_URL
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
@@ -86,6 +88,9 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         polish_models_available=list(
             raw.get("polish_models_available") or DEFAULT_POLISH_MODELS
         ),
+        polish_prompt_default=str(
+            raw.get("polish_prompt_default", DEFAULT_POLISH_PROMPT_ID)
+        ),
         llm_hub_url=str(raw.get("llm_hub_url", DEFAULT_LLM_HUB_URL)),
         host=str(raw.get("host", DEFAULT_HOST)),
         port=int(raw.get("port", DEFAULT_PORT)),
@@ -110,6 +115,7 @@ def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
     payload = {
         "polish_model_default": cfg.polish_model_default,
         "polish_models_available": list(cfg.polish_models_available),
+        "polish_prompt_default": cfg.polish_prompt_default,
         "llm_hub_url": cfg.llm_hub_url,
         "host": cfg.host,
         "port": cfg.port,

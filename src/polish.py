@@ -86,18 +86,24 @@ class PolishClient:
         text: str,
         model: str,
         max_tokens: int = DEFAULT_MAX_TOKENS,
+        system: Optional[str] = None,
     ) -> PolishResult:
         """Send `text` through the hub for polishing. Returns the cleaned text
         plus the raw request/response payloads for archival.
+
+        ``system`` overrides the built-in filler-word prompt; pass the
+        ``system`` field of any entry from
+        :mod:`src.polish_prompts` to apply a different polish style.
         """
         if not text.strip():
             raise PolishError("nothing to polish (empty text)")
 
+        system_prompt = system if (system and system.strip()) else POLISH_SYSTEM_PROMPT
         url = self.base_url + "/v1/messages"
         payload = {
             "model": model,
             "max_tokens": max_tokens,
-            "system": POLISH_SYSTEM_PROMPT,
+            "system": system_prompt,
             "messages": [
                 {
                     "role": "user",

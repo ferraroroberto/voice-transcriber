@@ -58,6 +58,7 @@ class SessionMeta:
     duration_seconds: Optional[float] = None
     transcript_chars: int = 0
     polish_model: Optional[str] = None
+    polish_prompt_id: Optional[str] = None
     polish_succeeded: Optional[bool] = None
     error: Optional[str] = None
     extra: dict = field(default_factory=dict)
@@ -103,6 +104,7 @@ class Session:
         model: str,
         request_payload: dict,
         response_payload: dict,
+        prompt_id: Optional[str] = None,
     ) -> Path:
         (self.folder / POLISHED_FILENAME).write_text(
             polished_text, encoding="utf-8"
@@ -116,11 +118,18 @@ class Session:
             encoding="utf-8",
         )
         self.meta.polish_model = model
+        self.meta.polish_prompt_id = prompt_id
         self.meta.polish_succeeded = True
         return self.folder / POLISHED_FILENAME
 
-    def mark_polish_failed(self, model: str, error: str) -> None:
+    def mark_polish_failed(
+        self,
+        model: str,
+        error: str,
+        prompt_id: Optional[str] = None,
+    ) -> None:
         self.meta.polish_model = model
+        self.meta.polish_prompt_id = prompt_id
         self.meta.polish_succeeded = False
         self.meta.error = error
 
@@ -299,6 +308,7 @@ class SessionArchive:
                     duration_seconds=raw.get("duration_seconds"),
                     transcript_chars=int(raw.get("transcript_chars", 0)),
                     polish_model=raw.get("polish_model"),
+                    polish_prompt_id=raw.get("polish_prompt_id"),
                     polish_succeeded=raw.get("polish_succeeded"),
                     error=raw.get("error"),
                     extra=dict(raw.get("extra") or {}),

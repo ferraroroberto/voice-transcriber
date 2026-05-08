@@ -31,6 +31,11 @@ from src import (
     TranscriptionError,
 )
 from src.polish import PolishClient, PolishError
+from src.polish_prompts import (
+    PolishPrompt,
+    get_prompt,
+    load_polish_prompts,
+)
 from src.webapp_config import load_webapp_config, update_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .diagnostics_window import DiagnosticsWindow
@@ -66,6 +71,13 @@ class TranscriberApp:
         self.webapp_config = load_webapp_config()
         self.polish_client = PolishClient(self.webapp_config.llm_hub_url)
         self._last_polished: Optional[str] = None
+        # Multi-prompt polish: load the library at boot. Drop-down selection
+        # below mirrors the webapp's "Polish style" picker.
+        self.polish_prompts: list = load_polish_prompts()
+        self._prompt_label_to_id = {p.label: p.id for p in self.polish_prompts}
+        _default_prompt = get_prompt(
+            self.webapp_config.polish_prompt_default, self.polish_prompts,
+        )
 
         # When launched from the tray, live as a Toplevel of the tray's root so
         # both share one tk interpreter — and delegate record/quit/toasts back
@@ -95,6 +107,7 @@ class TranscriberApp:
         self.model_var = tk.StringVar(value="model: …")
         self.language_var = tk.StringVar(value=LANGUAGE_MODE_LABELS[config.language])
         self.polish_model_var = tk.StringVar(value=self.webapp_config.polish_model_default)
+        self.polish_style_var = tk.StringVar(value=_default_prompt.label)
 
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
@@ -229,15 +242,19 @@ class TranscriberApp:
             polish_header,
             textvariable=self.polish_model_var,
             state="readonly",
-            width=22,
+            width=18,
             values=tuple(self.webapp_config.polish_models_available),
         )
-        self.polish_model_combo.pack(side=tk.LEFT, padx=8)
+        self.polish_model_combo.pack(side=tk.LEFT, padx=(8, 4))
 
-        ttk.Button(
-            polish_header, text="⭐ Default", width=10,
-            command=self._set_default_polish_model,
-        ).pack(side=tk.LEFT)
+        self.polish_style_combo = ttk.Combobox(
+            polish_header,
+            textvariable=self.polish_style_var,
+            state="readonly",
+            width=18,
+            values=tuple(p.label for p in self.polish_prompts),
+        )
+        self.polish_style_combo.pack(side=tk.LEFT)
 
         self.polish_btn = ttk.Button(
             polish_header, text="✨ Polish", width=10,
@@ -259,6 +276,14 @@ class TranscriberApp:
 
         polish_actions = ttk.Frame(polish_frame)
         polish_actions.pack(fill=tk.X, pady=(4, 0))
+        ttk.Button(
+            polish_actions, text="⭐ Save defaults", width=15,
+            command=self._set_polish_defaults,
+        ).pack(side=tk.LEFT)
+        ttk.Button(
+            polish_actions, text="👁 Show prompt", width=14,
+            command=self._show_polish_prompt,
+        ).pack(side=tk.LEFT, padx=(6, 0))
         self.copy_polished_btn = ttk.Button(
             polish_actions, text="📋 Copy polished", command=self._copy_polished,
         )
@@ -330,15 +355,18 @@ class TranscriberApp:
         if not text:
             return
         model = self.polish_model_var.get()
+        prompt = self._current_prompt()
         self.polish_btn.state(["disabled"])
         self.polish_btn.config(text="✨ …")
         threading.Thread(
-            target=self._polish_worker, args=(text, model), daemon=True,
+            target=self._polish_worker,
+            args=(text, model, prompt.system),
+            daemon=True,
         ).start()
 
-    def _polish_worker(self, text: str, model: str) -> None:
+    def _polish_worker(self, text: str, model: str, system: str) -> None:
         try:
-            result = self.polish_client.polish(text, model=model)
+            result = self.polish_client.polish(text, model=model, system=system)
         except PolishError as exc:
             msg = str(exc)
             logger.error(f"❌ polish: {msg}")
@@ -371,7 +399,13 @@ class TranscriberApp:
             lambda: self.copy_polished_btn.config(text="📋 Copy polished"),
         )
 
-    def _set_default_polish_model(self) -> None:
+    def _current_prompt(self) -> PolishPrompt:
+        """Resolve the dropdown's label back to a PolishPrompt entry."""
+        label = self.polish_style_var.get()
+        pid = self._prompt_label_to_id.get(label)
+        return get_prompt(pid, self.polish_prompts)
+
+    def _set_polish_defaults(self) -> None:
         model = self.polish_model_var.get()
         if model not in self.webapp_config.polish_models_available:
             messagebox.showwarning(
@@ -379,12 +413,39 @@ class TranscriberApp:
                 f"{model!r} not in webapp_config.polish_models_available.",
             )
             return
+        prompt = self._current_prompt()
         try:
-            self.webapp_config = update_webapp_config(polish_model_default=model)
+            self.webapp_config = update_webapp_config(
+                polish_model_default=model,
+                polish_prompt_default=prompt.id,
+            )
         except (ValueError, OSError) as exc:
             messagebox.showerror("Save failed", str(exc))
             return
-        messagebox.showinfo("Polish default", f"Default → {model}")
+        messagebox.showinfo(
+            "Polish defaults",
+            f"Model → {model}\nStyle → {prompt.label}",
+        )
+
+    def _show_polish_prompt(self) -> None:
+        """Read-only popup with the system prompt about to be sent."""
+        prompt = self._current_prompt()
+        win = tk.Toplevel(self.root)
+        win.title(f"Polish prompt — {prompt.label}")
+        win.geometry("640x420")
+        win.transient(self.root)
+        if prompt.description:
+            ttk.Label(
+                win, text=prompt.description, wraplength=600,
+                font=("Segoe UI", 9, "italic"),
+            ).pack(fill=tk.X, padx=12, pady=(12, 4))
+        body = tk.Text(
+            win, wrap=tk.WORD, font=("Consolas", 10),
+            background="#F0F4FA", relief=tk.FLAT, borderwidth=1,
+        )
+        body.insert(tk.END, prompt.system)
+        body.configure(state=tk.DISABLED)
+        body.pack(fill=tk.BOTH, expand=True, padx=12, pady=(4, 12))
 
     def _copy_last(self) -> None:
         text = self._current_last_transcription()

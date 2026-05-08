@@ -45,15 +45,11 @@ html, body {
 }
 .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
 
-.icon-btn {
-  background: transparent;
-  color: var(--fg);
-  border: 0;
-  font-size: 22px;
-  width: 44px; height: 44px;
-  border-radius: 50%;
+.header-reset-btn {
+  font-size: 13px;
+  padding: 6px 12px;
+  min-height: 36px;
 }
-.icon-btn:active { background: var(--bg-elev-2); }
 
 /* ---------- record zone (above the fold) ---------- */
 .record-zone {
@@ -65,13 +61,13 @@ html, body {
 }
 
 .record-btn {
-  width: min(48vw, 187px);
-  height: min(48vw, 187px);
+  width: min(32vw, 125px);
+  height: min(32vw, 125px);
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
   border: 0;
-  font-size: 22px;
+  font-size: 18px;
   font-weight: 700;
   letter-spacing: 0.04em;
   box-shadow: 0 8px 20px rgba(230, 74, 60, 0.35);
@@ -96,8 +92,8 @@ html, body {
 }
 .record-btn[disabled] { background: #333; box-shadow: none; cursor: not-allowed; }
 
-.record-label { font-size: 22px; }
-.record-timer { font-size: 28px; margin-top: 6px; font-variant-numeric: tabular-nums; }
+.record-label { font-size: 16px; }
+.record-timer { font-size: 22px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 .record-status {
   margin-top: 12px;
@@ -142,7 +138,7 @@ html, body {
   background: var(--bg-elev-2);
   border-radius: 10px;
   padding: 12px;
-  min-height: 64px;
+  min-height: 120px;
   white-space: pre-wrap;
   word-wrap: break-word;
   font-size: 16px;
@@ -169,13 +165,6 @@ textarea.text-out.editable {
 }
 textarea.text-out.editable::placeholder {
   color: var(--muted);
-}
-
-.reset-btn {
-  margin-top: 8px;
-  align-self: center;
-  font-size: 13px;
-  padding: 8px 14px;
 }
 
 /* ---------- buttons ---------- */
@@ -230,6 +219,32 @@ textarea.text-out.editable::placeholder {
 }
 .row > span:first-child { flex: 1; }
 
+/* Card-header actions row: shrink so it fits next to the title without
+ * inheriting the form-row top/bottom margin. */
+.card-header-actions { margin: 0; }
+.card-header-actions .big-btn { flex: 0 0 auto; padding: 10px 18px; min-height: 40px; }
+.card-header-actions .copy-btn { min-width: 92px; padding: 10px 14px; min-height: 40px; }
+
+.stacked {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 8px 0;
+}
+
+.prompt-preview {
+  width: 100%;
+  background: var(--bg-elev-2);
+  color: var(--muted);
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
 .select-native, .input-native {
   background: var(--bg-elev-2);
   color: var(--fg);
@@ -278,15 +293,21 @@ textarea.text-out.editable::placeholder {
 .history-list li .actions { display: flex; gap: 6px; margin-top: 8px; }
 .history-list li .actions button { font-size: 13px; min-height: 36px; padding: 6px 10px; }
 
-/* ---------- settings panel ---------- */
-.settings-panel {
-  background: var(--bg-elev);
-  border-radius: var(--radius);
-  padding: 16px;
-  margin-top: 16px;
+/* ---------- settings panel (collapsible card, twin of history) ---------- */
+.settings-card { padding: 6px 14px; }
+.settings-card summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-size: 14px;
 }
-.settings-panel h2 { margin-top: 0; }
-.settings-panel hr { border: 0; border-top: 1px solid #2a2a2a; margin: 14px 0; }
+.settings-card summary::-webkit-details-marker { display: none; }
+.settings-card[open] summary { color: var(--fg); }
+.settings-card hr { border: 0; border-top: 1px solid #2a2a2a; margin: 14px 0; }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 
