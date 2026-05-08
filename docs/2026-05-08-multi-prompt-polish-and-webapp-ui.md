@@ -117,6 +117,25 @@ GET /static/index.html → 200, contains <select id="polishStyle">
   picks up the new endpoints. The tk main window also needs a restart
   for the new dropdown to appear.
 
+## Follow-up: paginated history
+
+Same day, second iteration. Heavy daily use means the 30-day archive
+balloons and dragging the entire list into the page on every refresh
+gets wasteful.
+
+- `archive.list_sessions()` grew an `offset` parameter (newest-first);
+  new `count_sessions()` returns the total.
+- `GET /api/sessions` now defaults to `limit=10` and accepts `offset`.
+  Response includes `total`, `offset`, `limit` so the client knows
+  whether more pages exist.
+- The webapp loads 10 by default; a `📥 Load more` button under the
+  list fetches the next 10 and appends them. Hides itself when the
+  full archive is shown. The summary shows `📜 History (10/23)` while
+  more is available, and just `(23)` when everything is loaded.
+
+The tk window's "last transcription" panel only ever showed one entry,
+so no parity work was needed there.
+
 ## Adding new polish styles later
 
 Append a new entry to `config/polish_prompts.json`:

@@ -201,16 +201,30 @@ class SessionArchive:
                 return self._hydrate(folder)
         return None
 
-    def list_sessions(self, limit: Optional[int] = None) -> List[Session]:
-        """Newest-first listing, optionally capped."""
+    def list_sessions(
+        self,
+        limit: Optional[int] = None,
+        offset: int = 0,
+    ) -> List[Session]:
+        """Newest-first listing, optionally paginated.
+
+        ``offset`` skips that many newest entries before applying ``limit``,
+        so the webapp can fetch the first 10, then the next 10, etc.
+        """
         sessions = sorted(
             (self._hydrate(f) for f in self._iter_session_folders()),
             key=lambda s: s.meta.created_at,
             reverse=True,
         )
+        if offset:
+            sessions = sessions[offset:]
         if limit is not None:
             sessions = sessions[:limit]
         return sessions
+
+    def count_sessions(self) -> int:
+        """Total session count — used by the webapp's "X of Y" hint."""
+        return sum(1 for _ in self._iter_session_folders())
 
     # ------------------------------------------------------ housekeeping
 

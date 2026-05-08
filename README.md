@@ -429,6 +429,12 @@ days are auto-deleted on app start (configurable in
 `webapp_config.json`). A **🗑️ Clean all** button in the History view
 nukes everything.
 
+The webapp's History panel loads the **10 newest** entries by default
+and shows a **📥 Load more** button at the bottom for the next 10. The
+summary line reads `📜 History (10/N)` while more pages exist and
+collapses to `(N)` once everything is loaded — keeps the page light
+even after weeks of daily use.
+
 ### Optional: bearer-token auth (for the public Cloudflare tunnel)
 
 The webapp ships with the auth gate **off** by default — `auth_token`

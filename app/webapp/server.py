@@ -516,10 +516,15 @@ def create_app() -> FastAPI:
 
     @app.get("/api/sessions")
     async def list_sessions(
-        request: Request, limit: int = 50
+        request: Request, limit: int = 10, offset: int = 0,
     ) -> Dict[str, Any]:
         archive: SessionArchive = request.app.state.archive
-        sessions = archive.list_sessions(limit=limit)
+        if limit < 1:
+            limit = 10
+        if offset < 0:
+            offset = 0
+        sessions = archive.list_sessions(limit=limit, offset=offset)
+        total = archive.count_sessions()
         return {
             "sessions": [
                 {
@@ -536,7 +541,10 @@ def create_app() -> FastAPI:
                     "polished_preview": _preview(s.read_polished(), 200),
                 }
                 for s in sessions
-            ]
+            ],
+            "total": total,
+            "offset": offset,
+            "limit": limit,
         }
 
     @app.delete("/api/sessions")

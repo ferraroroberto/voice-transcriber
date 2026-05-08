@@ -32,6 +32,7 @@
     historyList:      document.getElementById('historyList'),
     refreshHistory:   document.getElementById('refreshHistory'),
     cleanAll:         document.getElementById('cleanAll'),
+    loadMoreHistory:  document.getElementById('loadMoreHistory'),
 
     resetBtn:         document.getElementById('resetBtn'),
 
@@ -232,6 +233,7 @@
 
     els.refreshHistory.addEventListener('click', refreshHistory);
     els.cleanAll.addEventListener('click', onCleanAll);
+    els.loadMoreHistory.addEventListener('click', loadMoreHistory);
 
     // Switching mic / forcing built-in invalidates the cached stream so
     // the next record() picks up the new constraints (and re-prompts only
@@ -684,41 +686,65 @@
 
   // ----------------------------------------------------- history
 
+  const HISTORY_PAGE_SIZE = 10;
+
   async function refreshHistory() {
+    // Reset to page 1.
+    els.historyList.innerHTML = '';
+    await fetchHistoryPage(0);
+  }
+
+  async function loadMoreHistory() {
+    await fetchHistoryPage(els.historyList.children.length);
+  }
+
+  async function fetchHistoryPage(offset) {
     try {
-      const r = await authFetch('/api/sessions?limit=50');
+      els.loadMoreHistory.disabled = true;
+      const r = await authFetch(
+        `/api/sessions?limit=${HISTORY_PAGE_SIZE}&offset=${offset}`
+      );
       const data = await r.json();
       const list = data.sessions || [];
-      els.historyCount.textContent = list.length;
-      els.historyList.innerHTML = '';
+      const total = typeof data.total === 'number' ? data.total : list.length;
       for (const s of list) {
-        const li = document.createElement('li');
-        const when = document.createElement('div');
-        when.className = 'when';
-        when.textContent = s.created_at + (s.language ? ` · ${s.language}` : '');
-        const preview = document.createElement('div');
-        preview.className = 'preview';
-        preview.textContent = s.polished_preview || s.transcript_preview || '(no transcript)';
-        const actions = document.createElement('div');
-        actions.className = 'actions';
-
-        const copyBtn = document.createElement('button');
-        copyBtn.className = 'copy-btn';
-        copyBtn.textContent = '📋 Copy';
-        copyBtn.addEventListener('click', () => {
-          copyText(s.polished_preview || s.transcript_preview || '', copyBtn);
-        });
-
-        const reBtn = document.createElement('button');
-        reBtn.className = 'ghost-btn';
-        reBtn.textContent = '🔁 Re-transcribe';
-        reBtn.addEventListener('click', () => retranscribe(s.session_id));
-
-        actions.append(copyBtn, reBtn);
-        li.append(when, preview, actions);
-        els.historyList.appendChild(li);
+        els.historyList.appendChild(renderHistoryItem(s));
       }
+      const shown = els.historyList.children.length;
+      els.historyCount.textContent = total > shown ? `${shown}/${total}` : `${shown}`;
+      els.loadMoreHistory.hidden = shown >= total;
     } catch (err) { /* swallow */ }
+    finally {
+      els.loadMoreHistory.disabled = false;
+    }
+  }
+
+  function renderHistoryItem(s) {
+    const li = document.createElement('li');
+    const when = document.createElement('div');
+    when.className = 'when';
+    when.textContent = s.created_at + (s.language ? ` · ${s.language}` : '');
+    const preview = document.createElement('div');
+    preview.className = 'preview';
+    preview.textContent = s.polished_preview || s.transcript_preview || '(no transcript)';
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'copy-btn';
+    copyBtn.textContent = '📋 Copy';
+    copyBtn.addEventListener('click', () => {
+      copyText(s.polished_preview || s.transcript_preview || '', copyBtn);
+    });
+
+    const reBtn = document.createElement('button');
+    reBtn.className = 'ghost-btn';
+    reBtn.textContent = '🔁 Re-transcribe';
+    reBtn.addEventListener('click', () => retranscribe(s.session_id));
+
+    actions.append(copyBtn, reBtn);
+    li.append(when, preview, actions);
+    return li;
   }
 
   async function retranscribe(id) {
