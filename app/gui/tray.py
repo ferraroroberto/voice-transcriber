@@ -150,7 +150,7 @@ class TrayApp:
             pystray.MenuItem(lambda _item: self._cached_model_label(), None, enabled=False),
             pystray.MenuItem("ℹ Model info…", lambda: self._enqueue(EVT_MODEL_INFO)),
             pystray.Menu.SEPARATOR,
-            pystray.MenuItem(record_label, lambda: self._enqueue(EVT_TOGGLE_RECORD), default=True),
+            pystray.MenuItem(record_label, lambda: self._enqueue(EVT_TOGGLE_RECORD)),
             pystray.MenuItem("🪟 Open window", lambda: self._enqueue(EVT_OPEN_WINDOW)),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("▶ Start server", lambda: self._enqueue(EVT_START_SERVER)),
