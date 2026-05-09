@@ -61,6 +61,7 @@ class SessionMeta:
     polish_prompt_id: Optional[str] = None
     polish_succeeded: Optional[bool] = None
     error: Optional[str] = None
+    incognito: bool = False  # filtered out of list_sessions when True
     extra: dict = field(default_factory=dict)
 
 
@@ -172,6 +173,7 @@ class SessionArchive:
         language: Optional[str] = None,
         sample_rate: Optional[int] = None,
         now: Optional[datetime] = None,
+        incognito: bool = False,
     ) -> Session:
         ts = now or datetime.now()
         session_id = ts.strftime("%H-%M-%S-") + uuid.uuid4().hex[:8]
@@ -189,6 +191,7 @@ class SessionArchive:
             created_at=ts.isoformat(timespec="seconds"),
             language=language,
             sample_rate=sample_rate,
+            incognito=incognito,
         )
         session = Session(session_id=session_id, folder=folder, meta=meta)
         session.write_meta()
@@ -208,14 +211,15 @@ class SessionArchive:
     ) -> List[Session]:
         """Newest-first listing, optionally paginated.
 
-        ``offset`` skips that many newest entries before applying ``limit``,
-        so the webapp can fetch the first 10, then the next 10, etc.
+        Incognito sessions are excluded — they exist on disk while the
+        recording flow needs them but never surface in History.
         """
         sessions = sorted(
             (self._hydrate(f) for f in self._iter_session_folders()),
             key=lambda s: s.meta.created_at,
             reverse=True,
         )
+        sessions = [s for s in sessions if not s.meta.incognito]
         if offset:
             sessions = sessions[offset:]
         if limit is not None:
@@ -223,8 +227,21 @@ class SessionArchive:
         return sessions
 
     def count_sessions(self) -> int:
-        """Total session count — used by the webapp's "X of Y" hint."""
-        return sum(1 for _ in self._iter_session_folders())
+        """Total non-incognito session count — used by 'X of Y' hint."""
+        return sum(
+            1
+            for s in (self._hydrate(f) for f in self._iter_session_folders())
+            if not s.meta.incognito
+        )
+
+    def delete_session(self, session_id: str) -> bool:
+        """Remove one session folder. Returns True iff it existed."""
+        for folder in self._iter_session_folders():
+            if folder.name == session_id:
+                shutil.rmtree(folder, ignore_errors=True)
+                self._prune_empty_date_folders()
+                return True
+        return False
 
     # ------------------------------------------------------ housekeeping
 
@@ -325,6 +342,7 @@ class SessionArchive:
                     polish_prompt_id=raw.get("polish_prompt_id"),
                     polish_succeeded=raw.get("polish_succeeded"),
                     error=raw.get("error"),
+                    incognito=bool(raw.get("incognito", False)),
                     extra=dict(raw.get("extra") or {}),
                 )
             except (OSError, json.JSONDecodeError, TypeError) as exc:

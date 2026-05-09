@@ -388,14 +388,17 @@ def create_app() -> FastAPI:
         archive: SessionArchive = request.app.state.archive
         app_cfg = request.app.state.app_config
         language = body.get("language") or app_cfg.language
+        incognito = bool(body.get("incognito", False))
         session = archive.new_session(
             language=language,
             sample_rate=app_cfg.sample_rate,
+            incognito=incognito,
         )
         return {
             "session_id": session.session_id,
             "folder": str(session.folder),
             "created_at": session.meta.created_at,
+            "incognito": incognito,
         }
 
     @app.post("/api/sessions/{session_id}/upload")
@@ -641,6 +644,15 @@ def create_app() -> FastAPI:
         archive: SessionArchive = request.app.state.archive
         removed = archive.cleanup_all()
         return {"removed": removed}
+
+    @app.delete("/api/sessions/{session_id}")
+    async def delete_one_session(
+        session_id: str, request: Request
+    ) -> Dict[str, Any]:
+        archive: SessionArchive = request.app.state.archive
+        if not archive.delete_session(session_id):
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        return {"removed": session_id}
 
     @app.delete("/api/sessions/older-than/{days}")
     async def delete_old_sessions(

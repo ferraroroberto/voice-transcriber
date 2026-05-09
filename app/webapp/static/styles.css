@@ -78,6 +78,27 @@ html, body {
   color: var(--fg);
 }
 
+.incognito-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  padding: 4px 10px;
+  min-height: 36px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  cursor: pointer;
+  user-select: none;
+  opacity: 0.55;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+.incognito-btn:active { background: var(--bg-elev-2); }
+.incognito-btn:has(input:checked) {
+  opacity: 1;
+  border-color: var(--polish);
+  background: rgba(74, 138, 243, 0.18);
+}
+
 /* ---------- record zone (above the fold) ---------- */
 .record-zone {
   display: flex;

@@ -5,20 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Voice">
+  <meta name="apple-mobile-web-app-title" content="Whisper">
   <meta name="theme-color" content="#0a0a0a">
   <link rel="manifest" href="/static/manifest.webmanifest">
-  <link rel="stylesheet" href="/static/styles.css?v=9">
-  <title>🎙️ Voice Transcribe</title>
+  <link rel="stylesheet" href="/static/styles.css?v=10">
+  <title>🎙️ Whisper</title>
 </head>
 <body>
   <main class="app">
     <header class="header">
-      <h1>🎙️ Voice Transcribe</h1>
+      <h1>🎙️ Whisper</h1>
       <div class="header-actions">
         <label class="append-toggle" title="Append the next take to the current transcript instead of replacing it">
           <input id="appendToggle" type="checkbox">
           <span>➕ Append</span>
+        </label>
+        <label class="incognito-btn" title="Incognito — don't save this recording to history">
+          <input id="incognitoToggle" type="checkbox" hidden>
+          <span class="icon">🕵️</span>
         </label>
         <button id="resetBtn" type="button" class="ghost-btn header-reset-btn">🧽 Reset</button>
       </div>
@@ -125,6 +129,6 @@
     </form>
   </div>
 
-  <script src="/static/app.js?v=8"></script>
+  <script src="/static/app.js?v=10"></script>
 </body>
 </html>

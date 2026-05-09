@@ -37,6 +37,7 @@
 
     resetBtn:         document.getElementById('resetBtn'),
     appendToggle:     document.getElementById('appendToggle'),
+    incognitoToggle:  document.getElementById('incognitoToggle'),
 
     loginOverlay:     document.getElementById('loginOverlay'),
     loginForm:        document.getElementById('loginForm'),
@@ -56,6 +57,11 @@
 
   const state = {
     sessionId:   null,
+    // Tracks the most recent incognito session so we can DELETE it
+    // from the server when the user starts another recording or hits
+    // Reset — keeps incognito sessions from piling up on disk even
+    // though they're already filtered out of the History list.
+    incognitoSessionId: null,
     recorder:    null,
     stream:      null,
     streamKey:   '',          // constraints fingerprint for the cached stream
@@ -441,10 +447,18 @@
     // Re-enumerate now that labels may be visible (iOS reveals after grant).
     populateMics();
 
+    // If we left an incognito session lingering from a previous take,
+    // clean it up before starting a new one so disk stays tidy.
+    await cleanupIncognitoSession();
+
+    const incognito = !!els.incognitoToggle.checked;
     const sessionRes = await authFetch('/api/sessions', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({language: els.languageSelect.value}),
+      body: JSON.stringify({
+        language: els.languageSelect.value,
+        incognito,
+      }),
     });
     if (!sessionRes.ok) {
       stream.getTracks().forEach(t => t.stop());
@@ -454,6 +468,7 @@
     }
     const session = await sessionRes.json();
     state.sessionId = session.session_id;
+    if (incognito) state.incognitoSessionId = session.session_id;
 
     const mimeType = pickMimeType();
     state.mimeType = mimeType;
@@ -749,6 +764,7 @@
   }
 
   function onReset() {
+    cleanupIncognitoSession();
     state.sessionId = null;
     state.transcript = '';
     state.polished = '';
@@ -759,6 +775,17 @@
     els.polishBtn.disabled = true;
     els.recordStatus.textContent = 'Tap to start';
     els.levelFill.style.width = '0%';
+  }
+
+  async function cleanupIncognitoSession() {
+    const id = state.incognitoSessionId;
+    if (!id) return;
+    state.incognitoSessionId = null;
+    try {
+      await authFetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    } catch (_) {
+      // best-effort — server-side retention will reap it eventually
+    }
   }
 
   // ----------------------------------------------------- settings
@@ -871,7 +898,24 @@
     reBtn.textContent = '🔁 Re-transcribe';
     reBtn.addEventListener('click', () => retranscribe(s.session_id));
 
-    actions.append(copyBtn, reBtn);
+    const delBtn = document.createElement('button');
+    delBtn.className = 'ghost-btn';
+    delBtn.textContent = '🗑️ Delete';
+    delBtn.addEventListener('click', async () => {
+      if (!confirm('Delete this take?')) return;
+      try {
+        const r = await authFetch(`/api/sessions/${s.session_id}`, {
+          method: 'DELETE',
+        });
+        if (!r.ok) throw new Error(await r.text());
+        // Refresh the whole list so counts and pagination stay correct.
+        refreshHistory();
+      } catch (err) {
+        showToast('Delete failed: ' + (err.message || err), 'error');
+      }
+    });
+
+    actions.append(copyBtn, reBtn, delBtn);
     content.append(when, preview, actions);
     li.append(selectLabel, content);
     return li;
