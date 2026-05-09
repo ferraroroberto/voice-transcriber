@@ -31,6 +31,7 @@ from src import (
     TranscriptionError,
 )
 from src.polish import PolishClient, PolishError
+from src.silence import is_silent, rms_dbfs_from_samples
 from src.polish_prompts import (
     PolishPrompt,
     get_prompt,
@@ -108,6 +109,11 @@ class TranscriberApp:
         self.language_var = tk.StringVar(value=LANGUAGE_MODE_LABELS[config.language])
         self.polish_model_var = tk.StringVar(value=self.webapp_config.polish_model_default)
         self.polish_style_var = tk.StringVar(value=_default_prompt.label)
+        # Append mode mirrors tray.append_mode when this window was opened
+        # from the tray; standalone, it's just a local flag.
+        initial_append = bool(getattr(self.tray, "append_mode", False)) if self.tray else False
+        self.append_var = tk.BooleanVar(value=initial_append)
+        self._suppress_append_trace = False
 
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
@@ -220,6 +226,22 @@ class TranscriberApp:
         self.copy_last_btn = ttk.Button(header, text="📋 Copy", command=self._copy_last, width=10)
         self.copy_last_btn.pack(side=tk.RIGHT)
         self.copy_last_btn.state(["disabled"])
+        self.append_check = ttk.Checkbutton(
+            header, text="➕ Append", variable=self.append_var,
+            command=self._on_append_toggle,
+        )
+        self.append_check.pack(side=tk.RIGHT, padx=(0, 8))
+        # When tray-owned, mirror tray.append_mode → checkbox.
+        if self.tray is not None:
+            self.tray.add_append_listener(self._on_tray_append_changed)
+            self.root.bind(
+                "<Destroy>",
+                lambda e, cb=self._on_tray_append_changed: (
+                    self.tray.remove_append_listener(cb)
+                    if e.widget is self.root else None
+                ),
+                add="+",
+            )
 
         text_wrap = ttk.Frame(last_frame)
         text_wrap.pack(fill=tk.BOTH, expand=True, pady=(4, 0))
@@ -322,6 +344,27 @@ class TranscriberApp:
             return self.tray.last_transcription
         return self._last_transcription
 
+    def _on_append_toggle(self) -> None:
+        """User toggled the checkbox → propagate to tray when owned."""
+        if self._suppress_append_trace:
+            return
+        if self.tray is not None:
+            self.tray.set_append_mode(self.append_var.get())
+
+    def _on_tray_append_changed(self, enabled: bool) -> None:
+        """Tray menu / hotkey toggle → mirror into the checkbox without
+        re-firing the command callback."""
+        try:
+            self._suppress_append_trace = True
+            self.append_var.set(bool(enabled))
+        finally:
+            self._suppress_append_trace = False
+
+    def _is_append_mode(self) -> bool:
+        if self.tray is not None:
+            return bool(self.tray.append_mode)
+        return bool(self.append_var.get())
+
     def _refresh_last_transcription(self) -> None:
         text = self._current_last_transcription()
         if text == self._displayed_last_transcription:
@@ -379,6 +422,15 @@ class TranscriberApp:
         self._last_polished = result.polished_text
         self.root.after(0, lambda: self._render_polished(result.polished_text))
         self.root.after(0, lambda: self.copy_polished_btn.state(["!disabled"]))
+        # Auto-copy polished text + flash the button so the user knows it
+        # already landed on the clipboard — matches the webapp's behaviour
+        # and saves a manual click on every polish.
+        if self.config.auto_copy:
+            try:
+                pyperclip.copy(result.polished_text)
+                self.root.after(0, self._flash_copied_polished)
+            except Exception as exc:
+                logger.warning(f"⚠️  Auto-copy of polished failed: {exc}")
         self.root.after(0, self._reset_polish_button)
 
     def _reset_polish_button(self) -> None:
@@ -393,6 +445,9 @@ class TranscriberApp:
         except Exception as exc:
             logger.warning(f"⚠️  Clipboard copy failed: {exc}")
             return
+        self._flash_copied_polished()
+
+    def _flash_copied_polished(self) -> None:
         self.copy_polished_btn.config(text="✓ Copied")
         self.root.after(
             1500,
@@ -544,6 +599,23 @@ class TranscriberApp:
         ).start()
 
     def _transcribe_and_show(self, recording) -> None:
+        # Silence gate — skip whisper on near-silent takes so it can't
+        # hallucinate "Thanks for watching" on an empty recording.
+        threshold = self.webapp_config.silence_dbfs_threshold
+        dbfs = rms_dbfs_from_samples(recording.samples)
+        if is_silent(dbfs, threshold):
+            logger.info(
+                f"🤫 Skipping whisper: {dbfs:.1f} dBFS < {threshold} dBFS"
+            )
+            self.root.after(
+                0,
+                lambda d=dbfs: messagebox.showinfo(
+                    "Empty audio",
+                    f"Recording was silent ({d:.1f} dBFS) — nothing transcribed.",
+                ),
+            )
+            return
+
         status = self.server.status()
         client = TranscriptionClient(status.base_url)
         iso_lang = self.config.whisper_language
@@ -560,6 +632,8 @@ class TranscriberApp:
 
         text = text.strip()
         if text:
+            if self._is_append_mode() and self._last_transcription:
+                text = self._last_transcription.rstrip() + "\n\n" + text
             self._last_transcription = text
 
         if self.config.auto_copy:
@@ -624,6 +698,8 @@ class TranscriberApp:
             return
         text = text.strip()
         if text:
+            if self._is_append_mode() and self._last_transcription:
+                text = self._last_transcription.rstrip() + "\n\n" + text
             self._last_transcription = text
         if self.config.auto_copy:
             try:

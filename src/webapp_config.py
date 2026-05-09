@@ -37,6 +37,7 @@ DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8443
 DEFAULT_RETENTION_DAYS = 30
+DEFAULT_SILENCE_DBFS_THRESHOLD = -50.0
 
 
 @dataclass
@@ -57,6 +58,9 @@ class WebappConfig:
     # Bearer token enforced when the request did NOT come from a
     # loopback / tailnet IP. Empty string disables enforcement entirely.
     auth_token: str = ""
+    # RMS gate before whisper. Clips quieter than this (dBFS) skip the
+    # transcription step entirely so whisper can't hallucinate on silence.
+    silence_dbfs_threshold: float = DEFAULT_SILENCE_DBFS_THRESHOLD
 
 
 def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
@@ -102,6 +106,9 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         ),
         preferred_mic_id=raw.get("preferred_mic_id") or None,
         auth_token=str(raw.get("auth_token", "")),
+        silence_dbfs_threshold=float(
+            raw.get("silence_dbfs_threshold", DEFAULT_SILENCE_DBFS_THRESHOLD)
+        ),
     )
     _validate(cfg)
     return cfg
@@ -123,6 +130,7 @@ def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
         "force_builtin_mic_default": cfg.force_builtin_mic_default,
         "preferred_mic_id": cfg.preferred_mic_id,
         "auth_token": cfg.auth_token,
+        "silence_dbfs_threshold": cfg.silence_dbfs_threshold,
     }
 
     tmp = target.with_suffix(target.suffix + ".tmp")

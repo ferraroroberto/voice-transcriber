@@ -31,10 +31,12 @@
     historyCount:     document.getElementById('historyCount'),
     historyList:      document.getElementById('historyList'),
     refreshHistory:   document.getElementById('refreshHistory'),
+    copyLast:         document.getElementById('copyLast'),
     cleanAll:         document.getElementById('cleanAll'),
     loadMoreHistory:  document.getElementById('loadMoreHistory'),
 
     resetBtn:         document.getElementById('resetBtn'),
+    appendToggle:     document.getElementById('appendToggle'),
 
     settingsPanel:    document.getElementById('settingsPanel'),
     languageSelect:   document.getElementById('languageSelect'),
@@ -232,6 +234,7 @@
     els.saveSettings.addEventListener('click', onSaveSettings);
 
     els.refreshHistory.addEventListener('click', refreshHistory);
+    els.copyLast.addEventListener('click', onCopyLast);
     els.cleanAll.addEventListener('click', onCleanAll);
     els.loadMoreHistory.addEventListener('click', loadMoreHistory);
 
@@ -469,14 +472,28 @@
       }
       const data = await r.json();
       const serverMs = Date.now() - t0;
-      state.transcript = data.transcript || '';
+      if (data.silent) {
+        // Recording was below the silence threshold — whisper was skipped
+        // so it can't hallucinate. Don't touch the transcript box; the
+        // user may still have accumulated text from earlier takes.
+        els.recordStatus.textContent =
+          `🤫 Empty audio (${data.dbfs} dBFS) — skipped`;
+        showToast('Empty audio — nothing transcribed', 'success');
+        refreshHistory();
+        return;
+      }
+      state.transcript = mergeForAppend(state.transcript, data.transcript || '');
       state.polished = '';
       els.transcript.value = state.transcript;
       els.polished.value = '';
       els.copyTranscript.disabled = !state.transcript;
       els.copyPolished.disabled = true;
       els.polishBtn.disabled = !state.transcript;
-      if (state.transcript) await tryAutoCopy(state.transcript);
+      // Auto-copy reads from the textarea so what lands on the clipboard
+      // is exactly what's on screen — including the merged accumulator
+      // when Append is on.
+      const transcriptForCopy = els.transcript.value;
+      if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyTranscript);
       const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
       els.recordStatus.textContent =
         `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
@@ -633,7 +650,8 @@
       state.polished = data.polished || '';
       els.polished.value = state.polished;
       els.copyPolished.disabled = !state.polished;
-      if (state.polished) await tryAutoCopy(state.polished);
+      const polishedForCopy = els.polished.value;
+      if (polishedForCopy) await tryAutoCopy(polishedForCopy, els.copyPolished);
       els.recordStatus.textContent =
         `Polished in ${(ms / 1000).toFixed(1)} s — tap Copy`;
       showToast('Polish done', 'success');
@@ -733,8 +751,18 @@
     const copyBtn = document.createElement('button');
     copyBtn.className = 'copy-btn';
     copyBtn.textContent = '📋 Copy';
-    copyBtn.addEventListener('click', () => {
-      copyText(s.polished_preview || s.transcript_preview || '', copyBtn);
+    copyBtn.addEventListener('click', async () => {
+      // The list payload only carries 200-char previews; fetch the full
+      // text on demand so what the user pastes matches what's on disk.
+      try {
+        const r = await authFetch(`/api/sessions/${s.session_id}/text`);
+        if (!r.ok) throw new Error(await r.text());
+        const data = await r.json();
+        const full = data.polished || data.transcript || '';
+        await copyText(full, copyBtn);
+      } catch (err) {
+        showToast('Copy failed: ' + (err.message || err), 'error');
+      }
     });
 
     const reBtn = document.createElement('button');
@@ -754,7 +782,7 @@
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       state.sessionId = id;
-      state.transcript = data.transcript || '';
+      state.transcript = mergeForAppend(state.transcript, data.transcript || '');
       state.polished = '';
       els.transcript.value = state.transcript;
       els.polished.value = '';
@@ -775,15 +803,77 @@
       if (!r.ok) throw new Error(await r.text());
       const data = await r.json();
       showToast(`Removed ${data.removed}`, 'success');
+      flashDanger(els.cleanAll);
       refreshHistory();
     } catch (err) {
       showToast('Clean failed', 'error');
     }
   }
 
+  // One-click "grab the newest take and put it on my clipboard" — refresh
+  // first so a take landing from another device (mobile dictating into the
+  // home tray while the work PC has the page open) is included.
+  async function onCopyLast() {
+    const btn = els.copyLast;
+    const restoreLabel = '📋 Copy last';
+    btn.disabled = true;
+    btn.textContent = '…';
+    let copyDone = false;
+    try {
+      const listRes = await authFetch('/api/sessions?limit=1&offset=0');
+      if (!listRes.ok) throw new Error(await listRes.text());
+      const listData = await listRes.json();
+      const newest = (listData.sessions || [])[0];
+      if (!newest) {
+        showToast('History is empty', 'error');
+        return;
+      }
+      const textRes = await authFetch(`/api/sessions/${newest.session_id}/text`);
+      if (!textRes.ok) throw new Error(await textRes.text());
+      const td = await textRes.json();
+      const full = td.polished || td.transcript || '';
+      if (!full) {
+        showToast('Newest take has no text', 'error');
+        return;
+      }
+      // Restore the button label *before* the green flash so flashCopied
+      // captures the right "original" and resets to "📋 Copy last", not "…".
+      btn.textContent = restoreLabel;
+      await copyText(full, btn);
+      copyDone = true;
+      refreshHistory();
+    } catch (err) {
+      showToast('Copy last failed: ' + (err.message || err), 'error');
+    } finally {
+      btn.disabled = false;
+      if (!copyDone) btn.textContent = restoreLabel;
+    }
+  }
+
+  function flashDanger(btn) {
+    if (!btn) return;
+    const original = btn.textContent;
+    btn.classList.add('danger-flash');
+    btn.textContent = '✓ Cleared';
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove('danger-flash');
+    }, 1400);
+  }
+
   // ----------------------------------------------------- helpers
 
   function setMode(m) { state.mode = m; }
+
+  // When the Append toggle is on, glue the new take onto the existing
+  // transcript with a blank-line separator. Otherwise replace.
+  function mergeForAppend(prev, next) {
+    if (!els.appendToggle || !els.appendToggle.checked) return next;
+    const prevTrimmed = (prev || '').replace(/\s+$/, '');
+    if (!prevTrimmed) return next;
+    if (!next) return prevTrimmed;
+    return prevTrimmed + '\n\n' + next;
+  }
 
   async function copyText(text, btn) {
     if (!text) return;
@@ -793,13 +883,7 @@
     const plain = String(text);
     try {
       await writePlainText(plain);
-      const original = btn.textContent;
-      btn.textContent = '✓ Copied';
-      btn.classList.add('copied');
-      setTimeout(() => {
-        btn.textContent = original;
-        btn.classList.remove('copied');
-      }, 1400);
+      flashCopied(btn);
     } catch (err) {
       // fallback: hidden textarea — execCommand('copy') always writes plain.
       const ta = document.createElement('textarea');
@@ -814,13 +898,28 @@
     }
   }
 
-  async function tryAutoCopy(text) {
+  async function tryAutoCopy(text, btn) {
     if (window.getSelection) window.getSelection().removeAllRanges();
     try {
       await writePlainText(String(text));
+      if (btn) flashCopied(btn);
     } catch (err) {
-      // iOS may reject auto-copy outside a user gesture — silent fallback
+      // iOS may reject auto-copy outside a user gesture — silent fallback.
+      // Button stays in its idle state so the user can tap to copy.
     }
+  }
+
+  function flashCopied(btn) {
+    if (!btn || btn.dataset.flashing === '1') return;
+    const original = btn.textContent;
+    btn.dataset.flashing = '1';
+    btn.textContent = '✓ Copied';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = original;
+      btn.classList.remove('copied');
+      delete btn.dataset.flashing;
+    }, 1400);
   }
 
   async function writePlainText(text) {

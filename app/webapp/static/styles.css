@@ -45,10 +45,37 @@ html, body {
 }
 .header h1 { margin: 0; font-size: 18px; font-weight: 600; }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .header-reset-btn {
   font-size: 13px;
   padding: 6px 12px;
   min-height: 36px;
+}
+
+.append-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+  padding: 6px 4px;
+  min-height: 36px;
+}
+.append-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--polish);
+  cursor: pointer;
+}
+.append-toggle:has(input:checked) {
+  color: var(--fg);
 }
 
 /* ---------- record zone (above the fold) ---------- */
@@ -204,6 +231,16 @@ textarea.text-out.editable::placeholder {
   min-height: 40px;
 }
 .ghost-btn:active { background: var(--bg-elev-2); }
+.ghost-btn.copied {
+  background: var(--good);
+  color: #fff;
+  border-color: var(--good);
+}
+.ghost-btn.danger-flash {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+}
 
 .danger-btn {
   background: var(--danger);
@@ -275,7 +312,13 @@ textarea.text-out.editable::placeholder {
 .history-card summary::-webkit-details-marker { display: none; }
 .history-card[open] summary { color: var(--fg); }
 
-.history-actions { display: flex; gap: 8px; padding: 4px 0 8px; }
+.history-actions {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 
 .load-more-btn {
   display: block;
@@ -296,7 +339,13 @@ textarea.text-out.editable::placeholder {
 }
 .history-list li .when { color: var(--muted); font-size: 12px; }
 .history-list li .preview { margin-top: 4px; font-size: 14px; color: var(--fg); }
-.history-list li .actions { display: flex; gap: 6px; margin-top: 8px; }
+.history-list li .actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
 .history-list li .actions button { font-size: 13px; min-height: 36px; padding: 6px 10px; }
 
 /* ---------- settings panel (collapsible card, twin of history) ---------- */

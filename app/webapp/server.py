@@ -50,6 +50,7 @@ from src import (
 )
 from src.archive import SessionArchive
 from src.polish import PolishClient, PolishError
+from src.silence import is_silent, rms_dbfs_from_wav
 from src.polish_prompts import (
     PolishPrompt,
     get_prompt,
@@ -514,6 +515,23 @@ def create_app() -> FastAPI:
             "prompt_id": prompt.id,
         }
 
+    @app.get("/api/sessions/{session_id}/text")
+    async def get_session_text(session_id: str, request: Request) -> Dict[str, Any]:
+        """Return the full transcript and polished text for one session.
+
+        The list endpoint only returns 200-char previews to keep the page
+        light; this endpoint backs the history Copy buttons so the user
+        gets the full text, not the truncated preview.
+        """
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        return {
+            "session_id": session.session_id,
+            "transcript": session.read_transcript() or "",
+            "polished": session.read_polished() or "",
+        }
+
     @app.get("/api/sessions")
     async def list_sessions(
         request: Request, limit: int = 10, offset: int = 0,
@@ -600,6 +618,27 @@ async def _transcribe_session_payload(
 
     chosen_lang = language or session.meta.language or app_cfg.language
     iso = _iso_language(chosen_lang)
+
+    # Silence gate — skip whisper entirely on near-silent audio so it
+    # can't hallucinate "Thanks for watching" on an empty take.
+    cfg: WebappConfig = request.app.state.webapp_config
+    dbfs = rms_dbfs_from_wav(wav_path)
+    if is_silent(dbfs, cfg.silence_dbfs_threshold):
+        session.write_transcript("")
+        session.meta.language = chosen_lang
+        session.meta.extra["silence_dbfs"] = round(dbfs, 1)
+        session.write_meta()
+        logger.info(
+            f"🤫 Skipped whisper for {session.session_id}: "
+            f"{dbfs:.1f} dBFS < {cfg.silence_dbfs_threshold} dBFS threshold"
+        )
+        return {
+            "session_id": session.session_id,
+            "transcript": "",
+            "language": chosen_lang,
+            "silent": True,
+            "dbfs": round(dbfs, 1),
+        }
 
     client: TranscriptionClient = request.app.state.transcription_client
     try:

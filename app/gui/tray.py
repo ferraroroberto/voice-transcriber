@@ -41,6 +41,7 @@ from src import (
     TranscriptionError,
 )
 from src.recorder import Recording
+from src.silence import is_silent, rms_dbfs_from_samples
 from src.webapp_config import append_auth_token, load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from app.webapp.manager import WebappManager, load_config as load_webapp_runtime_config
@@ -57,6 +58,7 @@ EVT_STOP_SERVER = "stop_server"
 EVT_MODEL_INFO = "model_info"
 EVT_COPY_WEBAPP_URL = "copy_webapp_url"
 EVT_RESTART_WEBAPP = "restart_webapp"
+EVT_TOGGLE_APPEND = "toggle_append"
 EVT_QUIT = "quit"
 
 
@@ -84,6 +86,12 @@ class TrayApp:
         # Latest non-empty transcription, surfaced in the main window so the
         # user can re-copy it after the clipboard has been overwritten.
         self.last_transcription: Optional[str] = None
+        # Append mode: when True, each new take is glued onto the previous
+        # transcript with a blank-line separator instead of replacing it.
+        # Ephemeral (off on every launch). Mirrored by the tk window's
+        # checkbox so toggling either surface stays in sync.
+        self.append_mode: bool = False
+        self._append_listeners: list = []
 
     # ------------------------------------------------------------ run / quit
 
@@ -155,6 +163,12 @@ class TrayApp:
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("▶ Start server", lambda: self._enqueue(EVT_START_SERVER)),
             pystray.MenuItem("■ Stop server", lambda: self._enqueue(EVT_STOP_SERVER)),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                "➕ Append mode",
+                lambda: self._enqueue(EVT_TOGGLE_APPEND),
+                checked=lambda _item: self.append_mode,
+            ),
         ]
         if self.webapp.config.enabled:
             items.extend([
@@ -249,8 +263,35 @@ class TrayApp:
             self._copy_webapp_url()
         elif event == EVT_RESTART_WEBAPP:
             threading.Thread(target=self._restart_webapp_worker, daemon=True).start()
+        elif event == EVT_TOGGLE_APPEND:
+            self.set_append_mode(not self.append_mode)
         elif event == EVT_QUIT:
             self.root.quit()
+
+    def set_append_mode(self, enabled: bool) -> None:
+        """Flip the append flag and notify any open window to mirror it."""
+        if self.append_mode == enabled:
+            return
+        self.append_mode = bool(enabled)
+        if self._icon is not None:
+            try:
+                self._icon.update_menu()
+            except Exception:
+                pass
+        for cb in list(self._append_listeners):
+            try:
+                cb(self.append_mode)
+            except Exception:
+                pass
+
+    def add_append_listener(self, cb) -> None:
+        """Window registers a callback to mirror tray.append_mode changes."""
+        if cb not in self._append_listeners:
+            self._append_listeners.append(cb)
+
+    def remove_append_listener(self, cb) -> None:
+        if cb in self._append_listeners:
+            self._append_listeners.remove(cb)
 
     def _copy_webapp_url(self) -> None:
         # Re-read the webapp config at copy-time so a freshly rotated
@@ -339,6 +380,20 @@ class TrayApp:
         threading.Thread(target=self._transcribe_worker, args=(recording,), daemon=True).start()
 
     def _transcribe_worker(self, recording: Recording) -> None:
+        # Silence gate — skip whisper if the take is below the dBFS
+        # threshold so it can't hallucinate on empty audio.
+        try:
+            threshold = load_webapp_config().silence_dbfs_threshold
+        except Exception:
+            threshold = -50.0
+        dbfs = rms_dbfs_from_samples(recording.samples)
+        if is_silent(dbfs, threshold):
+            logger.info(
+                f"🤫 Skipping whisper: {dbfs:.1f} dBFS < {threshold} dBFS"
+            )
+            self._notify("🤫 Empty audio", f"Silent take ({dbfs:.1f} dBFS) — skipped")
+            return
+
         status = self.server.status()
         if self._transcription_client is None:
             self._transcription_client = TranscriptionClient(status.base_url)
@@ -358,6 +413,8 @@ class TrayApp:
             self._notify("Empty transcription", "The server returned no text.")
             return
 
+        if self.append_mode and self.last_transcription:
+            text = self.last_transcription.rstrip() + "\n\n" + text
         self.last_transcription = text
 
         if self.config.auto_copy:
