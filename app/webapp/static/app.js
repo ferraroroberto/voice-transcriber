@@ -837,7 +837,7 @@
   // next begins.
   async function onCopySelection() {
     const btn = els.copySelection;
-    const restoreLabel = '📋 Copy selection';
+    const restoreLabel = '📋 Copy selected';
     const checked = Array.from(
       els.historyList.querySelectorAll('input.select-checkbox:checked')
     );
@@ -871,7 +871,7 @@
       await copyText(combined, btn);
       copyDone = true;
     } catch (err) {
-      showToast('Copy selection failed: ' + (err.message || err), 'error');
+      showToast('Copy selected failed: ' + (err.message || err), 'error');
     } finally {
       btn.disabled = false;
       if (!copyDone) btn.textContent = restoreLabel;
