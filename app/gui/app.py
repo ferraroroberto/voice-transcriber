@@ -27,6 +27,8 @@ from src import (
     AudioRecorder,
     LANGUAGE_MODE_LABELS,
     LANGUAGE_MODES,
+    WHISPER_LANGUAGES,
+    resolve_iso,
     TranscriptionClient,
     TranscriptionError,
 )
@@ -106,7 +108,18 @@ class TranscriberApp:
 
         self.status_var = tk.StringVar(value="checking…")
         self.model_var = tk.StringVar(value="model: …")
-        self.language_var = tk.StringVar(value=LANGUAGE_MODE_LABELS[config.language])
+        # Language picker — Title-case label backed by ISO under the hood.
+        # Old configs spelled it "english"/"spanish"/"italian"; new configs
+        # store ISO directly. resolve_iso() handles both shapes.
+        _initial_iso = resolve_iso(config.language) or "en"
+        self._language_label_to_iso = {label: iso for iso, label in WHISPER_LANGUAGES.items()}
+        self._sorted_language_labels = sorted(WHISPER_LANGUAGES.values())
+        self.language_var = tk.StringVar(
+            value=WHISPER_LANGUAGES.get(_initial_iso, "English"),
+        )
+        # Translate toggle — ephemeral, off on every launch. Shipped here for
+        # parity with the webapp's settings panel toggle.
+        self.translate_var = tk.BooleanVar(value=False)
         self.polish_model_var = tk.StringVar(value=self.webapp_config.polish_model_default)
         self.polish_style_var = tk.StringVar(value=_default_prompt.label)
         # Append mode mirrors tray.append_mode when this window was opened
@@ -155,10 +168,12 @@ class TranscriberApp:
 
     def _on_language_change(self, *_: object) -> None:
         label = self.language_var.get()
-        for mode, mode_label in LANGUAGE_MODE_LABELS.items():
-            if mode_label == label:
-                self.config.language = mode
-                return
+        iso = self._language_label_to_iso.get(label)
+        if iso:
+            # Store the ISO so tray-initiated recordings (hotkey path) pick
+            # up whatever the user picked here. Old code stored "english"
+            # etc., AppConfig.whisper_language now resolves either form.
+            self.config.language = iso
 
     def _apply_mic_selection(self, *_: object) -> None:
         """Combine the mic combo + force-built-in checkbox into a single
@@ -201,15 +216,20 @@ class TranscriberApp:
         self.stop_btn = ttk.Button(server_btn_frame, text="■ Stop server", command=self._stop_server)
         self.stop_btn.pack(side=tk.LEFT, expand=True, fill=tk.X, padx=(4, 0))
 
-        # Dictation mode
+        # Dictation mode — full Whisper language list (alphabetical), with a
+        # 🌐 Translate-to-English toggle alongside.
         lang_frame = ttk.Frame(self.root)
         lang_frame.pack(fill=tk.X, **pad)
         ttk.Label(lang_frame, text="Language:").pack(side=tk.LEFT)
         lang_combo = ttk.Combobox(
             lang_frame, textvariable=self.language_var, state="readonly", width=22,
-            values=tuple(LANGUAGE_MODE_LABELS[m] for m in LANGUAGE_MODES),
+            values=tuple(self._sorted_language_labels),
         )
         lang_combo.pack(side=tk.LEFT, padx=8)
+        ttk.Checkbutton(
+            lang_frame, text="🌐 Translate to English",
+            variable=self.translate_var,
+        ).pack(side=tk.LEFT, padx=(8, 0))
 
         # Mic selector
         mic_frame = ttk.Frame(self.root)
@@ -695,12 +715,17 @@ class TranscriberApp:
             return
 
         status = self.server.status()
-        client = TranscriptionClient(status.base_url)
+        client = TranscriptionClient(
+            status.base_url,
+            translate_base_url=self.config.translate_base_url,
+        )
         iso_lang = self.config.whisper_language
+        translate = bool(self.translate_var.get())
         try:
             text = client.transcribe_array(
                 recording.samples, recording.sample_rate,
                 language=iso_lang,
+                translate=translate,
             )
         except TranscriptionError as e:
             msg = str(e)
@@ -763,12 +788,17 @@ class TranscriberApp:
 
     def _transcribe_file_worker(self, path: str) -> None:
         status = self.server.status()
-        client = TranscriptionClient(status.base_url)
+        client = TranscriptionClient(
+            status.base_url,
+            translate_base_url=self.config.translate_base_url,
+        )
         iso_lang = self.config.whisper_language
+        translate = bool(self.translate_var.get())
         try:
             text = client.transcribe_file(
                 path,
                 language=iso_lang,
+                translate=translate,
             )
         except TranscriptionError as e:
             msg = str(e)

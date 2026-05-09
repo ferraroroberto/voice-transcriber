@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy this to snippets.json (gitignored) and edit. Keys are matched case-insensitively at word boundaries; values are inserted verbatim.",
+  "ttyl": "talk to you later",
+  "fyi": "for your information",
+  "myemail": "you@example.com"
+}

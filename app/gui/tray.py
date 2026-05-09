@@ -2,9 +2,12 @@
 
 - Tray icon sits in the system tray.
 - Menu: Record / Open / Start server / Stop server / Quit.
-- Global hotkey (default Ctrl+Alt+Space) starts a recording immediately; a
-  second press stops it. Transcribed text is copied to the clipboard and a
-  toast is shown via the tray.
+- Global hotkey (default F10) supports both tap-toggle and push-to-talk on
+  the same key: tap once to start, tap again to stop; or hold for ≥
+  ``ptt_threshold_ms`` and release to stop. Transcribed text is copied to
+  the clipboard and (when ``auto_paste_after_hotkey`` is on) pasted at the
+  caret via Ctrl+V into the focused window. Modifier-combo hotkeys
+  (e.g. ``<ctrl>+<alt>+<space>``) fall back to toggle-only.
 - Closing the (optional) main window hides it; only "Quit" from the tray
   menu really exits — and that's when we stop the server if we own it.
 """
@@ -45,6 +48,7 @@ from src import (
     TranscriptionClient,
     TranscriptionError,
 )
+from src.inject import parse_simple_hotkey, paste_at_caret
 from src.recorder import Recording
 from src.silence import is_silent, rms_dbfs_from_samples
 from src.webapp_config import append_auth_token, load_webapp_config
@@ -65,6 +69,7 @@ EVT_COPY_LOCAL_URL = "copy_local_url"
 EVT_COPY_TUNNEL_URL = "copy_tunnel_url"
 EVT_RESTART_WEBAPP = "restart_webapp"
 EVT_TOGGLE_APPEND = "toggle_append"
+EVT_TOGGLE_AUTO_PASTE = "toggle_auto_paste"
 EVT_QUIT = "quit"
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -106,7 +111,16 @@ class TrayApp:
         self._recording_popup: Optional[RecordingPopup] = None
         self._current_recorder: Optional[AudioRecorder] = None
         self._icon: Optional[pystray.Icon] = None
-        self._hotkey_listener: Optional[keyboard.GlobalHotKeys] = None
+        self._hotkey_listener = None  # GlobalHotKeys or Listener depending on hotkey shape
+        self._hotkey_target_key = None  # pynput Key when in tap/hold mode
+        self._hotkey_key_down: bool = False
+        # When set, the in-flight recording was started by a hotkey press —
+        # transcription will paste at caret after copy. Cleared by the worker
+        # once consumed, or by the tk-button entry point on a fresh start.
+        self._record_from_hotkey: bool = False
+        # ``time.monotonic()`` of the press that started the current take, while
+        # the user is still holding. Used to discriminate tap vs PTT on release.
+        self._hotkey_press_started_recording_at: Optional[float] = None
         self._transcription_client: Optional[TranscriptionClient] = None
         # Model label is queried by pystray on every menu draw; cache so the
         # TCP probe + psutil lookup don't fire on each open.
@@ -207,6 +221,11 @@ class TrayApp:
                 lambda: self._enqueue(EVT_TOGGLE_APPEND),
                 checked=lambda _item: self.append_mode,
             ),
+            pystray.MenuItem(
+                "📌 Paste at caret",
+                lambda: self._enqueue(EVT_TOGGLE_AUTO_PASTE),
+                checked=lambda _item: self.config.auto_paste_after_hotkey,
+            ),
         ]
         if self.webapp.config.enabled:
             items.extend([
@@ -261,13 +280,86 @@ class TrayApp:
     # ---------------------------------------------------------- hotkey
 
     def _start_hotkey_listener(self) -> None:
+        """Register the global hotkey.
+
+        Single-key hotkeys (``<F10>``) get a low-level keyboard.Listener so we
+        can time press↔release and offer push-to-talk alongside tap-toggle.
+        Modifier combos fall through to the legacy GlobalHotKeys path —
+        toggle-only, since holding a 3-key chord for PTT is awkward.
+        """
         hotkey = self.config.hotkey
+        target_key = parse_simple_hotkey(hotkey)
+        if target_key is None:
+            try:
+                mapping = {hotkey: lambda: self._enqueue_hotkey_toggle(start=None)}
+                self._hotkey_listener = keyboard.GlobalHotKeys(mapping)
+                self._hotkey_listener.start()
+                logger.info(f"🧷 Hotkey {hotkey} (toggle-only — combo)")
+            except Exception as e:
+                logger.error(f"❌ Failed to register hotkey {hotkey!r}: {e}")
+            return
+
+        self._hotkey_target_key = target_key
         try:
-            mapping = {hotkey: lambda: self._enqueue(EVT_TOGGLE_RECORD)}
-            self._hotkey_listener = keyboard.GlobalHotKeys(mapping)
+            self._hotkey_listener = keyboard.Listener(
+                on_press=self._on_hotkey_press,
+                on_release=self._on_hotkey_release,
+            )
             self._hotkey_listener.start()
+            logger.info(
+                f"🧷 Hotkey {hotkey} (tap = toggle, hold ≥ "
+                f"{self.config.ptt_threshold_ms} ms = push-to-talk)"
+            )
         except Exception as e:
-            logger.error(f"❌ Failed to register global hotkey {hotkey!r}: {e}")
+            logger.error(f"❌ Failed to register hotkey {hotkey!r}: {e}")
+
+    def _on_hotkey_press(self, key) -> None:
+        if key != self._hotkey_target_key:
+            return
+        if self._hotkey_key_down:
+            return  # auto-repeat from a held key — already handled
+        self._hotkey_key_down = True
+        if self._current_recorder is None:
+            # Press starts a fresh take. Tentatively in PTT mode until release
+            # tells us how long the key was held.
+            self._hotkey_press_started_recording_at = time.monotonic()
+            self._enqueue_hotkey_toggle(start=True)
+        elif self._hotkey_press_started_recording_at is None:
+            # Already recording in tap-waiting state → this press is the
+            # second tap and should stop the take immediately.
+            self._enqueue_hotkey_toggle(start=False)
+        # else: press while still holding the original — ignore
+
+    def _on_hotkey_release(self, key) -> None:
+        if key != self._hotkey_target_key:
+            return
+        self._hotkey_key_down = False
+        started_at = self._hotkey_press_started_recording_at
+        if started_at is None:
+            return  # release of a second-tap stop, or unrelated release
+        held_ms = (time.monotonic() - started_at) * 1000
+        self._hotkey_press_started_recording_at = None
+        threshold = max(0, int(self.config.ptt_threshold_ms))
+        if held_ms >= threshold and self._current_recorder is not None:
+            self._enqueue_hotkey_toggle(start=False)
+        # else: tap. Recording continues; await the second tap.
+
+    def _enqueue_hotkey_toggle(self, start: Optional[bool]) -> None:
+        """Enqueue a toggle event from the hotkey path.
+
+        ``start=True``  → mark the upcoming take as hotkey-initiated so the
+                          worker pastes at caret on completion.
+        ``start=False`` → leave the flag alone; this is the stop press of an
+                          already hotkey-initiated take.
+        ``start=None``  → combo path (toggle-only); set the flag iff there
+                          isn't a recording in flight (i.e. this press is a
+                          start).
+        """
+        if start is True:
+            self._record_from_hotkey = True
+        elif start is None and self._current_recorder is None:
+            self._record_from_hotkey = True
+        self._enqueue(EVT_TOGGLE_RECORD)
 
     # --------------------------------------------------------- event loop
 
@@ -277,6 +369,9 @@ class TrayApp:
     # Public hooks used by the main window when it's opened from the tray,
     # so the two paths share one recorder / hotkey / notification pipeline.
     def request_toggle_record(self) -> None:
+        # Tk button: never paste at caret, even when this kicks off a take.
+        if self._current_recorder is None:
+            self._record_from_hotkey = False
         self._enqueue(EVT_TOGGLE_RECORD)
 
     def request_quit(self) -> None:
@@ -310,6 +405,13 @@ class TrayApp:
             threading.Thread(target=self._restart_webapp_worker, daemon=True).start()
         elif event == EVT_TOGGLE_APPEND:
             self.set_append_mode(not self.append_mode)
+        elif event == EVT_TOGGLE_AUTO_PASTE:
+            self.config.auto_paste_after_hotkey = not self.config.auto_paste_after_hotkey
+            if self._icon is not None:
+                try:
+                    self._icon.update_menu()
+                except Exception:
+                    pass
         elif event == EVT_QUIT:
             self.root.quit()
 
@@ -505,6 +607,12 @@ class TrayApp:
         threading.Thread(target=self._transcribe_worker, args=(recording,), daemon=True).start()
 
     def _transcribe_worker(self, recording: Recording) -> None:
+        # Consume the hotkey-initiated flag set on the start press; the
+        # worker decides on caret paste based on this single value, so a
+        # mid-flight tk-window interaction can't change the outcome.
+        from_hotkey = self._record_from_hotkey
+        self._record_from_hotkey = False
+
         # Silence gate — skip whisper if the take is below the dBFS
         # threshold so it can't hallucinate on empty audio.
         try:
@@ -521,7 +629,10 @@ class TrayApp:
 
         status = self.server.status()
         if self._transcription_client is None:
-            self._transcription_client = TranscriptionClient(status.base_url)
+            self._transcription_client = TranscriptionClient(
+                status.base_url,
+                translate_base_url=self.config.translate_base_url,
+            )
         client = self._transcription_client
         try:
             iso_lang = self.config.whisper_language
@@ -548,8 +659,13 @@ class TrayApp:
             except Exception as exc:
                 logger.warning(f"⚠️  Clipboard copy failed: {exc}")
 
+        pasted = False
+        if from_hotkey and self.config.auto_paste_after_hotkey:
+            pasted = paste_at_caret()
+
         preview = text if len(text) <= 80 else text[:77] + "…"
-        self._notify("📋 Copied to clipboard", preview)
+        title = "📌 Pasted at caret" if pasted else "📋 Copied to clipboard"
+        self._notify(title, preview)
 
     # -------------------------------------------------------- window / server
 

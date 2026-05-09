@@ -9,7 +9,9 @@ from .app_config import (
     AppConfig,
     LANGUAGE_MODE_LABELS,
     LANGUAGE_MODES,
+    WHISPER_LANGUAGES,
     load_app_config,
+    resolve_iso,
 )
 from .diagnostics import (
     BACKEND_CPU,
@@ -38,6 +40,8 @@ __all__ = [
     "RecordingError",
     "TranscriptionClient",
     "TranscriptionError",
+    "WHISPER_LANGUAGES",
+    "resolve_iso",
     "app_log_handler",
     "attach_app_log_handler",
     "infer_backend",

@@ -42,6 +42,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from src.app_config import WHISPER_LANGUAGES, resolve_iso
 from src import (
     LANGUAGE_MODE_LABELS,
     TranscriptionClient,
@@ -212,7 +213,10 @@ def create_app() -> FastAPI:
     webapp_cfg = load_webapp_config()
     server_manager = WhisperServerManager()
     archive = SessionArchive()
-    transcription_client = TranscriptionClient(server_manager.config.base_url)
+    transcription_client = TranscriptionClient(
+        server_manager.config.base_url,
+        translate_base_url=app_config.translate_base_url,
+    )
     polish_client = PolishClient(webapp_cfg.llm_hub_url)
 
     app = FastAPI(
@@ -299,8 +303,14 @@ def create_app() -> FastAPI:
             "history_retention_days": cfg.history_retention_days,
             "force_builtin_mic_default": cfg.force_builtin_mic_default,
             "preferred_mic_id": cfg.preferred_mic_id,
-            "languages": list(LANGUAGE_MODE_LABELS.keys()),
-            "language_default": app_cfg.language,
+            # All 99 Whisper languages, sorted alphabetically by label so
+            # the dropdown reads naturally. Each entry carries both the ISO
+            # code (sent to the server) and the display label.
+            "languages": sorted(
+                [{"iso": iso, "label": label} for iso, label in WHISPER_LANGUAGES.items()],
+                key=lambda e: e["label"],
+            ),
+            "language_default": resolve_iso(app_cfg.language) or "en",
         }
 
     @app.post("/api/config")
@@ -407,6 +417,7 @@ def create_app() -> FastAPI:
         request: Request,
         file: UploadFile = File(...),
         language: Optional[str] = None,
+        translate: bool = False,
     ) -> Dict[str, Any]:
         """Single-shot upload — receive whole audio blob, transcribe, return.
 
@@ -427,7 +438,7 @@ def create_app() -> FastAPI:
         session.meta.raw_format = file.content_type or "audio/webm;codecs=opus"
         session.write_meta()
 
-        return await _transcribe_session_payload(request, session, language)
+        return await _transcribe_session_payload(request, session, language, translate=translate)
 
     @app.post("/api/sessions/{session_id}/chunk")
     async def append_chunk(session_id: str, request: Request) -> Dict[str, Any]:
@@ -455,6 +466,7 @@ def create_app() -> FastAPI:
         session_id: str,
         request: Request,
         language: Optional[str] = None,
+        translate: bool = False,
     ) -> Dict[str, Any]:
         """Close a chunked session, transcode, transcribe, return text."""
         session = request.app.state.archive.get(session_id)
@@ -473,13 +485,14 @@ def create_app() -> FastAPI:
         if isinstance(duration, (int, float)):
             session.meta.duration_seconds = float(duration)
         session.write_meta()
-        return await _transcribe_session_payload(request, session, language)
+        return await _transcribe_session_payload(request, session, language, translate=translate)
 
     @app.post("/api/sessions/{session_id}/retranscribe")
     async def retranscribe(
         session_id: str,
         request: Request,
         language: Optional[str] = None,
+        translate: bool = False,
     ) -> Dict[str, Any]:
         """Re-run whisper on an existing raw audio file (crash-recovery flow)."""
         session = request.app.state.archive.get(session_id)
@@ -490,7 +503,7 @@ def create_app() -> FastAPI:
                 status_code=404,
                 detail="raw audio missing — nothing to re-transcribe",
             )
-        return await _transcribe_session_payload(request, session, language)
+        return await _transcribe_session_payload(request, session, language, translate=translate)
 
     @app.post("/api/sessions/{session_id}/polish")
     async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
@@ -684,6 +697,7 @@ async def _transcribe_session_payload(
     request: Request,
     session,
     language: Optional[str],
+    translate: bool = False,
 ) -> Dict[str, Any]:
     """Shared finish path: transcode → whisper → write transcript → meta."""
     app_cfg = request.app.state.app_config
@@ -700,7 +714,7 @@ async def _transcribe_session_payload(
         raise HTTPException(status_code=500, detail=f"transcode failed: {exc}")
 
     chosen_lang = language or session.meta.language or app_cfg.language
-    iso = _iso_language(chosen_lang)
+    iso = resolve_iso(chosen_lang)
 
     # Silence gate — skip whisper entirely on near-silent audio so it
     # can't hallucinate "Thanks for watching" on an empty take.
@@ -725,7 +739,7 @@ async def _transcribe_session_payload(
 
     client: TranscriptionClient = request.app.state.transcription_client
     try:
-        text = client.transcribe_file(wav_path, language=iso)
+        text = client.transcribe_file(wav_path, language=iso, translate=translate)
     except TranscriptionError as exc:
         session.meta.error = str(exc)
         session.write_meta()
@@ -743,9 +757,7 @@ async def _transcribe_session_payload(
     }
 
 
-def _iso_language(name: str) -> Optional[str]:
-    table = {"english": "en", "spanish": "es", "italian": "it"}
-    return table.get(name, name)
+# _iso_language() removed — use src.app_config.resolve_iso instead.
 
 
 def _preview(text: Optional[str], n: int) -> Optional[str]:

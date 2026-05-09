@@ -2,6 +2,16 @@
 
 Calls the OpenAI-compatible `/v1/audio/transcriptions` endpoint that
 whisper.cpp's `whisper-server` exposes.
+
+Two endpoints are supported, selected per-request via the ``translate`` flag:
+
+- ``base_url``           — primary turbo server (transcription, fast, GPU).
+- ``translate_base_url`` — secondary translate-capable server (e.g. the
+  local-llm-hub's :8091 proxy loaded with ggml-medium.bin). CPU-only with
+  a 3-8 s cold-start the first time after idle.
+
+Translate requests carry ``task=translate`` as a multipart form field; the
+server returns the translated English text in the same OpenAI shape.
 """
 
 from __future__ import annotations
@@ -17,6 +27,9 @@ from typing import Optional, Union
 # Third-party imports
 import numpy as np
 import requests
+
+from .snippets import apply_snippets
+from .vocabulary import prompt_for_language
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +53,18 @@ class TranscriptionError(Exception):
 class TranscriptionClient:
     """Tiny wrapper around whisper-server's OpenAI-shaped audio endpoints."""
 
-    def __init__(self, base_url: str, timeout: float = DEFAULT_TIMEOUT) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        timeout: float = DEFAULT_TIMEOUT,
+        translate_base_url: Optional[str] = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
+        # Translation falls back to the primary URL when no separate translate
+        # server is configured — turbo will accept ``task=translate`` but the
+        # output will be junk, which is on the user to debug. The two-server
+        # wiring is the supported path.
+        self.translate_base_url = (translate_base_url or base_url).rstrip("/")
         self.timeout = timeout
         self._session = requests.Session()
 
@@ -55,17 +78,35 @@ class TranscriptionClient:
         wav_bytes: bytes,
         language: Optional[str] = None,
         filename: str = "audio.wav",
+        translate: bool = False,
     ) -> str:
-        url = self.base_url + "/v1/audio/transcriptions"
+        base = self.translate_base_url if translate else self.base_url
+        url = base + "/v1/audio/transcriptions"
 
         iso = ISO_LANGUAGE_CODES.get(language, language) if language else None
         data = {"response_format": "json"}
-        if iso:
+        # Only send `language` when transcribing — the :8091 translate proxy
+        # (as of 2026-05-09) treats `language` as a hard "transcribe in this
+        # language" hint that masks `task=translate`. Whisper auto-detects
+        # source language reliably for translation anyway, so dropping the
+        # hint costs nothing and unblocks the toggle. Remove this branch
+        # once the sibling proxy honours `task=translate` regardless of
+        # `language`.
+        if iso and not translate:
             data["language"] = iso
+        if translate:
+            data["task"] = "translate"
+        prompt = prompt_for_language(iso)
+        if prompt:
+            data["prompt"] = prompt
 
         files = {"file": (filename, wav_bytes, "audio/wav")}
 
-        logger.info(f"📤 POST {url} (language={iso or 'auto'})")
+        logger.info(
+            f"📤 POST {url} (language={iso or 'auto'}"
+            f"{', task=translate' if translate else ''}"
+            f"{', vocab=' + str(prompt.count(',') + 1) + ' terms' if prompt else ''})"
+        )
         try:
             response = self._session.post(url, data=data, files=files, timeout=self.timeout)
         except requests.RequestException as e:
@@ -76,21 +117,25 @@ class TranscriptionClient:
                 f"server returned {response.status_code}: {response.text[:500]}"
             )
 
-        return _extract_text(response)
+        return apply_snippets(_extract_text(response))
 
     def transcribe_array(
         self,
         samples: np.ndarray,
         sample_rate: int,
         language: Optional[str] = None,
+        translate: bool = False,
     ) -> str:
         wav_bytes = samples_to_wav_bytes(samples, sample_rate)
-        return self.transcribe_wav_bytes(wav_bytes, language=language)
+        return self.transcribe_wav_bytes(
+            wav_bytes, language=language, translate=translate,
+        )
 
     def transcribe_file(
         self,
         path: Union[str, Path],
         language: Optional[str] = None,
+        translate: bool = False,
     ) -> str:
         path = Path(path)
         if not path.exists():
@@ -99,6 +144,7 @@ class TranscriptionClient:
             path.read_bytes(),
             language=language,
             filename=path.name,
+            translate=translate,
         )
 
 

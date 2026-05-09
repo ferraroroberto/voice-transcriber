@@ -46,6 +46,7 @@
 
     settingsPanel:    document.getElementById('settingsPanel'),
     languageSelect:   document.getElementById('languageSelect'),
+    translateToggle:  document.getElementById('translateToggle'),
     micSelect:        document.getElementById('micSelect'),
     forceBuiltinMic:  document.getElementById('forceBuiltinMic'),
     retentionDays:    document.getElementById('retentionDays'),
@@ -172,8 +173,8 @@
         description: 'Remove uh/um/like, false starts, repetitions. No rephrasing.',
         system: '(prompt unavailable — server is offline)',
       }],
-      languages: ['english', 'spanish', 'italian'],
-      language_default: 'english',
+      languages: [{iso: 'en', label: 'English'}, {iso: 'es', label: 'Spanish'}, {iso: 'it', label: 'Italian'}],
+      language_default: 'en',
       force_builtin_mic_default: false,
       preferred_mic_id: null,
       history_retention_days: 30,
@@ -202,10 +203,14 @@
     refreshPromptPreview();
     els.languageSelect.innerHTML = '';
     for (const lang of state.config.languages || []) {
+      // Server returns [{iso, label}]; tolerate the legacy bare-string shape
+      // for back-compat with any cached client code.
+      const iso = (typeof lang === 'string') ? lang : lang.iso;
+      const label = (typeof lang === 'string') ? capitalize(lang) : lang.label;
       const opt = document.createElement('option');
-      opt.value = lang;
-      opt.textContent = capitalize(lang);
-      if (lang === state.config.language_default) opt.selected = true;
+      opt.value = iso;
+      opt.textContent = label;
+      if (iso === state.config.language_default) opt.selected = true;
       els.languageSelect.appendChild(opt);
     }
     els.forceBuiltinMic.checked = !!state.config.force_builtin_mic_default;
@@ -556,14 +561,20 @@
       els.recordStatus.textContent =
         `Server: ffmpeg → whisper · ${formatDuration(elapsedSec)} of audio…`;
       const t0 = Date.now();
-      const r = await authFetch(
-        `/api/sessions/${state.sessionId}/finish?language=${encodeURIComponent(els.languageSelect.value)}`,
-        {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ duration_seconds: elapsedSec }),
-        }
-      );
+      const translate = !!els.translateToggle.checked;
+      const finishUrl =
+        `/api/sessions/${state.sessionId}/finish` +
+        `?language=${encodeURIComponent(els.languageSelect.value)}` +
+        `&translate=${translate ? 'true' : 'false'}`;
+      if (translate) {
+        els.recordStatus.textContent =
+          `Server: ffmpeg → translate (cold-start ~5 s on first call)…`;
+      }
+      const r = await authFetch(finishUrl, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ duration_seconds: elapsedSec }),
+      });
       if (!r.ok) {
         const text = await r.text();
         throw new Error(text || `${r.status}`);
@@ -599,7 +610,7 @@
     } catch (err) {
       console.error(err);
       els.recordStatus.textContent = 'Failed — recording is still on the PC, see History';
-      showToast('Transcribe failed: ' + (err.message || err), 'error');
+      showToast('Transcribe failed: ' + truncate(err.message || String(err), 120), 'error');
       refreshHistory();
     } finally {
       els.recordBtn.disabled = false;

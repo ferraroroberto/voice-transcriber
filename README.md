@@ -16,7 +16,7 @@ and used from there — no shared system install required.
 git clone <this-repo>
 cd transcribe_voice
 setup.bat                 :: creates .venv, installs deps, fetches whisper.cpp + model
-tray.bat                  :: system-tray mode, global hotkey Ctrl+Alt+Space
+tray.bat                  :: system-tray mode, global hotkey F10 (tap = toggle, hold = push-to-talk)
 ```
 
 That's it. The tray launches and, if no server is running yet, spawns the
@@ -27,7 +27,7 @@ server it started.
 
 | Command                  | What it does                                                              |
 |--------------------------|---------------------------------------------------------------------------|
-| `tray.bat`               | Resident tray icon + global hotkey (default: `Ctrl+Alt+Space`). Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
+| `tray.bat`               | Resident tray icon + global hotkey (default: `F10` — **tap to toggle**, **hold ≥ 300 ms for push-to-talk**). Result auto-pastes at the caret in the focused window. Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
 | `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
 | `webapp_tunnel_named.bat`| Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See "Persistent URL via Cloudflare tunnel" below for the one-time setup. |
 | `server.bat start|stop|status|logs` | Direct control of the whisper-server process.             |
@@ -65,17 +65,50 @@ Two config files live under the repo: one for the app, one for the server.
   "hotkey": "<F10>",
   "auto_copy": true,
   "auto_start_server": false,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "auto_paste_after_hotkey": true,
+  "ptt_threshold_ms": 300,
+  "translate_base_url": "http://127.0.0.1:8091"
 }
 ```
 
-`language` selects the dictation mode — one of:
+`language` accepts any of the 100 Whisper-supported languages, either as a
+Whisper ISO code (`en`, `es`, `haw`, `yue`) or as the lowercase English
+name (`english`, `spanish`, `italian`, …). Common values:
 
-| value                  | dictate in | clipboard output |
-|------------------------|------------|------------------|
-| `english` *(default)*  | English    | English          |
-| `spanish`              | Spanish    | Spanish          |
-| `italian`              | Italian    | Italian          |
+| value                | dictate in | clipboard output |
+|----------------------|------------|------------------|
+| `en` *(default)*     | English    | English          |
+| `es`                 | Spanish    | Spanish          |
+| `it`                 | Italian    | Italian          |
+
+Other knobs:
+
+- `auto_paste_after_hotkey` — when `true` (default), the tray simulates
+  `Ctrl+V` into the focused window after a hotkey-driven transcription so
+  the text lands at the caret instead of just on the clipboard. Tray menu
+  has a 📌 Paste at caret toggle. Hotkey-flow only — tk window and webapp
+  records are unaffected.
+- `ptt_threshold_ms` — F10 is a single key with two modes: tap to toggle
+  (start/stop), or hold ≥ this many ms and release for push-to-talk. The
+  default 300 ms is comfortable; raise it if a tap occasionally registers
+  as PTT.
+- `translate_base_url` — the secondary whisper-server URL used when the
+  🌐 Translate toggle is on. Defaults to the local-llm-hub's `:8091`
+  contract. See "Translation" below.
+
+Two optional companion files (both gitignored, sample-tracked):
+
+- `config/vocabulary.json` — per-language buckets of proper nouns, brands,
+  and jargon Whisper would otherwise mishear. Joined into the request's
+  `prompt` so the decoder biases toward those words. See
+  `config/vocabulary.sample.json` for the schema.
+- `config/snippets.json` — short keys auto-expanded in the transcript
+  before it hits clipboard / caret paste (e.g. `"myemail"` →
+  `"you@domain.com"`). Word-boundary, case-insensitive matching. See
+  `config/snippets.sample.json`.
+
+Both files hot-reload on mtime change — no restart needed after editing.
 
 Hotkey uses [`pynput.keyboard.GlobalHotKeys`](https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys)
 syntax: angle-bracketed modifiers + a key, `+`-separated.
@@ -417,6 +450,33 @@ so a long take never feels stuck:
 | Done | `Done in 3.2 s · 20.0× realtime — tap Copy or Polish` |
 | Polish in flight | `LLM hub → claude-haiku-4-5 · polishing…` |
 | Polish done | `Polished in 1.4 s — tap Copy` |
+
+### Translation
+
+Whisper can transcribe speech in any of its supported languages, but
+*translation* — speak Spanish, get English back — is a separate task and
+the bundled `large-v3-turbo` model has no translation training data, so
+turbo + `task=translate` returns garbage.
+
+The fix is two whisper-server instances side-by-side:
+
+- `:8090` — turbo (transcription, fast, GPU). What this repo's
+  `whisper_server.yaml` configures.
+- `:8091` — a non-turbo, translate-capable model (e.g.
+  `ggml-medium.bin`, CPU). Run by the sibling
+  [`claude-local-calls`](#-see-also) hub as a lazy-spawn proxy: idle most
+  of the time, cold-starts in 3–8 s on the first translate request after
+  idle, then unloads after 5 min of inactivity.
+
+Both webapp and tk window expose a **🌐 Translate to English** toggle.
+When on, the request routes to `translate_base_url` (default
+`http://127.0.0.1:8091`) with `task=translate`. When off, it routes to
+the primary whisper-server as usual. The toggle is ephemeral — off on
+every launch.
+
+If you don't run the second instance, leave the toggle off and translate
+is invisible. The hotkey path always transcribes — there is no F10
+translate mode by design.
 
 ### Polish models
 

@@ -1,0 +1,7 @@
+{
+  "_comment": "Copy this to vocabulary.json (gitignored) and edit. Buckets keyed by ISO language code; 'all' merges into every language.",
+  "all": ["Roberto", "Ferraro"],
+  "en": ["Anthropic", "Claude", "whisper.cpp", "Cloudflare"],
+  "es": ["Anthropic"],
+  "it": ["Anthropic"]
+}

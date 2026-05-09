@@ -9,7 +9,7 @@
   <meta name="theme-color" content="#0a0a0a">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icon-180.png">
-  <link rel="stylesheet" href="/static/styles.css?v=11">
+  <link rel="stylesheet" href="/static/styles.css?v=12">
   <title>🎙️ Whisper</title>
 </head>
 <body>
@@ -76,6 +76,10 @@
         <span>Language</span>
         <select id="languageSelect" class="select-native"></select>
       </label>
+      <label class="row toggle" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
+        <span>🌐 Translate to English</span>
+        <input id="translateToggle" type="checkbox">
+      </label>
       <label class="row">
         <span>Microphone</span>
         <select id="micSelect" class="select-native"></select>
@@ -130,6 +134,6 @@
     </form>
   </div>
 
-  <script src="/static/app.js?v=11"></script>
+  <script src="/static/app.js?v=12"></script>
 </body>
 </html>

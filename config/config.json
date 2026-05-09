@@ -16,5 +16,8 @@
   "hotkey": "<F10>",
   "auto_copy": true,
   "auto_start_server": false,
-  "log_level": "INFO"
+  "log_level": "INFO",
+  "auto_paste_after_hotkey": true,
+  "ptt_threshold_ms": 300,
+  "translate_base_url": "http://127.0.0.1:8091"
 }

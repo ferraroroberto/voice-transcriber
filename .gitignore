@@ -30,6 +30,8 @@ Thumbs.db
 # --- Config overrides (keep the committed template) -----------------------
 config/config.local.json
 config/webapp_config.json
+config/vocabulary.json
+config/snippets.json
 
 # --- Webapp runtime data --------------------------------------------------
 archive/
