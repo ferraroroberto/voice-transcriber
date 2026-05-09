@@ -29,7 +29,8 @@ server it started.
 |--------------------------|---------------------------------------------------------------------------|
 | `tray.bat`               | Resident tray icon + global hotkey (default: `Ctrl+Alt+Space`). Day-to-day default. Also boots the mobile webapp on `:8443` when enabled. |
 | `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
-| `webapp_tunnel.bat`      | Webapp + Cloudflare quick tunnel — public HTTPS URL for use from outside Tailscale (e.g. at the office). |
+| `webapp_tunnel.bat`      | Webapp + Cloudflare **quick** tunnel — public HTTPS URL on `*.trycloudflare.com` (URL changes every launch). |
+| `webapp_tunnel_named.bat`| Webapp + Cloudflare **named** tunnel — persistent public URL on your own domain (e.g. `https://voice.<you>.net`). Requires one-time setup; see "Persistent URL via named Cloudflare tunnel" below. |
 | `server.bat start|stop|status|logs` | Direct control of the whisper-server process.             |
 | `setup.bat`              | One-shot installer (venv + deps + whisper.cpp + ggml model).             |
 
@@ -266,7 +267,8 @@ the local LLM hub (filler-word removal, no rephrasing).
 |---|---|---|
 | Sitting at the PC | `tray.bat` (or already running) | `https://127.0.0.1:8443` |
 | iPhone, on tailnet | `tray.bat` on the PC | `https://<pc-tailscale-name>:8443` |
-| iPhone, no tailnet (work) | `webapp_tunnel.bat` on the PC | URL printed by cloudflared, also written to `webapp/last_tunnel_url.txt` |
+| iPhone, no tailnet (work) — quick tunnel | `webapp_tunnel.bat` on the PC | URL printed by cloudflared, also written to `webapp/last_tunnel_url.txt` (changes every launch) |
+| iPhone / work PC — persistent URL | `webapp_tunnel_named.bat` on the PC | Your own bookmarked URL, e.g. `https://voice.<your-domain>` |
 | Headless box / dev | `webapp.bat` | `https://127.0.0.1:8443` |
 
 In the daily flow you never touch `webapp.bat`. The tray adopts-or-spawns
@@ -513,6 +515,84 @@ The script writes a strong `secrets.token_urlsafe(32)` into
 After enabling, rotating, or clearing the token, restart the tray /
 webapp process so the new config is loaded.
 
+### Persistent URL via named Cloudflare tunnel
+
+The quick tunnel (`webapp_tunnel.bat`) is great for ad-hoc use but
+the URL changes on every launch — fine if you're going to email
+yourself the URL once a day, painful if you want a stable bookmark
+on a work PC. A **named** Cloudflare tunnel solves this: pick a
+subdomain you own once (e.g. `voice.your-domain.net`), tie it to
+your home PC, and the URL is yours forever. **Free** if you already
+own a domain on Cloudflare.
+
+Pair it with **Cloudflare Access** (also free for personal use) and
+the bearer token, and you have three layers in front of the webapp:
+
+1. Your domain has to be guessed.
+2. Cloudflare Access bounces every request to a Google sign-in
+   restricted to your email — random scanners never see the app.
+3. The bearer token still has to be presented (already on
+   localStorage on every device you've used once).
+
+#### One-time setup
+
+```powershell
+# 1. Install cloudflared if you haven't already
+winget install Cloudflare.cloudflared
+
+# 2. Authenticate cloudflared to your Cloudflare account (browser flow)
+cloudflared tunnel login
+
+# 3. Create the named tunnel — writes credentials JSON to
+#    %USERPROFILE%\.cloudflared\<UUID>.json
+cloudflared tunnel create voice
+
+# 4. Point your subdomain at the tunnel (DNS CNAME, automatically
+#    proxied through Cloudflare)
+cloudflared tunnel route dns voice voice.your-domain.net
+
+# 5. Copy the sample config and fill in your UUID + hostname
+copy webapp\cloudflared.sample.yml webapp\cloudflared.yml
+notepad webapp\cloudflared.yml
+```
+
+`webapp/cloudflared.yml` is gitignored so your tunnel UUID + hostname
+don't end up in the repo. Default `credentials-file` lookup at
+`~/.cloudflared/<UUID>.json` works out of the box; only set it
+explicitly in the YAML if you stored the credentials JSON somewhere
+else.
+
+#### Cloudflare Access policy (recommended)
+
+In the Cloudflare Zero Trust dashboard:
+
+1. **Access → Applications → Add an application → Self-hosted**.
+2. Name it `Voice Transcriber`, hostname `voice.your-domain.net`.
+3. **Identity providers**: enable Google (or whatever you prefer).
+4. **Policy**: name it `Owner only`, action *Allow*, rule
+   `Emails → is → roberto.ferraro@gmail.com`.
+5. Save. From now on, every request to the public URL bounces
+   through a Google sign-in. Anyone not on the email allowlist
+   gets a clean 403.
+
+The bearer token still applies on top — Access just gates the
+network reachability. Both layers run independently.
+
+#### Daily use
+
+```powershell
+webapp_tunnel_named.bat
+```
+
+That's it. Boot uvicorn (or adopt one already running),
+`cloudflared tunnel run` against your config, persistent URL stays
+the same on every restart. Open `https://voice.your-domain.net` on
+the work PC / phone — Cloudflare Access prompts for Google sign-in
+the first time, then drops a session cookie so subsequent visits
+are seamless. The page picks up `?token=…` from
+`webapp/last_tunnel_url.txt` (set the bearer token first if you
+want that — see the section above).
+
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
@@ -527,6 +607,9 @@ webapp process so the new config is loaded.
 | Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |
 | `401 missing or invalid bearer token` on the phone | Token rotated (or never bootstrapped) on this device | Re-open the tokenised URL — Tray → 📋 Copy mobile URL, or `webapp/last_tunnel_url.txt`. The page extracts `?token=…` and stashes it in localStorage |
 | `502` instead of `401` on the phone | Tunnel down or webapp not listening — auth never ran | Start `webapp_tunnel.bat` (or the tray webapp), then retry |
+| Named tunnel: `webapp\cloudflared.yml missing` | First-run setup not done | Copy `webapp\cloudflared.sample.yml` to `webapp\cloudflared.yml`, fill in your UUID + hostname, retry |
+| Named tunnel: `Unable to read credentials file` | `cloudflared tunnel create` was never run on this PC, or the JSON moved | Re-run `cloudflared tunnel create voice` (or set `credentials-file:` in the YAML to point at the existing JSON) |
+| Named tunnel: Cloudflare Access blocks you | Email not on the policy allowlist | Edit the Access application's policy in the Zero Trust dashboard, add your email, save. The change is immediate. |
 
 ## 🔗 See also
 
