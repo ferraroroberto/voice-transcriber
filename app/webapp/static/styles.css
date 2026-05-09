@@ -336,7 +336,24 @@ textarea.text-out.editable::placeholder {
   border-radius: 10px;
   padding: 10px 12px;
   margin: 6px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
 }
+.history-list li .select {
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+  cursor: pointer;
+}
+.history-list li .select input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--polish);
+  cursor: pointer;
+}
+.history-list li .content { flex: 1; min-width: 0; }
 .history-list li .when { color: var(--muted); font-size: 12px; }
 .history-list li .preview { margin-top: 4px; font-size: 14px; color: var(--fg); }
 .history-list li .actions {

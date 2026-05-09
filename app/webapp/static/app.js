@@ -31,7 +31,7 @@
     historyCount:     document.getElementById('historyCount'),
     historyList:      document.getElementById('historyList'),
     refreshHistory:   document.getElementById('refreshHistory'),
-    copyLast:         document.getElementById('copyLast'),
+    copySelection:    document.getElementById('copySelection'),
     cleanAll:         document.getElementById('cleanAll'),
     loadMoreHistory:  document.getElementById('loadMoreHistory'),
 
@@ -234,7 +234,7 @@
     els.saveSettings.addEventListener('click', onSaveSettings);
 
     els.refreshHistory.addEventListener('click', refreshHistory);
-    els.copyLast.addEventListener('click', onCopyLast);
+    els.copySelection.addEventListener('click', onCopySelection);
     els.cleanAll.addEventListener('click', onCleanAll);
     els.loadMoreHistory.addEventListener('click', loadMoreHistory);
 
@@ -710,6 +710,11 @@
     // Reset to page 1.
     els.historyList.innerHTML = '';
     await fetchHistoryPage(0);
+    // After a fresh refresh, the newest take is at the top — default-check
+    // it so a single click on "Copy selection" copies the latest, while the
+    // user can extend the selection up the list to grab more takes.
+    const firstCheckbox = els.historyList.querySelector('input.select-checkbox');
+    if (firstCheckbox) firstCheckbox.checked = true;
   }
 
   async function loadMoreHistory() {
@@ -739,6 +744,19 @@
 
   function renderHistoryItem(s) {
     const li = document.createElement('li');
+
+    const selectLabel = document.createElement('label');
+    selectLabel.className = 'select';
+    selectLabel.title = 'Include this take in "Copy selection"';
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'select-checkbox';
+    checkbox.dataset.sessionId = s.session_id;
+    selectLabel.append(checkbox);
+
+    const content = document.createElement('div');
+    content.className = 'content';
+
     const when = document.createElement('div');
     when.className = 'when';
     when.textContent = s.created_at + (s.language ? ` · ${s.language}` : '');
@@ -771,7 +789,8 @@
     reBtn.addEventListener('click', () => retranscribe(s.session_id));
 
     actions.append(copyBtn, reBtn);
-    li.append(when, preview, actions);
+    content.append(when, preview, actions);
+    li.append(selectLabel, content);
     return li;
   }
 
@@ -810,40 +829,49 @@
     }
   }
 
-  // One-click "grab the newest take and put it on my clipboard" — refresh
-  // first so a take landing from another device (mobile dictating into the
-  // home tray while the work PC has the page open) is included.
-  async function onCopyLast() {
-    const btn = els.copyLast;
-    const restoreLabel = '📋 Copy last';
+  // Multi-take copy. The newest take is auto-checked on every refresh, so
+  // a one-click flow ("just copy the last one") still works. Tick more
+  // boxes to bundle older takes — the result is concatenated in
+  // chronological order (oldest → newest of the selection) with a
+  // blank-line separator so it's obvious where one take ends and the
+  // next begins.
+  async function onCopySelection() {
+    const btn = els.copySelection;
+    const restoreLabel = '📋 Copy selection';
+    const checked = Array.from(
+      els.historyList.querySelectorAll('input.select-checkbox:checked')
+    );
+    if (!checked.length) {
+      showToast('Tick at least one take first', 'error');
+      return;
+    }
     btn.disabled = true;
     btn.textContent = '…';
     let copyDone = false;
     try {
-      const listRes = await authFetch('/api/sessions?limit=1&offset=0');
-      if (!listRes.ok) throw new Error(await listRes.text());
-      const listData = await listRes.json();
-      const newest = (listData.sessions || [])[0];
-      if (!newest) {
-        showToast('History is empty', 'error');
+      // The list is rendered newest-first; reverse selection to get the
+      // chronological order the user reads: oldest piece first, latest last.
+      const idsChronOrder = checked.map(c => c.dataset.sessionId).reverse();
+      const parts = [];
+      for (const id of idsChronOrder) {
+        const r = await authFetch(`/api/sessions/${id}/text`);
+        if (!r.ok) continue;
+        const data = await r.json();
+        const text = (data.polished || data.transcript || '').trim();
+        if (text) parts.push(text);
+      }
+      if (!parts.length) {
+        showToast('Selected takes have no text', 'error');
         return;
       }
-      const textRes = await authFetch(`/api/sessions/${newest.session_id}/text`);
-      if (!textRes.ok) throw new Error(await textRes.text());
-      const td = await textRes.json();
-      const full = td.polished || td.transcript || '';
-      if (!full) {
-        showToast('Newest take has no text', 'error');
-        return;
-      }
-      // Restore the button label *before* the green flash so flashCopied
-      // captures the right "original" and resets to "📋 Copy last", not "…".
+      const combined = parts.join('\n\n');
+      // Restore the label before the green flash so flashCopied captures
+      // "📋 Copy selection" as the original, not "…".
       btn.textContent = restoreLabel;
-      await copyText(full, btn);
+      await copyText(combined, btn);
       copyDone = true;
-      refreshHistory();
     } catch (err) {
-      showToast('Copy last failed: ' + (err.message || err), 'error');
+      showToast('Copy selection failed: ' + (err.message || err), 'error');
     } finally {
       btn.disabled = false;
       if (!copyDone) btn.textContent = restoreLabel;
