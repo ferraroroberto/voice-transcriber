@@ -2,39 +2,35 @@
 
 Why this exists
 ---------------
-The webapp's Cloudflare-tunnel exposure (`webapp_tunnel.bat`) puts the
-recorder on a public `https://*.trycloudflare.com` URL. Anyone who
-guesses or intercepts that URL could record, transcribe, and burn local
-hardware + Claude subscription quota. To shut that off, the server can
-require a bearer token on every API call. This script writes a strong
-token into `config/webapp_config.json` so you don't pick a weak one.
+The webapp's Cloudflare tunnel puts the recorder on a public URL. Even
+behind Cloudflare Access, the bearer token adds a second factor on the
+API itself — a caller past the Access policy still needs the token to
+record / transcribe / polish on your hardware. This script writes a
+strong token into `config/webapp_config.json` so you don't pick a weak
+one.
 
 Behaviour
 ---------
 - With no `auth_token` set (the default): the gate is **off**. The
-  webapp behaves exactly as before. Loopback (tk window) and Tailscale
-  callers all reach the API freely.
+  webapp behaves exactly as before. Every caller reaches the API
+  freely.
 - After running this script: the gate is **on**. Loopback callers
   (the tk window, local probes, the tray's own usage) still bypass —
-  Tailscale and tunnel callers must present the token.
+  remote (tunnel) callers must present the token.
 
 How the phone gets the token
 ----------------------------
-You don't type it. Two paths bake it into the URL automatically:
+You don't type it. The tray bakes it into the URL automatically:
 
-  1. **Tray → 📋 Copy mobile URL** appends `?token=…` to whatever URL
-     it copies (works for both the LAN/Tailscale URL and the
-     trycloudflare URL).
-  2. **`webapp_tunnel.bat`** writes the tokenised URL to
-     `webapp/last_tunnel_url.txt`.
+    Tray → 📋 Copy Cloudflare URL  appends `?token=…` to the URL it
+    copies. Paste into the phone's browser, open once.
 
-Open that URL on the phone once. The page extracts the token, stores it
-in localStorage, and strips it from the visible URL (so your Home Screen
-icon stays clean). All later visits authenticate from localStorage —
-nothing to type.
+The page extracts the token, stores it in localStorage, and strips
+it from the visible URL (so your Home Screen icon stays clean). All
+later visits authenticate from localStorage — nothing to type.
 
-Rotation = re-run this script, then re-open the new tokenised URL once
-on each device that should keep working. Old devices stop working
+Rotation = re-run with --force, then re-open the new tokenised URL
+once on each device that should keep working. Old devices stop working
 immediately, which is the point.
 
 Usage
@@ -113,15 +109,12 @@ def main() -> int:
     print("  webapp process so the new config is picked up.")
     print("• Loopback callers (the tk main window) keep working without")
     print("  the token — local UX is unchanged.")
-    print("• Tailscale + tunnel callers must present the token. They")
-    print("  pick it up automatically the first time they open a")
-    print("  tokenised URL:")
-    print("    – Tray menu → 📋 Copy mobile URL  (URL already includes")
+    print("• Remote (tunnel) callers must present the token. They pick")
+    print("  it up automatically the first time they open a tokenised URL:")
+    print("    – Tray menu → 📋 Copy Cloudflare URL (URL already includes")
     print("      ?token=…). Paste into the phone's browser, open it,")
     print("      done. The page strips ?token=… from the visible URL")
     print("      after stashing it in localStorage.")
-    print("    – Cloudflare tunnel: `webapp_tunnel.bat` writes the")
-    print("      tokenised URL to webapp/last_tunnel_url.txt.")
     print("• Rotation: re-run with --force, then re-open the new")
     print("  tokenised URL once on each device that should keep")
     print("  working. Other devices stop working immediately.")

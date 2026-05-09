@@ -1,9 +1,8 @@
 """Start uvicorn + cloudflared on a named (persistent) tunnel.
 
-Used by `webapp_tunnel_named.bat`. Mirrors `scripts/run_tunnel.py` but
-points at a pre-created Cloudflare tunnel via a config file
-(`webapp/cloudflared.yml`) so the public URL is the same on every
-launch — bookmark once, forever.
+Used by `webapp_tunnel_named.bat` for headless / no-tray use. The
+tray (`tray.bat`) already does this same work as part of normal
+startup — only reach for this script when running without the tray.
 
 Boots:
 
@@ -11,11 +10,11 @@ Boots:
   2. cloudflared tunnel --config webapp/cloudflared.yml run
 
 The persistent URL is written to `webapp/last_tunnel_url.txt` (with
-`?token=…` appended when an `auth_token` is configured) so the
-existing tray "📋 Copy mobile URL" path can keep working unchanged.
+`?token=…` appended when an `auth_token` is configured) so external
+tooling can find it.
 
 One-time setup before this script can run — see README →
-"Persistent URL via named Cloudflare tunnel":
+"Persistent URL via Cloudflare tunnel":
 
   cloudflared tunnel login
   cloudflared tunnel create voice
@@ -124,7 +123,7 @@ def _spawn_cloudflared(config_path: Path) -> subprocess.Popen:
 
 def _read_hostname(config_path: Path) -> Optional[str]:
     """Pull the first hostname out of the ingress list — used to
-    persist the public URL for the tray's Copy mobile URL path."""
+    persist the public URL to last_tunnel_url.txt."""
     try:
         data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
     except (OSError, yaml.YAMLError) as exc:

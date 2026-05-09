@@ -7,24 +7,18 @@ to `webapp/certificates/`:
     ca.key                              local CA private key (sensitive)
     cert.pem                            server cert signed by the CA
     key.pem                             server private key (uvicorn reads this)
-    voice-transcriber-ca.mobileconfig   iOS profile that wraps the CA
 
-The leaf cert's SAN list includes:
+Used only for the local loopback HTTPS endpoint. Remote access goes
+through Cloudflare which provides its own public TLS — phones and
+remote PCs never see this cert.
 
-  - 127.0.0.1, ::1, localhost
-  - the machine's hostname
-  - every IPv4 address bound on local interfaces (LAN + Tailscale)
-
-So you can hit the webapp by IP, hostname, or tailnet name without a
-warning. Re-run this script if your IP changes (e.g. moved to a new
-network) and restart the webapp.
+The leaf cert's SAN list includes 127.0.0.1, ::1, localhost, the
+machine's hostname, and any IPv4 addresses bound on local interfaces.
+Re-run this script if those change and restart the webapp.
 
 On Windows the script also installs ``ca.pem`` into the user's
 ``CurrentUser\\Root`` trust store via ``certutil`` so Edge/Chrome on this
 PC trust it without admin rights.
-
-The `.mobileconfig` is also copied into `app/webapp/static/` so the
-webapp can serve it at `/install-ca` for one-tap iOS install.
 
 Usage:
     python scripts/gen_ssl_cert.py

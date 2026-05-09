@@ -16,6 +16,10 @@ import atexit
 import logging
 import os
 import queue
+import shutil
+import signal
+import subprocess
+import sys
 import threading
 import time
 import tkinter as tk
@@ -25,6 +29,7 @@ from typing import Optional
 # Third-party imports
 import psutil
 import pyperclip
+import yaml
 from PIL import Image, ImageDraw
 import pystray
 from pynput import keyboard
@@ -56,10 +61,33 @@ EVT_OPEN_WINDOW = "open_window"
 EVT_START_SERVER = "start_server"
 EVT_STOP_SERVER = "stop_server"
 EVT_MODEL_INFO = "model_info"
-EVT_COPY_WEBAPP_URL = "copy_webapp_url"
+EVT_COPY_LOCAL_URL = "copy_local_url"
+EVT_COPY_TUNNEL_URL = "copy_tunnel_url"
 EVT_RESTART_WEBAPP = "restart_webapp"
 EVT_TOGGLE_APPEND = "toggle_append"
 EVT_QUIT = "quit"
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+TUNNEL_CONFIG_PATH = PROJECT_ROOT / "webapp" / "cloudflared.yml"
+
+
+def _read_tunnel_hostname(config_path: Path) -> Optional[str]:
+    """Pull the first ingress[].hostname out of the cloudflared config.
+
+    Returns None when the file is missing or unparseable — the tray
+    treats either case as "no tunnel" and skips spawning cloudflared.
+    """
+    if not config_path.exists():
+        return None
+    try:
+        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    except (OSError, yaml.YAMLError) as exc:
+        logger.warning(f"⚠️  Could not parse {config_path}: {exc}")
+        return None
+    for entry in data.get("ingress") or []:
+        if isinstance(entry, dict) and entry.get("hostname"):
+            return str(entry["hostname"]).strip()
+    return None
 
 
 class TrayApp:
@@ -92,6 +120,11 @@ class TrayApp:
         # checkbox so toggling either surface stays in sync.
         self.append_mode: bool = False
         self._append_listeners: list = []
+        # Cloudflare named tunnel — auto-spawned alongside whisper + uvicorn
+        # so a single launch ('tray.bat') brings everything up. Hostname is
+        # read from webapp/cloudflared.yml; missing config skips the tunnel.
+        self._cloudflared_proc: Optional[subprocess.Popen] = None
+        self._tunnel_hostname: Optional[str] = _read_tunnel_hostname(TUNNEL_CONFIG_PATH)
 
     # ------------------------------------------------------------ run / quit
 
@@ -110,6 +143,8 @@ class TrayApp:
             threading.Thread(target=self._start_server_worker, daemon=True).start()
         if self.webapp.config.enabled:
             threading.Thread(target=self._start_webapp_worker, daemon=True).start()
+        if self._tunnel_hostname is not None:
+            threading.Thread(target=self._start_tunnel_worker, daemon=True).start()
         try:
             self.root.mainloop()
         finally:
@@ -122,6 +157,9 @@ class TrayApp:
                 self._hotkey_listener.stop()
             except Exception:
                 pass
+        # Stop cloudflared first so the public URL goes 5xx immediately
+        # while the rest of the cleanup runs.
+        self._stop_tunnel()
         try:
             webapp_status = self.webapp.status()
             if webapp_status.ownership == OWNERSHIP_OURS:
@@ -177,8 +215,13 @@ class TrayApp:
                     lambda _item: self._cached_webapp_label(), None, enabled=False,
                 ),
                 pystray.MenuItem(
-                    "📋 Copy mobile URL",
-                    lambda: self._enqueue(EVT_COPY_WEBAPP_URL),
+                    "📋 Copy local URL",
+                    lambda: self._enqueue(EVT_COPY_LOCAL_URL),
+                ),
+                pystray.MenuItem(
+                    "📋 Copy Cloudflare URL",
+                    lambda: self._enqueue(EVT_COPY_TUNNEL_URL),
+                    enabled=lambda _item: self._tunnel_hostname is not None,
                 ),
                 pystray.MenuItem(
                     "🔄 Restart web app",
@@ -259,8 +302,10 @@ class TrayApp:
             threading.Thread(target=self.server.stop, daemon=True).start()
         elif event == EVT_MODEL_INFO:
             self._show_model_info()
-        elif event == EVT_COPY_WEBAPP_URL:
-            self._copy_webapp_url()
+        elif event == EVT_COPY_LOCAL_URL:
+            self._copy_local_url()
+        elif event == EVT_COPY_TUNNEL_URL:
+            self._copy_tunnel_url()
         elif event == EVT_RESTART_WEBAPP:
             threading.Thread(target=self._restart_webapp_worker, daemon=True).start()
         elif event == EVT_TOGGLE_APPEND:
@@ -293,14 +338,35 @@ class TrayApp:
         if cb in self._append_listeners:
             self._append_listeners.remove(cb)
 
-    def _copy_webapp_url(self) -> None:
-        # Re-read the webapp config at copy-time so a freshly rotated
-        # token lands in the URL without needing a tray restart.
+    def _copy_local_url(self) -> None:
+        """Copy the loopback URL for use from this PC's browser. Token
+        bypasses the auth gate on loopback, but we still tag it so
+        pasting into a remote tool (curl from another machine, etc.)
+        carries the credential."""
+        token = self._current_auth_token()
+        url = append_auth_token(f"https://127.0.0.1:{self.webapp.config.port}", token)
+        self._copy_with_toast(url)
+
+    def _copy_tunnel_url(self) -> None:
+        """Copy the persistent Cloudflare URL — what to bookmark on
+        the phone or open from the work PC."""
+        if self._tunnel_hostname is None:
+            self._notify("Cloudflare tunnel", "No webapp/cloudflared.yml — tunnel disabled")
+            return
+        token = self._current_auth_token()
+        url = append_auth_token(f"https://{self._tunnel_hostname}", token)
+        self._copy_with_toast(url)
+
+    @staticmethod
+    def _current_auth_token() -> str:
+        """Re-read the bearer token at copy-time so a freshly rotated
+        token lands in the URL without needing a tray restart."""
         try:
-            token = load_webapp_config().auth_token
+            return load_webapp_config().auth_token
         except Exception:
-            token = ""
-        url = append_auth_token(self.webapp.base_url, token)
+            return ""
+
+    def _copy_with_toast(self, url: str) -> None:
         try:
             pyperclip.copy(url)
             self._notify("📋 Copied", url)
@@ -322,6 +388,65 @@ class TrayApp:
         except RuntimeError as exc:
             logger.warning(f"⚠️  Webapp failed to start: {exc}")
             self._notify("Webapp failed to start", str(exc))
+
+    def _start_tunnel_worker(self) -> None:
+        """Spawn cloudflared against webapp/cloudflared.yml so the
+        persistent public URL comes up alongside everything else.
+        Best-effort — a missing cloudflared binary or a failed launch
+        is logged but doesn't take the tray down."""
+        bin_path = shutil.which("cloudflared")
+        if bin_path is None:
+            logger.warning(
+                "⚠️  cloudflared not on PATH — public URL won't be reachable. "
+                "Install: winget install Cloudflare.cloudflared"
+            )
+            self._notify(
+                "Cloudflare tunnel",
+                "cloudflared not on PATH — install via winget",
+            )
+            return
+        cmd = [
+            bin_path, "tunnel", "--config", str(TUNNEL_CONFIG_PATH), "run",
+        ]
+        kw: dict = dict(
+            cwd=str(PROJECT_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        if sys.platform == "win32":
+            kw["creationflags"] = (
+                subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+            )
+        try:
+            self._cloudflared_proc = subprocess.Popen(cmd, **kw)
+        except OSError as exc:
+            logger.warning(f"⚠️  cloudflared failed to launch: {exc}")
+            self._notify("Cloudflare tunnel", f"Failed to start: {exc}")
+            return
+        logger.info(
+            f"🌍 Cloudflare tunnel started → https://{self._tunnel_hostname} "
+            f"(pid={self._cloudflared_proc.pid})"
+        )
+
+    def _stop_tunnel(self) -> None:
+        proc = self._cloudflared_proc
+        if proc is None:
+            return
+        self._cloudflared_proc = None
+        try:
+            logger.info(f"🛑 Stopping cloudflared (pid={proc.pid})")
+            if sys.platform == "win32":
+                try:
+                    proc.send_signal(signal.CTRL_BREAK_EVENT)
+                except Exception:
+                    pass
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+        except Exception as exc:
+            logger.debug(f"cloudflared stop failed: {exc}")
 
     def _show_model_info(self) -> None:
         """Surface model/memory/runtime info either through the open main

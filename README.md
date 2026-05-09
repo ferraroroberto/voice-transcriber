@@ -27,10 +27,9 @@ server it started.
 
 | Command                  | What it does                                                              |
 |--------------------------|---------------------------------------------------------------------------|
-| `tray.bat`               | Resident tray icon + global hotkey (default: `Ctrl+Alt+Space`). Day-to-day default. Also boots the mobile webapp on `:8443` when enabled. |
+| `tray.bat`               | Resident tray icon + global hotkey (default: `Ctrl+Alt+Space`). Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
 | `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
-| `webapp_tunnel.bat`      | Webapp + Cloudflare **quick** tunnel — public HTTPS URL on `*.trycloudflare.com` (URL changes every launch). |
-| `webapp_tunnel_named.bat`| Webapp + Cloudflare **named** tunnel — persistent public URL on your own domain (e.g. `https://voice.<you>.net`). Requires one-time setup; see "Persistent URL via named Cloudflare tunnel" below. |
+| `webapp_tunnel_named.bat`| Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See "Persistent URL via Cloudflare tunnel" below for the one-time setup. |
 | `server.bat start|stop|status|logs` | Direct control of the whisper-server process.             |
 | `setup.bat`              | One-shot installer (venv + deps + whisper.cpp + ggml model).             |
 
@@ -157,9 +156,9 @@ The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — 
 voice-transcriber/
 ├── launcher.py                    # entry point (python launcher.py tray|record|gui|…)
 ├── setup.bat                      # one-shot: venv + pip + whisper.cpp + model
-├── tray.bat                       # default daily launcher (also boots the webapp)
-├── webapp.bat                     # standalone FastAPI webapp launcher
-├── webapp_tunnel.bat              # webapp + Cloudflare quick tunnel
+├── tray.bat                       # default daily launcher (boots whisper + webapp + Cloudflare tunnel)
+├── webapp.bat                     # standalone FastAPI webapp launcher (no tunnel)
+├── webapp_tunnel_named.bat        # webapp + named Cloudflare tunnel, no tray (headless use)
 ├── server.bat                     # raw server start|stop|status|logs
 ├── requirements.txt
 ├── .gitignore
@@ -265,78 +264,52 @@ the local LLM hub (filler-word removal, no rephrasing).
 
 | Where you are | What to launch | How to reach it |
 |---|---|---|
-| Sitting at the PC | `tray.bat` (or already running) | `https://127.0.0.1:8443` |
-| iPhone, on tailnet | `tray.bat` on the PC | `https://<pc-tailscale-name>:8443` |
-| iPhone, no tailnet (work) — quick tunnel | `webapp_tunnel.bat` on the PC | URL printed by cloudflared, also written to `webapp/last_tunnel_url.txt` (changes every launch) |
-| iPhone / work PC — persistent URL | `webapp_tunnel_named.bat` on the PC | Your own bookmarked URL, e.g. `https://voice.<your-domain>` |
-| Headless box / dev | `webapp.bat` | `https://127.0.0.1:8443` |
+| Sitting at the PC | `tray.bat` (or already running) | `https://127.0.0.1:8443`, or tray → **📋 Copy local URL** |
+| Anywhere else (phone, work PC, hotel Wi-Fi) | `tray.bat` on the home PC | Your bookmarked Cloudflare URL, e.g. `https://voice.<your-domain>` — tray → **📋 Copy Cloudflare URL** |
+| Headless box / dev | `webapp.bat` (no tunnel) or `webapp_tunnel_named.bat` (with tunnel) | `https://127.0.0.1:8443` / your Cloudflare URL |
 
-In the daily flow you never touch `webapp.bat`. The tray adopts-or-spawns
-uvicorn the same way it adopts-or-spawns whisper-server. To opt out, set
-`"webapp": {"enabled": false}` in `config/config.json`.
+The tray launches whisper-server, the webapp, and (if
+`webapp/cloudflared.yml` exists) cloudflared too. One launch covers
+local + remote in a single step. To opt the webapp out entirely, set
+`"webapp": {"enabled": false}` in `config/config.json`. To skip the
+tunnel, just don't create `webapp/cloudflared.yml` (it's gitignored
+anyway).
 
-### First-time setup (one-time per device)
+### First-time setup
 
-The webapp uses HTTPS with a self-signed CA so iOS Safari will allow
-microphone access. Three one-time steps to make a phone "remember"
-everything:
+#### 1. PC: generate the local HTTPS cert (one-time)
 
-#### 1. PC: generate the certificate
+The webapp serves HTTPS on the loopback so the local browser still
+sees a secure context (needed for `getUserMedia` when you record from
+the home PC). Cloudflare terminates TLS at the edge for everything
+else — phones and remote PCs never see this cert.
 
 ```powershell
 & .\.venv\Scripts\python.exe scripts\gen_ssl_cert.py
 ```
 
-This writes `webapp/certificates/{ca.pem,cert.pem,key.pem}`, copies the
-iOS profile (`voice-transcriber-ca.mobileconfig`) and Android-friendly
-DER (`ca.crt`) into `app/webapp/static/`, and installs the CA into the
-Windows user trust store via `certutil` (no admin required). The cert
-covers `127.0.0.1`, your LAN IP, your Tailscale IPv4, `localhost`, your
-hostname, and your tailnet DNS name. Valid 10 years. Re-run this if any
-of those addresses change.
+This writes `webapp/certificates/{ca.pem,cert.pem,key.pem}` and
+installs the CA into the Windows user trust store via `certutil`
+(no admin required) so the local browser shows a green padlock.
+Valid 10 years. Restart the tray (right-click → Quit, then
+`tray.bat`) so uvicorn picks up the cert.
 
-Then restart the tray (right-click tray icon → Quit, then `tray.bat`)
-so uvicorn picks up the cert. From then on it runs HTTPS automatically
-whenever the cert files exist.
+#### 2. iPhone: install the webapp as a Home Screen icon
 
-#### 2. iPhone: trust the CA (so Safari doesn't warn)
+Open the **Cloudflare URL** in Safari (e.g.
+`https://voice.<your-domain>`), then **share sheet → Add to Home
+Screen** → name it "Voice". Launch from that icon from now on —
+iOS treats it as a standalone app and persists mic permission
+across launches.
 
-1. Open Tailscale on your iPhone, confirm the green dot.
-2. Safari → `https://<pc-tailscale-name>:8443/install-ca`
-   (e.g. `https://tower.tail1121fd.ts.net:8443/install-ca`).
-   First connection may show "Not Secure" — tap **Advanced → Proceed**
-   once to download the profile.
-3. iOS shows "Profile Downloaded".
-4. **Settings → General → VPN & Device Management** → tap
-   *Voice Transcriber Trust* → **Install** (Face ID + passcode).
-5. **Settings → General → About → Certificate Trust Settings** →
-   toggle on **Voice Transcriber Local CA**.
-6. Reload `https://<pc-tailscale-name>:8443` — green padlock, no
-   warnings, ever.
+> First-time visit on a new device: open the tokenised URL the tray
+> copies via **📋 Copy Cloudflare URL** (it includes `?token=…` if
+> you've enabled bearer-token auth). The page stashes the token in
+> `localStorage` and strips it from the visible URL. From then on
+> just open the icon — nothing to type.
 
-> **Always type `https://`** when entering the URL by hand. Without the
-> scheme, Chrome/Safari default to `http://` and uvicorn (which is
-> serving TLS) will close the connection — you'll see
-> `ERR_CONNECTION_CLOSED`.
-
-#### 3. iPhone: persistent microphone permission
-
-Mobile Safari prompts for the mic on every fresh page load by default.
-Two ways around that:
-
-**Best — Add to Home Screen (PWA mode).**
-In Safari, share sheet → **Add to Home Screen** → name it (e.g.
-"Voice"). Launch from that icon from now on. iOS treats it as a
-standalone app and persists mic permission across launches —
-WhisperFlow-style.
-
-**Belt + suspenders — whitelist the site.**
-Settings → Safari → Settings for Websites → **Microphone** → tap your
-host → set to **Allow**. Same for **Camera** while you're there.
-
-Within a single page session the app already keeps the mic stream alive
-between recordings, so back-to-back records never re-prompt regardless
-of these steps.
+Within a single page session the app keeps the mic stream alive
+between recordings, so back-to-back records never re-prompt.
 
 ### Daily use
 
@@ -477,15 +450,14 @@ preview) and **🔁 Re-transcribe** (re-runs whisper on the saved raw
 audio — useful when a phone died mid-record and you want to pull the
 transcript afterwards).
 
-### Optional: bearer-token auth (for the public Cloudflare tunnel)
+### Optional: bearer-token auth (extra layer)
 
 The webapp ships with the auth gate **off** by default — `auth_token`
 is `""` in `config/webapp_config.json` and every caller (tk window,
-Tailscale phone, tunnel visitor) reaches the API freely. That's fine
-on a LAN. When you expose the webapp via `webapp_tunnel.bat`, the URL
-is public until the tunnel closes, and anyone who guesses or
-intercepts it can record / transcribe / polish on your hardware. Turn
-the gate on:
+loopback browser, tunnel visitor) reaches the API freely. With
+Cloudflare Access in front of your tunnel, that's already a strong
+gate. The bearer token adds a second factor on the API itself — even
+a caller past the Access policy still needs the token. Turn it on:
 
 ```powershell
 & .\.venv\Scripts\python.exe scripts\gen_token.py
@@ -494,36 +466,31 @@ the gate on:
 The script writes a strong `secrets.token_urlsafe(32)` into
 `webapp_config.json`. From then on:
 
-- **Loopback bypass.** The tk window and any local probe still hit the
-  API without the token. Local UX is unchanged.
-- **Tailscale + tunnel callers must present the token.** They pick it
-  up automatically the first time they open a tokenised URL:
-  - **Tray → 📋 Copy mobile URL** appends `?token=…` to the URL it
-    copies (works for both LAN/Tailscale and Cloudflare URLs).
-  - **`webapp_tunnel.bat`** writes the tokenised URL to
-    `webapp/last_tunnel_url.txt`.
-  - Open that URL once on the phone — the page stashes the token in
-    `localStorage` and strips `?token=…` from the visible URL so the
-    Home Screen icon stays clean. All later visits authenticate from
-    `localStorage`. Nothing to type.
+- **Loopback bypass.** The tk window and any local probe still hit
+  the API without the token. Local UX is unchanged.
+- **Remote callers must present the token.** They pick it up
+  automatically the first time they open a tokenised URL — tray
+  menu → **📋 Copy Cloudflare URL** appends `?token=…` to the URL it
+  copies. Open that URL once on the phone — the page stashes the
+  token in `localStorage` and strips `?token=…` from the visible URL
+  so the Home Screen icon stays clean. All later visits authenticate
+  from `localStorage`. Nothing to type.
 - **Rotation.** `python scripts/gen_token.py --force` writes a fresh
-  token. Re-open the new tokenised URL once on each device that should
-  keep working. Other devices stop working immediately.
+  token. Re-open the new tokenised URL once on each device that
+  should keep working. Other devices stop working immediately.
 - **Disable.** `python scripts/gen_token.py --clear` returns the
   webapp to no-auth.
 
-After enabling, rotating, or clearing the token, restart the tray /
-webapp process so the new config is loaded.
+After enabling, rotating, or clearing the token, restart the tray
+so the new config is loaded.
 
-### Persistent URL via named Cloudflare tunnel
+### Persistent URL via Cloudflare tunnel
 
-The quick tunnel (`webapp_tunnel.bat`) is great for ad-hoc use but
-the URL changes on every launch — fine if you're going to email
-yourself the URL once a day, painful if you want a stable bookmark
-on a work PC. A **named** Cloudflare tunnel solves this: pick a
-subdomain you own once (e.g. `voice.your-domain.net`), tie it to
-your home PC, and the URL is yours forever. **Free** if you already
-own a domain on Cloudflare.
+A named Cloudflare tunnel binds a subdomain you own (e.g.
+`voice.your-domain.net`) to your home PC, so the public URL stays
+the same on every launch — bookmark once, forever. **Free** if you
+already own a domain on Cloudflare. The tray brings it up
+automatically alongside whisper + the webapp.
 
 Pair it with **Cloudflare Access** (also free for personal use) and
 the bearer token, and you have three layers in front of the webapp:
@@ -580,36 +547,40 @@ network reachability. Both layers run independently.
 
 #### Daily use
 
-```powershell
-webapp_tunnel_named.bat
-```
+Just `tray.bat`. The tray detects `webapp/cloudflared.yml` and
+spawns cloudflared alongside everything else — the public URL is
+live as soon as the tray icon turns green. Open
+`https://voice.your-domain.net` on the work PC / phone:
+Cloudflare Access prompts for Google sign-in the first time, drops
+a session cookie, subsequent visits are seamless.
 
-That's it. Boot uvicorn (or adopt one already running),
-`cloudflared tunnel run` against your config, persistent URL stays
-the same on every restart. Open `https://voice.your-domain.net` on
-the work PC / phone — Cloudflare Access prompts for Google sign-in
-the first time, then drops a session cookie so subsequent visits
-are seamless. The page picks up `?token=…` from
-`webapp/last_tunnel_url.txt` (set the bearer token first if you
-want that — see the section above).
+Tray menu items for sharing the URL:
+
+- **📋 Copy local URL** → `https://127.0.0.1:8443` for use on this PC.
+- **📋 Copy Cloudflare URL** → `https://voice.your-domain.net` —
+  what to paste on the phone or share. Both URLs include
+  `?token=…` automatically when bearer-token auth is enabled.
+
+For headless / no-tray use, `webapp_tunnel_named.bat` does the same
+work in one foreground process.
 
 ### Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `ERR_CONNECTION_CLOSED` on iPhone | Typed without `https://` — Chrome tried HTTP, uvicorn closed the TLS port | Type the full `https://...:8443` URL |
-| `Init failed: Load failed` toast | Tailscale on iPhone briefly dropped while Safari held a stale TLS connection | Pull down on the page to reload — init now retries automatically and falls back to defaults |
+| `ERR_CONNECTION_CLOSED` typing the local URL | Typed `http://...:8443` without the scheme — uvicorn closed the TLS port | Always type `https://127.0.0.1:8443`. For remote use, open the Cloudflare URL via tray → 📋 Copy Cloudflare URL |
+| `ERR_NAME_NOT_RESOLVED` on the Cloudflare URL | DNS hasn't propagated, or the domain's nameservers aren't on Cloudflare | `nslookup voice.your-domain.net 1.1.1.1` — empty result means the CNAME isn't on Cloudflare. Verify the domain shows `Active` in dashboard → Websites; if not, switch nameservers at your registrar |
+| `401 missing or invalid bearer token` after rotating | Phone has the OLD token in localStorage; server has the new one | Tray → 📋 Copy Cloudflare URL → open on the phone once. The page picks up `?token=…` and refreshes localStorage. If still stuck, Settings → Safari → Advanced → Website Data → remove the site, then re-open |
+| Cloudflare Access blocks you | Email not on the policy allowlist | Zero Trust dashboard → Access → Applications → your app → Policies → edit Include rule, add your email, save. Effective immediately |
+| `Init failed: Load failed` toast | Network dropped while the page held a stale connection | Pull down on the page to reload — init retries automatically |
 | iOS prompts for mic on every record | Loaded from Safari URL bar, not from a Home Screen icon | **Add to Home Screen** and launch from the icon. Or whitelist the site under Settings → Safari → Settings for Websites → Microphone |
 | Polish fails with `502 hub returned…upstream :8086 unreachable` | Selected polish model's local llama-server isn't running | Start it from the local-llm-hub tray (Models submenu → toggle on), or pick `claude-haiku-4-5` in the dropdown — that one routes via your Claude subscription and doesn't need a local backend |
-| Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings (best-effort — iOS doesn't always expose enough info to override its routing) |
-| Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button now writes a single `text/plain` MIME type via `ClipboardItem` and clears any active selection first |
-| Cert worked yesterday, browser warns today | Your LAN IP or Tailscale name changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the webapp |
+| Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings |
+| Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button writes a single `text/plain` MIME type via `ClipboardItem` |
+| Local cert warns in the browser | LAN IP or hostname changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the tray |
 | Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |
-| `401 missing or invalid bearer token` on the phone | Token rotated (or never bootstrapped) on this device | Re-open the tokenised URL — Tray → 📋 Copy mobile URL, or `webapp/last_tunnel_url.txt`. The page extracts `?token=…` and stashes it in localStorage |
-| `502` instead of `401` on the phone | Tunnel down or webapp not listening — auth never ran | Start `webapp_tunnel.bat` (or the tray webapp), then retry |
-| Named tunnel: `webapp\cloudflared.yml missing` | First-run setup not done | Copy `webapp\cloudflared.sample.yml` to `webapp\cloudflared.yml`, fill in your UUID + hostname, retry |
-| Named tunnel: `Unable to read credentials file` | `cloudflared tunnel create` was never run on this PC, or the JSON moved | Re-run `cloudflared tunnel create voice` (or set `credentials-file:` in the YAML to point at the existing JSON) |
-| Named tunnel: Cloudflare Access blocks you | Email not on the policy allowlist | Edit the Access application's policy in the Zero Trust dashboard, add your email, save. The change is immediate. |
+| Tray says `cloudflared not on PATH` | Binary missing | `winget install Cloudflare.cloudflared`, restart the tray |
+| Tray boots but no public URL | `webapp/cloudflared.yml` missing | Copy `webapp/cloudflared.sample.yml` to `webapp/cloudflared.yml`, fill in UUID + hostname, restart the tray. See "Persistent URL via Cloudflare tunnel" |
 
 ## 🔗 See also
 
