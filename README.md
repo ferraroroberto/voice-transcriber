@@ -355,7 +355,29 @@ start the next recording, the client sends `DELETE
 /api/sessions/{id}` so the folder is gone.
 
 Ephemeral on the client (off on every fresh page load); webapp
-only — the tray + tk surfaces don't expose this yet.
+only by design — the tk window and tray-hotkey flows don't write
+anything to `archive/`, so every desktop take is already
+effectively incognito and there's no history list to hide from.
+
+#### Tk window controls
+
+The tk main window mirrors the webapp's three header tools as far
+as the desktop flow allows:
+
+- **➕ Append** — same flag as the tray menu (toggling either keeps
+  the other in sync). Each new take glues onto the current one
+  with a blank-line separator.
+- **🧽 Reset** — clears the *Last transcription* + *Polished*
+  panels and the in-memory slot, so the next take starts on a
+  clean page without restarting the app.
+- **Editable transcript** — the *Last transcription* box accepts
+  edits; corrections flow back into the slot so **✨ Polish** runs
+  against your edited text.
+- **Force built-in mic (skip Bluetooth)** — checkbox under the
+  *Mic* combobox. Only effective when the combo is at *System
+  default*; biases device selection toward inputs whose name
+  contains *realtek*, *built-in*, or *internal*. Default seeded
+  from `force_builtin_mic_default` in `webapp_config.json`.
 
 #### Silence skip
 

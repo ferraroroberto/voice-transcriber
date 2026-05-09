@@ -114,6 +114,13 @@ class TranscriberApp:
         initial_append = bool(getattr(self.tray, "append_mode", False)) if self.tray else False
         self.append_var = tk.BooleanVar(value=initial_append)
         self._suppress_append_trace = False
+        # Force-built-in mic — when on AND the mic combo is at "System
+        # default", the heuristic preferred_mics list below biases device
+        # selection toward built-in inputs over Bluetooth/headset ones.
+        # Default seeded from the shared webapp_config.json.
+        self.force_builtin_var = tk.BooleanVar(
+            value=self.webapp_config.force_builtin_mic_default,
+        )
 
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
@@ -137,7 +144,8 @@ class TranscriberApp:
                     _initial_mic = name
                     break
         self.mic_var = tk.StringVar(value=_initial_mic)
-        self.mic_var.trace_add("write", self._on_mic_change)
+        self.mic_var.trace_add("write", self._apply_mic_selection)
+        self.force_builtin_var.trace_add("write", self._apply_mic_selection)
 
         self._build_widgets()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -152,12 +160,18 @@ class TranscriberApp:
                 self.config.language = mode
                 return
 
-    def _on_mic_change(self, *_: object) -> None:
+    def _apply_mic_selection(self, *_: object) -> None:
+        """Combine the mic combo + force-built-in checkbox into a single
+        preferred_mics list. An explicit combo pick always wins; otherwise
+        the checkbox switches between OS-default and a built-in heuristic
+        (substring matches that bias selection away from BT/headsets)."""
         label = self.mic_var.get()
-        if label == "System default":
-            self.config.preferred_mics = None
-        else:
+        if label != "System default":
             self.config.preferred_mics = [label]
+        elif self.force_builtin_var.get():
+            self.config.preferred_mics = ["realtek", "built-in", "internal"]
+        else:
+            self.config.preferred_mics = None
 
     def _build_widgets(self) -> None:
         pad = {"padx": 16, "pady": 6}
@@ -207,6 +221,16 @@ class TranscriberApp:
         )
         mic_combo.pack(side=tk.LEFT, padx=8)
 
+        # Force-built-in toggle — only effective when mic combo is at
+        # "System default"; biases preferred_mics toward built-in inputs.
+        force_builtin_frame = ttk.Frame(self.root)
+        force_builtin_frame.pack(fill=tk.X, padx=16, pady=(0, 6))
+        ttk.Checkbutton(
+            force_builtin_frame,
+            text="Force built-in mic (skip Bluetooth)",
+            variable=self.force_builtin_var,
+        ).pack(side=tk.LEFT)
+
         # Primary actions
         record_btn = ttk.Button(self.root, text="🎤 Record / Stop", command=self._toggle_record)
         record_btn.pack(fill=tk.X, **pad)
@@ -223,9 +247,17 @@ class TranscriberApp:
         header = ttk.Frame(last_frame)
         header.pack(fill=tk.X)
         ttk.Label(header, text="Last transcription:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT)
+        # Order on the right (rightmost first because pack(side=RIGHT) stacks
+        # toward the centre): Append | Reset | Copy — mirrors the webapp
+        # header's Append | Reset | Incognito grouping.
         self.copy_last_btn = ttk.Button(header, text="📋 Copy", command=self._copy_last, width=10)
         self.copy_last_btn.pack(side=tk.RIGHT)
         self.copy_last_btn.state(["disabled"])
+        self.reset_btn = ttk.Button(
+            header, text="🧽 Reset", command=self._reset_session, width=10,
+        )
+        self.reset_btn.pack(side=tk.RIGHT, padx=(0, 6))
+        self.reset_btn.state(["disabled"])
         self.append_check = ttk.Checkbutton(
             header, text="➕ Append", variable=self.append_var,
             command=self._on_append_toggle,
@@ -248,7 +280,11 @@ class TranscriberApp:
         self.last_text = tk.Text(text_wrap, wrap=tk.WORD, height=5, font=("Segoe UI", 9),
                                  background="#FAFAFA", relief=tk.FLAT, borderwidth=1)
         scroll = ttk.Scrollbar(text_wrap, orient=tk.VERTICAL, command=self.last_text.yview)
-        self.last_text.configure(yscrollcommand=scroll.set, state=tk.DISABLED)
+        # Editable so the user can fix a misheard word before polishing —
+        # matches the webapp's transcript box. Edits flow back into the
+        # transcript slot via _on_last_text_edited so Polish picks them up.
+        self.last_text.configure(yscrollcommand=scroll.set)
+        self.last_text.bind("<KeyRelease>", self._on_last_text_edited)
         self.last_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -370,20 +406,57 @@ class TranscriberApp:
         if text == self._displayed_last_transcription:
             return
         self._displayed_last_transcription = text
-        self.last_text.configure(state=tk.NORMAL)
         self.last_text.delete("1.0", tk.END)
         if text:
             self.last_text.insert(tk.END, text)
             self.copy_last_btn.state(["!disabled"])
             self.copy_last_btn.config(text="📋 Copy")
+            self.reset_btn.state(["!disabled"])
             self.polish_btn.state(["!disabled"])
         else:
             self.copy_last_btn.state(["disabled"])
+            self.reset_btn.state(["disabled"])
             self.polish_btn.state(["disabled"])
-        self.last_text.configure(state=tk.DISABLED)
         # Source transcript changed → drop any stale polished output.
         self._last_polished = None
         self._render_polished("")
+        self.copy_polished_btn.state(["disabled"])
+
+    def _on_last_text_edited(self, _event: object = None) -> None:
+        """User typed in the transcript box — push the new content back to
+        the source slot (tray-owned or local) so Polish runs against the
+        edited text. Mirrors _displayed_last_transcription so the 2 s
+        status poll doesn't fight live edits."""
+        text = self.last_text.get("1.0", "end-1c") or None
+        if self.tray is not None:
+            self.tray.last_transcription = text
+        else:
+            self._last_transcription = text
+        self._displayed_last_transcription = text
+        if text:
+            self.copy_last_btn.state(["!disabled"])
+            self.reset_btn.state(["!disabled"])
+            self.polish_btn.state(["!disabled"])
+        else:
+            self.copy_last_btn.state(["disabled"])
+            self.reset_btn.state(["disabled"])
+            self.polish_btn.state(["disabled"])
+
+    def _reset_session(self) -> None:
+        """Clear the transcript + polished panels and the underlying slot
+        so the next take starts on a clean page. Equivalent to the
+        webapp's 🧽 Reset header button."""
+        if self.tray is not None:
+            self.tray.last_transcription = None
+        else:
+            self._last_transcription = None
+        self._last_polished = None
+        self._displayed_last_transcription = None
+        self.last_text.delete("1.0", tk.END)
+        self._render_polished("")
+        self.copy_last_btn.state(["disabled"])
+        self.reset_btn.state(["disabled"])
+        self.polish_btn.state(["disabled"])
         self.copy_polished_btn.state(["disabled"])
 
     def _render_polished(self, text: str) -> None:
@@ -394,6 +467,9 @@ class TranscriberApp:
         self.polished_text.configure(state=tk.DISABLED)
 
     def _run_polish(self) -> None:
+        # Sync widget → slot first so a mouse-pasted edit (which doesn't
+        # fire <KeyRelease>) still feeds into Polish.
+        self._on_last_text_edited()
         text = self._current_last_transcription()
         if not text:
             return
@@ -503,6 +579,8 @@ class TranscriberApp:
         body.pack(fill=tk.BOTH, expand=True, padx=12, pady=(4, 12))
 
     def _copy_last(self) -> None:
+        # Sync widget → slot in case the user mouse-pasted edits.
+        self._on_last_text_edited()
         text = self._current_last_transcription()
         if not text:
             return
