@@ -342,10 +342,14 @@ class TrayApp:
                         self._on_hotkey_release(target_key)
                     listener_box[0].suppress_event()  # raises, drops the key
 
+                # NB: pynput strips kwargs that don't start with the platform
+                # prefix, so on Windows the filter must be passed as
+                # ``win32_event_filter`` — bare ``event_filter`` is silently
+                # ignored.
                 self._hotkey_listener = keyboard.Listener(
                     on_press=lambda _k: None,
                     on_release=lambda _k: None,
-                    event_filter=_filter,
+                    win32_event_filter=_filter,
                 )
                 listener_box.append(self._hotkey_listener)
             else:
