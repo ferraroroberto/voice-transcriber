@@ -302,6 +302,12 @@ Screen** → name it "Voice". Launch from that icon from now on —
 iOS treats it as a standalone app and persists mic permission
 across launches.
 
+> If you already had a Home Screen icon from before icons shipped (it
+> showed a "W" letter instead of the mic glyph), iOS aggressively
+> caches the original — you have to **long-press → Remove Bookmark**
+> on the old icon and re-add it via the share sheet to pick up the
+> new artwork.
+
 > First-time visit on a new device: open the tokenised URL the tray
 > copies via **📋 Copy Cloudflare URL** (it includes `?token=…` if
 > you've enabled bearer-token auth). The page stashes the token in
