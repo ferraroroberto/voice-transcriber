@@ -326,21 +326,36 @@ Edits are sent to the server on the next polish call so History matches
 what's on screen. You can also skip recording entirely: paste any text
 into the transcript box and tap **✨ Polish** — a text-only session is
 created and shows up in History alongside dictated takes. The
-**🧽 Reset** button in the top-right of the header clears both boxes
-and the current session so the next record starts fresh.
+**🧽** icon button in the top-right of the header clears both boxes
+and the current session so the next record starts fresh. Sits between
+**➕ Append** and **🕵️** Incognito.
 
 #### Append mode
 
-A **➕ Append** checkbox sits next to **🧽 Reset** in the header. With
-it on, every new take is glued onto the existing transcript with a
-blank-line separator instead of replacing it — useful when you're
-moving between locations or apps and want to build up one big
-transcript across multiple records before polishing. The toggle is
-ephemeral (off on every fresh page load) and exists on every surface:
-header checkbox in the webapp, **➕ Append mode** menu item in the
-tray, **➕ Append** checkbox on the *Last transcription* row in the
-tk window. The tray menu and tk checkbox share one flag so toggling
+A **➕ Append** checkbox sits in the header. With it on, every new
+take is glued onto the existing transcript with a blank-line
+separator instead of replacing it — useful when you're moving
+between locations or apps and want to build up one big transcript
+across multiple records before polishing. The toggle is ephemeral
+(off on every fresh page load) and exists on every surface: header
+checkbox in the webapp, **➕ Append mode** menu item in the tray,
+**➕ Append** checkbox on the *Last transcription* row in the tk
+window. The tray menu and tk checkbox share one flag so toggling
 either keeps both in sync; the webapp toggle is independent.
+
+#### Incognito mode
+
+A **🕵️** icon toggle in the header. When the outline turns blue,
+the **next recording** is flagged `incognito=true` server-side and
+never appears in the History list — useful for taking a private
+note that shouldn't sit on disk for the 30-day retention window.
+The session still works normally during its lifetime (record,
+transcribe, polish, copy); the moment you hit **🧽 Reset** or
+start the next recording, the client sends `DELETE
+/api/sessions/{id}` so the folder is gone.
+
+Ephemeral on the client (off on every fresh page load); webapp
+only — the tray + tk surfaces don't expose this yet.
 
 #### Silence skip
 
@@ -358,7 +373,7 @@ raise it (e.g. `-45`) if hallucinations get through anyway.
 While recording, audio is streamed to the PC every second and persisted
 to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
 the connection drops mid-record, the partial recording is still on the
-PC — the **📜 History** view's *🔁 Re-transcribe* button replays whisper
+PC — the **📜 History** view's *🔁 Redo* button replays whisper
 on any saved take.
 
 ### What the status line tells you
@@ -445,10 +460,16 @@ Three buttons live above the list, all in a single right-aligned row:
 | **📋 Copy selected** | Concatenates every checked take's full text in chronological order (oldest → newest of the selection) with a blank-line separator and writes the whole bundle to the clipboard. Each item has a checkbox on the left; the newest take is auto-checked on every refresh, so the "just grab the latest" flow stays one click. Tick more boxes above it to bundle older takes. |
 | **🗑️ Clean** | Deletes every saved recording with a confirmation prompt. Briefly flashes red on success. |
 
-Each item also has its own **📋 Copy** (full text, not the truncated
-preview) and **🔁 Re-transcribe** (re-runs whisper on the saved raw
-audio — useful when a phone died mid-record and you want to pull the
-transcript afterwards).
+Each row also has its own three buttons:
+
+- **📋 Copy** — copies the full text from disk, not the 200-char
+  preview the list payload carries.
+- **🔁 Redo** — re-runs whisper on the saved raw audio. Useful when
+  a phone died mid-record and you want to pull the transcript
+  afterwards.
+- **🗑️ Delete** — confirmation dialog, then `DELETE
+  /api/sessions/{id}` removes that one take. Cleaner than nuking
+  everything via the top-row Clean button.
 
 ### Optional: bearer-token auth (extra layer)
 
