@@ -318,11 +318,41 @@ class TrayApp:
         self._hotkey_target_key = target_key
         suppress = bool(self.config.suppress_hotkey)
         try:
-            self._hotkey_listener = keyboard.Listener(
-                on_press=self._on_hotkey_press,
-                on_release=self._on_hotkey_release,
-                suppress=suppress,
-            )
+            if suppress:
+                # pynput's `suppress=True` flag is all-or-nothing — it eats
+                # every key. To suppress only the hotkey, use the per-event
+                # `event_filter` hook: ignore non-target keys (return False
+                # → no callback, no suppression), and for the target key
+                # dispatch press/release manually then raise
+                # SuppressException via `suppress_event()` so Windows drops
+                # the keystroke before it reaches the focused window.
+                target_vk = target_key.value.vk
+                # Forward-declare so the closure can call suppress_event()
+                # on the listener it's attached to.
+                listener_box: list = []
+                _WM_KEYDOWNS = (0x0100, 0x0104)  # WM_KEYDOWN, WM_SYSKEYDOWN
+                _WM_KEYUPS = (0x0101, 0x0105)    # WM_KEYUP,   WM_SYSKEYUP
+
+                def _filter(msg, data):
+                    if data.vkCode != target_vk:
+                        return False
+                    if msg in _WM_KEYDOWNS:
+                        self._on_hotkey_press(target_key)
+                    elif msg in _WM_KEYUPS:
+                        self._on_hotkey_release(target_key)
+                    listener_box[0].suppress_event()  # raises, drops the key
+
+                self._hotkey_listener = keyboard.Listener(
+                    on_press=lambda _k: None,
+                    on_release=lambda _k: None,
+                    event_filter=_filter,
+                )
+                listener_box.append(self._hotkey_listener)
+            else:
+                self._hotkey_listener = keyboard.Listener(
+                    on_press=self._on_hotkey_press,
+                    on_release=self._on_hotkey_release,
+                )
             self._hotkey_listener.start()
             logger.info(
                 f"🧷 Hotkey {hotkey} (tap = toggle, hold ≥ "
