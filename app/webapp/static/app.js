@@ -895,7 +895,7 @@
 
     const reBtn = document.createElement('button');
     reBtn.className = 'ghost-btn';
-    reBtn.textContent = '🔁 Re-transcribe';
+    reBtn.textContent = '🔁 Redo';
     reBtn.addEventListener('click', () => retranscribe(s.session_id));
 
     const delBtn = document.createElement('button');
