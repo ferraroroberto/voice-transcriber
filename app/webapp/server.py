@@ -42,7 +42,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.app_config import WHISPER_LANGUAGES, resolve_iso
+from src.app_config import resolve_iso
 from src import (
     LANGUAGE_MODE_LABELS,
     TranscriptionClient,
@@ -303,11 +303,14 @@ def create_app() -> FastAPI:
             "history_retention_days": cfg.history_retention_days,
             "force_builtin_mic_default": cfg.force_builtin_mic_default,
             "preferred_mic_id": cfg.preferred_mic_id,
-            # All 99 Whisper languages, sorted alphabetically by label so
+            # Languages exposed in the picker — narrowed by
+            # AppConfig.enabled_languages when set, otherwise the full
+            # 99-language Whisper list. Sorted alphabetically by label so
             # the dropdown reads naturally. Each entry carries both the ISO
             # code (sent to the server) and the display label.
             "languages": sorted(
-                [{"iso": iso, "label": label} for iso, label in WHISPER_LANGUAGES.items()],
+                [{"iso": iso, "label": label}
+                 for iso, label in app_cfg.enabled_language_map().items()],
                 key=lambda e: e["label"],
             ),
             "language_default": resolve_iso(app_cfg.language) or "en",

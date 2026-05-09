@@ -112,10 +112,11 @@ class TranscriberApp:
         # Old configs spelled it "english"/"spanish"/"italian"; new configs
         # store ISO directly. resolve_iso() handles both shapes.
         _initial_iso = resolve_iso(config.language) or "en"
-        self._language_label_to_iso = {label: iso for iso, label in WHISPER_LANGUAGES.items()}
-        self._sorted_language_labels = sorted(WHISPER_LANGUAGES.values())
+        _lang_map = config.enabled_language_map()
+        self._language_label_to_iso = {label: iso for iso, label in _lang_map.items()}
+        self._sorted_language_labels = sorted(_lang_map.values())
         self.language_var = tk.StringVar(
-            value=WHISPER_LANGUAGES.get(_initial_iso, "English"),
+            value=_lang_map.get(_initial_iso, next(iter(_lang_map.values()), "English")),
         )
         # Translate toggle — ephemeral, off on every launch. Shipped here for
         # parity with the webapp's settings panel toggle.

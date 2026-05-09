@@ -123,11 +123,29 @@ class AppConfig:
     # Optional webapp section — when missing, the tray spawns the webapp
     # on `:8443` with default settings. Set webapp.enabled:false to opt out.
     webapp: Dict = field(default_factory=dict)
+    # ISO codes to expose in the language picker (tk window + webapp). When
+    # None or empty, all 99 Whisper languages are shown. Underlying CLI/API
+    # paths still accept any ISO — this only narrows the UI.
+    enabled_languages: Optional[List[str]] = None
 
     @property
     def whisper_language(self) -> Optional[str]:
         """ISO language code for the configured dictation mode (None = auto)."""
         return resolve_iso(self.language)
+
+    def enabled_language_map(self) -> Dict[str, str]:
+        """Return ``{iso: label}`` filtered by ``enabled_languages``.
+
+        Falls back to the full Whisper map when no allowlist is configured.
+        Unknown ISO codes in the allowlist are silently dropped.
+        """
+        if not self.enabled_languages:
+            return dict(WHISPER_LANGUAGES)
+        return {
+            iso: WHISPER_LANGUAGES[iso]
+            for iso in self.enabled_languages
+            if iso in WHISPER_LANGUAGES
+        }
 
     @property
     def hotkey_label(self) -> str:
@@ -189,6 +207,7 @@ def load_app_config(path: Optional[Path] = None) -> AppConfig:
         ptt_threshold_ms=int(raw.get("ptt_threshold_ms", 300)),
         translate_base_url=str(raw.get("translate_base_url") or "http://127.0.0.1:8091"),
         webapp=raw.get("webapp") or {},
+        enabled_languages=raw.get("enabled_languages") or None,
     )
 
 
@@ -198,6 +217,22 @@ def _validate(raw: Dict) -> None:
             f"language must be a Whisper ISO code or English name "
             f"(e.g. 'en', 'english'); got {raw['language']!r}"
         )
+    if "enabled_languages" in raw and raw["enabled_languages"] is not None:
+        v = raw["enabled_languages"]
+        if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
+            raise ValueError("enabled_languages must be a list of ISO code strings")
+        unknown = [x for x in v if x not in WHISPER_LANGUAGES]
+        if unknown:
+            raise ValueError(
+                f"enabled_languages contains unknown ISO codes: {unknown}"
+            )
+        if v and "language" in raw:
+            iso = resolve_iso(raw["language"])
+            if iso is not None and iso not in v:
+                raise ValueError(
+                    f"language {raw['language']!r} (iso={iso!r}) is not in "
+                    f"enabled_languages {v}"
+                )
     if "log_level" in raw and raw["log_level"] not in VALID_LOG_LEVELS:
         raise ValueError(f"log_level must be one of {VALID_LOG_LEVELS}")
     if "max_record_seconds" in raw:

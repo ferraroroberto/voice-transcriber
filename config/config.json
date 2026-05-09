@@ -1,5 +1,6 @@
 {
   "language": "english",
+  "enabled_languages": ["en", "es", "it"],
   "max_record_seconds": 300,
   "sample_rate": 16000,
   "preferred_mics": null,
