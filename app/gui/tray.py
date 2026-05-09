@@ -70,6 +70,8 @@ EVT_COPY_TUNNEL_URL = "copy_tunnel_url"
 EVT_RESTART_WEBAPP = "restart_webapp"
 EVT_TOGGLE_APPEND = "toggle_append"
 EVT_TOGGLE_AUTO_PASTE = "toggle_auto_paste"
+EVT_TOGGLE_SUPPRESS_HOTKEY = "toggle_suppress_hotkey"
+EVT_TOGGLE_NOTIFICATIONS = "toggle_notifications"
 EVT_QUIT = "quit"
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -226,6 +228,16 @@ class TrayApp:
                 lambda: self._enqueue(EVT_TOGGLE_AUTO_PASTE),
                 checked=lambda _item: self.config.auto_paste_after_hotkey,
             ),
+            pystray.MenuItem(
+                "🚫 Suppress hotkey",
+                lambda: self._enqueue(EVT_TOGGLE_SUPPRESS_HOTKEY),
+                checked=lambda _item: self.config.suppress_hotkey,
+            ),
+            pystray.MenuItem(
+                "🔔 Show notifications",
+                lambda: self._enqueue(EVT_TOGGLE_NOTIFICATIONS),
+                checked=lambda _item: self.config.show_notifications,
+            ),
         ]
         if self.webapp.config.enabled:
             items.extend([
@@ -282,10 +294,14 @@ class TrayApp:
     def _start_hotkey_listener(self) -> None:
         """Register the global hotkey.
 
-        Single-key hotkeys (``<F10>``) get a low-level keyboard.Listener so we
+        Single-key hotkeys (``<F8>``) get a low-level keyboard.Listener so we
         can time press↔release and offer push-to-talk alongside tap-toggle.
         Modifier combos fall through to the legacy GlobalHotKeys path —
         toggle-only, since holding a 3-key chord for PTT is awkward.
+
+        ``suppress_hotkey`` is honoured on the simple-key path only; combos
+        keep pass-through behaviour to avoid swallowing modifier keystrokes
+        from the focused window.
         """
         hotkey = self.config.hotkey
         target_key = parse_simple_hotkey(hotkey)
@@ -300,18 +316,32 @@ class TrayApp:
             return
 
         self._hotkey_target_key = target_key
+        suppress = bool(self.config.suppress_hotkey)
         try:
             self._hotkey_listener = keyboard.Listener(
                 on_press=self._on_hotkey_press,
                 on_release=self._on_hotkey_release,
+                suppress=suppress,
             )
             self._hotkey_listener.start()
             logger.info(
                 f"🧷 Hotkey {hotkey} (tap = toggle, hold ≥ "
-                f"{self.config.ptt_threshold_ms} ms = push-to-talk)"
+                f"{self.config.ptt_threshold_ms} ms = push-to-talk, "
+                f"suppress={'on' if suppress else 'off'})"
             )
         except Exception as e:
             logger.error(f"❌ Failed to register hotkey {hotkey!r}: {e}")
+
+    def _restart_hotkey_listener(self) -> None:
+        if self._hotkey_listener is not None:
+            try:
+                self._hotkey_listener.stop()
+            except Exception:
+                pass
+            self._hotkey_listener = None
+        self._hotkey_key_down = False
+        self._hotkey_press_started_recording_at = None
+        self._start_hotkey_listener()
 
     def _on_hotkey_press(self, key) -> None:
         if key != self._hotkey_target_key:
@@ -407,6 +437,11 @@ class TrayApp:
             self.set_append_mode(not self.append_mode)
         elif event == EVT_TOGGLE_AUTO_PASTE:
             self.config.auto_paste_after_hotkey = not self.config.auto_paste_after_hotkey
+        elif event == EVT_TOGGLE_SUPPRESS_HOTKEY:
+            self.config.suppress_hotkey = not self.config.suppress_hotkey
+            self._restart_hotkey_listener()
+        elif event == EVT_TOGGLE_NOTIFICATIONS:
+            self.config.show_notifications = not self.config.show_notifications
             if self._icon is not None:
                 try:
                     self._icon.update_menu()
@@ -697,6 +732,9 @@ class TrayApp:
             pass
 
     def _notify(self, title: str, message: str) -> None:
+        if not self.config.show_notifications:
+            logger.info(f"🔕 (suppressed) {title}: {message}")
+            return
         # Prefer modern WinRT toasts — they stack in Action Center instead of
         # being coalesced like the legacy Shell_NotifyIcon balloon tips that
         # pystray uses, so rapid-fire notifications don't get dropped.

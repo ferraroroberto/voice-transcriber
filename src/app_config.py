@@ -104,6 +104,14 @@ class AppConfig:
     # caret instead of just on the clipboard. Hotkey-flow only; tk-window
     # records are unaffected.
     auto_paste_after_hotkey: bool = True
+    # When True, the global hotkey is consumed before reaching the focused
+    # window (pynput low-level hook). Avoids collisions like F10 activating
+    # the Office ribbon. Tray menu exposes a live toggle; default on.
+    suppress_hotkey: bool = True
+    # Toast notifications for record/transcribe lifecycle events. Tray menu
+    # exposes a live toggle; turn off for a fully silent workflow once the
+    # app is trusted.
+    show_notifications: bool = True
     # Push-to-talk threshold: hold the hotkey ≥ this many ms and release
     # ends the take. Anything shorter is treated as a tap (toggle).
     ptt_threshold_ms: int = 300
@@ -176,6 +184,8 @@ def load_app_config(path: Optional[Path] = None) -> AppConfig:
         auto_start_server=bool(raw.get("auto_start_server", False)),
         log_level=raw.get("log_level", "INFO"),
         auto_paste_after_hotkey=bool(raw.get("auto_paste_after_hotkey", True)),
+        suppress_hotkey=bool(raw.get("suppress_hotkey", True)),
+        show_notifications=bool(raw.get("show_notifications", True)),
         ptt_threshold_ms=int(raw.get("ptt_threshold_ms", 300)),
         translate_base_url=str(raw.get("translate_base_url") or "http://127.0.0.1:8091"),
         webapp=raw.get("webapp") or {},

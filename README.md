@@ -16,7 +16,7 @@ and used from there — no shared system install required.
 git clone <this-repo>
 cd transcribe_voice
 setup.bat                 :: creates .venv, installs deps, fetches whisper.cpp + model
-tray.bat                  :: system-tray mode, global hotkey F10 (tap = toggle, hold = push-to-talk)
+tray.bat                  :: system-tray mode, global hotkey F8 (tap = toggle, hold = push-to-talk)
 ```
 
 That's it. The tray launches and, if no server is running yet, spawns the
@@ -27,7 +27,7 @@ server it started.
 
 | Command                  | What it does                                                              |
 |--------------------------|---------------------------------------------------------------------------|
-| `tray.bat`               | Resident tray icon + global hotkey (default: `F10` — **tap to toggle**, **hold ≥ 300 ms for push-to-talk**). Result auto-pastes at the caret in the focused window. Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
+| `tray.bat`               | Resident tray icon + global hotkey (default: `F8` — **tap to toggle**, **hold ≥ 300 ms for push-to-talk**). Result auto-pastes at the caret in the focused window. Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
 | `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
 | `webapp_tunnel_named.bat`| Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See "Persistent URL via Cloudflare tunnel" below for the one-time setup. |
 | `server.bat start|stop|status|logs` | Direct control of the whisper-server process.             |
@@ -62,7 +62,7 @@ Two config files live under the repo: one for the app, one for the server.
     "laptop": ["Micrófono (Realtek(R) Audio)"],
     "tower":  ["el gato wave XLR (Elgato Wave XLR)"]
   },
-  "hotkey": "<F10>",
+  "hotkey": "<F8>",
   "auto_copy": true,
   "auto_start_server": false,
   "log_level": "INFO",
@@ -475,7 +475,7 @@ the primary whisper-server as usual. The toggle is ephemeral — off on
 every launch.
 
 If you don't run the second instance, leave the toggle off and translate
-is invisible. The hotkey path always transcribes — there is no F10
+is invisible. The hotkey path always transcribes — there is no F8
 translate mode by design.
 
 ### Polish models

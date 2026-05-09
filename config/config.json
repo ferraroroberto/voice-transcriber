@@ -13,11 +13,13 @@
       "Wave Link Stream (Elgato Wave:XLR)"
     ]
   },
-  "hotkey": "<F10>",
+  "hotkey": "<F8>",
   "auto_copy": true,
   "auto_start_server": false,
   "log_level": "INFO",
   "auto_paste_after_hotkey": true,
+  "suppress_hotkey": true,
+  "show_notifications": false,
   "ptt_threshold_ms": 300,
   "translate_base_url": "http://127.0.0.1:8091"
 }
