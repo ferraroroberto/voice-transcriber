@@ -913,7 +913,6 @@
     delBtn.className = 'ghost-btn';
     delBtn.textContent = '🗑️ Delete';
     delBtn.addEventListener('click', async () => {
-      if (!confirm('Delete this take?')) return;
       try {
         const r = await authFetch(`/api/sessions/${s.session_id}`, {
           method: 'DELETE',
