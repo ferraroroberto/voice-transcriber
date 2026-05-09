@@ -15,5 +15,7 @@
   "history_retention_days": 30,
   "force_builtin_mic_default": false,
   "preferred_mic_id": null,
-  "auth_token": ""
+  "auth_token": "",
+  "_comment_silence": "Peak-RMS dBFS threshold below which a take skips whisper entirely (so it can't hallucinate 'Thanks for watching' on silence). Default -50 is conservative; lower (-55) to be more permissive, raise (-45) if hallucinations still slip through.",
+  "silence_dbfs_threshold": -50.0
 }

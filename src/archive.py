@@ -17,7 +17,7 @@ Layout:
 
 The whole `archive/` folder is gitignored. Sessions older than the
 retention window (default 30 days) are deleted on app start, and on
-demand from the UI's "Clean all" button.
+demand from the UI's Clean button.
 """
 
 from __future__ import annotations

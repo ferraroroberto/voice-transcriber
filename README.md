@@ -340,9 +340,10 @@ of these steps.
 
 Open the home-screen icon → tap the big red **⬤ RECORD** circle →
 speak → tap **◼︎ STOP**. The transcript appears, auto-copied to the
-clipboard, ready to paste anywhere. Optional second tap on **✨ Polish**
-runs the transcript through the local LLM hub for filler-word removal,
-auto-copies the polished version.
+clipboard (the **📋 Copy** button briefly flashes green to confirm),
+ready to paste anywhere. Optional second tap on **✨ Polish** runs the
+transcript through the local LLM hub for filler-word removal,
+auto-copies the polished version (same green flash on its Copy button).
 
 The transcript and polished boxes are both editable — fix a misheard
 word before polishing, or tweak the polished output before copying.
@@ -350,8 +351,34 @@ Edits are sent to the server on the next polish call so History matches
 what's on screen. You can also skip recording entirely: paste any text
 into the transcript box and tap **✨ Polish** — a text-only session is
 created and shows up in History alongside dictated takes. The
-**🧽 Reset** button under the record circle clears both boxes and the
-current session so the next record starts fresh.
+**🧽 Reset** button in the top-right of the header clears both boxes
+and the current session so the next record starts fresh.
+
+#### Append mode
+
+A **➕ Append** checkbox sits next to **🧽 Reset** in the header. With
+it on, every new take is glued onto the existing transcript with a
+blank-line separator instead of replacing it — useful when you're
+moving between locations or apps and want to build up one big
+transcript across multiple records before polishing. The toggle is
+ephemeral (off on every fresh page load) and exists on every surface:
+header checkbox in the webapp, **➕ Append mode** menu item in the
+tray, **➕ Append** checkbox on the *Last transcription* row in the
+tk window. The tray menu and tk checkbox share one flag so toggling
+either keeps both in sync; the webapp toggle is independent.
+
+#### Silence skip
+
+Whisper hallucinates plausible-sounding text on near-silent input
+("Thanks for watching!", "[Music]", a single "you", etc.). Every take
+runs through a loudness gate before transcription: clips with peak
+RMS below `silence_dbfs_threshold` (default `-50` dBFS, configurable
+in `config/webapp_config.json`) skip whisper entirely and report
+`🤫 Empty audio (X.X dBFS) — skipped` in the status line, with no
+transcript written. False negatives (rejecting actual speech) are
+worse than the occasional hallucination slipping through, so the
+default is conservative — lower it (e.g. `-55`) if you whisper a lot,
+raise it (e.g. `-45`) if hallucinations get through anyway.
 
 While recording, audio is streamed to the PC every second and persisted
 to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
@@ -426,14 +453,27 @@ Every recording lands in `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with
 `raw.webm`, transcoded `audio.wav`, `transcript.txt`, `polished.txt`,
 and `meta.json`. The directory is gitignored. Sessions older than 30
 days are auto-deleted on app start (configurable in
-`webapp_config.json`). A **🗑️ Clean all** button in the History view
-nukes everything.
+`webapp_config.json`).
 
-The webapp's History panel loads the **10 newest** entries by default
-and shows a **📥 Load more** button at the bottom for the next 10. The
-summary line reads `📜 History (10/N)` while more pages exist and
-collapses to `(N)` once everything is loaded — keeps the page light
-even after weeks of daily use.
+The webapp's History panel is **open by default** so the action row
+is always reachable in one tap. It loads the **10 newest** entries
+and shows a **📥 Load more** button at the bottom for the next 10.
+The summary line reads `📜 History (10/N)` while more pages exist
+and collapses to `(N)` once everything is loaded — keeps the page
+light even after weeks of daily use.
+
+Three buttons live above the list, all in a single right-aligned row:
+
+| Button | What it does |
+|---|---|
+| **🔄 Refresh** | Re-fetches the list from the server. Use this on a second device — the work PC, say — to pick up takes you just dictated from your phone into the home tray. |
+| **📋 Copy selected** | Concatenates every checked take's full text in chronological order (oldest → newest of the selection) with a blank-line separator and writes the whole bundle to the clipboard. Each item has a checkbox on the left; the newest take is auto-checked on every refresh, so the "just grab the latest" flow stays one click. Tick more boxes above it to bundle older takes. |
+| **🗑️ Clean** | Deletes every saved recording with a confirmation prompt. Briefly flashes red on success. |
+
+Each item also has its own **📋 Copy** (full text, not the truncated
+preview) and **🔁 Re-transcribe** (re-runs whisper on the saved raw
+audio — useful when a phone died mid-record and you want to pull the
+transcript afterwards).
 
 ### Optional: bearer-token auth (for the public Cloudflare tunnel)
 
