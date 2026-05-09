@@ -484,6 +484,41 @@ The script writes a strong `secrets.token_urlsafe(32)` into
 After enabling, rotating, or clearing the token, restart the tray
 so the new config is loaded.
 
+#### Password gate (companion to the token)
+
+Pasting a long tokenised URL on every fresh device is awkward, and on
+iOS PWAs whose `localStorage` is partitioned from Safari's main jar
+the token sometimes doesn't carry over. A short password fixes both:
+
+```powershell
+& .\.venv\Scripts\python.exe scripts\set_password.py PW
+```
+
+(replace `PW` with whatever you want). When set, the webapp shows
+a small login overlay any time an API call returns 401:
+
+1. User opens `https://<your-host>` on a fresh device.
+2. JS hits `/api/config`, gets 401 (no token in localStorage).
+3. Login overlay appears → user types the password.
+4. JS posts to `/api/login`; server validates and hands the bearer
+   token back.
+5. Page stashes the token in `localStorage` and reloads the config.
+   From then on the device behaves as if it had pasted the tokenised
+   URL.
+
+Failed attempts (wrong password, or a hit while no password is
+configured) are logged with the requesting IP to
+`webapp/auth.log` in addition to the normal server log.
+
+```powershell
+& .\.venv\Scripts\python.exe scripts\set_password.py --clear
+```
+
+clears the password (login overlay disappears; only the token gate
+remains). The bearer token must be set for the password to do
+anything — the password is just a UX wrapper that hands the
+existing token back.
+
 ### Persistent URL via Cloudflare tunnel
 
 A named Cloudflare tunnel binds a subdomain you own (e.g.

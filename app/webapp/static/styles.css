@@ -326,6 +326,56 @@ textarea.text-out.editable::placeholder {
   margin-top: 8px;
 }
 
+/* ---------- login overlay (shown on 401) ---------- */
+.login-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 10, 0.96);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+  padding-top: max(20px, env(safe-area-inset-top));
+}
+.login-card {
+  background: var(--bg-elev);
+  border-radius: var(--radius);
+  padding: 24px;
+  max-width: 360px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.login-card h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+.login-card p {
+  margin: 0 0 4px;
+}
+.login-card input[type="password"] {
+  background: var(--bg-elev-2);
+  border: 1px solid #333;
+  border-radius: 10px;
+  color: var(--fg);
+  font-size: 18px;
+  padding: 14px;
+  min-height: 48px;
+  width: 100%;
+  -webkit-appearance: none;
+}
+.login-card .big-btn {
+  flex: 0 0 auto;
+}
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+  text-align: center;
+}
+
 .history-list {
   list-style: none;
   margin: 0;

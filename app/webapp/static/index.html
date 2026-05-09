@@ -108,6 +108,23 @@
     <div id="toast" class="toast" hidden></div>
   </main>
 
-  <script src="/static/app.js?v=6"></script>
+  <div id="loginOverlay" class="login-overlay" hidden>
+    <form id="loginForm" class="login-card" autocomplete="off">
+      <h2>🔐 Sign in</h2>
+      <p class="muted small">Enter the password to use this voice transcriber.</p>
+      <input
+        id="loginPassword"
+        type="password"
+        inputmode="numeric"
+        autocomplete="current-password"
+        placeholder="Password"
+        required
+      >
+      <button type="submit" class="big-btn">Unlock</button>
+      <div id="loginError" class="login-error" hidden></div>
+    </form>
+  </div>
+
+  <script src="/static/app.js?v=7"></script>
 </body>
 </html>

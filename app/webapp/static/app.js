@@ -38,6 +38,11 @@
     resetBtn:         document.getElementById('resetBtn'),
     appendToggle:     document.getElementById('appendToggle'),
 
+    loginOverlay:     document.getElementById('loginOverlay'),
+    loginForm:        document.getElementById('loginForm'),
+    loginPassword:    document.getElementById('loginPassword'),
+    loginError:       document.getElementById('loginError'),
+
     settingsPanel:    document.getElementById('settingsPanel'),
     languageSelect:   document.getElementById('languageSelect'),
     micSelect:        document.getElementById('micSelect'),
@@ -275,8 +280,86 @@
   // ----------------------------------------------------- config
 
   async function loadConfig() {
-    state.config = await fetchJsonWithRetry('/api/config', null, 2);
+    // Single attempt first so we can detect 401 and prompt for the
+    // password instead of silently retrying with the same stale state.
+    const r = await authFetch('/api/config');
+    if (r.status === 401) {
+      const ok = await promptForPassword();
+      if (!ok) throw new Error('login cancelled');
+      return loadConfig();
+    }
+    if (!r.ok) throw new Error(`/api/config → ${r.status}`);
+    state.config = await r.json();
     populateConfigUI();
+  }
+
+  // ----------------------------------------------------- login overlay
+
+  function promptForPassword() {
+    return new Promise((resolve) => {
+      els.loginOverlay.hidden = false;
+      els.loginPassword.value = '';
+      els.loginError.hidden = true;
+      els.loginError.textContent = '';
+      // Defer focus so iOS Safari opens the keyboard reliably.
+      setTimeout(() => {
+        try { els.loginPassword.focus(); } catch (_) {}
+      }, 80);
+
+      const onSubmit = async (e) => {
+        e.preventDefault();
+        const password = els.loginPassword.value;
+        if (!password) return;
+        els.loginError.hidden = true;
+        const submitBtn = els.loginForm.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        submitBtn.textContent = '…';
+        try {
+          const r = await fetch('/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password }),
+          });
+          if (r.status === 503) {
+            const detail = await r.json().catch(() => ({}));
+            els.loginError.textContent =
+              'Password auth not configured: ' +
+              (detail.detail || 'check server config');
+            els.loginError.hidden = false;
+            return;
+          }
+          if (r.status === 401) {
+            els.loginError.textContent = 'Wrong password';
+            els.loginError.hidden = false;
+            els.loginPassword.select();
+            return;
+          }
+          if (!r.ok) {
+            els.loginError.textContent = 'Login failed: ' + r.status;
+            els.loginError.hidden = false;
+            return;
+          }
+          const data = await r.json();
+          if (!data.token) {
+            els.loginError.textContent = 'Server returned no token';
+            els.loginError.hidden = false;
+            return;
+          }
+          try { localStorage.setItem(TOKEN_KEY, data.token); } catch (_) {}
+          els.loginOverlay.hidden = true;
+          els.loginForm.removeEventListener('submit', onSubmit);
+          resolve(true);
+        } catch (err) {
+          els.loginError.textContent = 'Login failed: ' + (err.message || err);
+          els.loginError.hidden = false;
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Unlock';
+        }
+      };
+
+      els.loginForm.addEventListener('submit', onSubmit);
+    });
   }
 
   async function refreshStatus() {

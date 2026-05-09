@@ -1,6 +1,7 @@
 {
   "_comment": "Copy this file to webapp_config.json (gitignored) or let the webapp create it on the first 'Set as default' tap. All keys are optional — missing keys fall back to the defaults documented in src/webapp_config.py.",
   "_comment_auth_token": "Empty string = auth gate OFF (the default). Run scripts/gen_token.py to generate a strong token; the webapp will then require Authorization: Bearer <token> on every API call from non-loopback callers. See README → 'Optional: bearer-token auth'.",
+  "_comment_auth_password": "Optional companion to auth_token: when set, a fresh device with no token shows a login overlay; entering the password swaps it for the bearer token. Set/clear via scripts/set_password.py. Failed attempts are logged to webapp/auth.log.",
   "polish_model_default": "gemma4-e4b-it",
   "polish_models_available": [
     "gemma4-e4b-it",
@@ -16,6 +17,7 @@
   "force_builtin_mic_default": false,
   "preferred_mic_id": null,
   "auth_token": "",
+  "auth_password": "",
   "_comment_silence": "Peak-RMS dBFS threshold below which a take skips whisper entirely (so it can't hallucinate 'Thanks for watching' on silence). Default -50 is conservative; lower (-55) to be more permissive, raise (-45) if hallucinations still slip through.",
   "silence_dbfs_threshold": -50.0
 }

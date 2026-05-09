@@ -84,9 +84,40 @@ _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 # Endpoints that must remain reachable without the token: liveness probes
 # (/healthz), the iOS profile install (/install-ca), the page boot
 # (/ + /static/*) so the JS can pick up the token from ?token= and
-# attach it to subsequent API calls.
+# attach it to subsequent API calls, and /api/login so a device with no
+# token can swap a password for the bearer token.
 _AUTH_EXEMPT_PREFIXES = ("/static/", "/healthz", "/install-ca")
-_AUTH_EXEMPT_EXACT = frozenset({"/", "/healthz", "/install-ca"})
+_AUTH_EXEMPT_EXACT = frozenset({"/", "/healthz", "/install-ca", "/api/login"})
+
+
+# Dedicated logger for password attempts — written to webapp/auth.log
+# in addition to the normal stderr stream so failed attempts are easy
+# to find without scrolling through full server logs.
+auth_logger = logging.getLogger("vt.auth")
+_AUTH_LOG_PATH = Path(__file__).resolve().parent.parent.parent / "webapp" / "auth.log"
+
+
+def _ensure_auth_log_handler() -> None:
+    if any(
+        isinstance(h, logging.FileHandler)
+        and Path(h.baseFilename).resolve() == _AUTH_LOG_PATH.resolve()
+        for h in auth_logger.handlers
+    ):
+        return
+    try:
+        _AUTH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        fh = logging.FileHandler(_AUTH_LOG_PATH, encoding="utf-8")
+        fh.setLevel(logging.INFO)
+        fh.setFormatter(
+            logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+        )
+        auth_logger.addHandler(fh)
+        auth_logger.setLevel(logging.INFO)
+    except OSError as exc:
+        logger.warning(f"⚠️  Could not open {_AUTH_LOG_PATH}: {exc}")
+
+
+_ensure_auth_log_handler()
 
 
 class BearerTokenMiddleware(BaseHTTPMiddleware):
@@ -289,6 +320,46 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=400, detail=str(exc))
         request.app.state.webapp_config = new_cfg
         return {"ok": True, "config": _config_dict(new_cfg)}
+
+    @app.post("/api/login")
+    async def login(request: Request) -> Dict[str, Any]:
+        """Swap a password for the bearer token.
+
+        Used by the page when no token is in localStorage — typical on
+        a fresh device or inside an iOS PWA whose storage is partitioned
+        from Safari's. Failed attempts are logged with the client IP to
+        webapp/auth.log so suspicious access is visible.
+        """
+        cfg: WebappConfig = request.app.state.webapp_config
+        client_host = request.client.host if request.client else "?"
+        if not cfg.auth_password:
+            auth_logger.info(
+                f"⚠️  Login attempt from {client_host} but no auth_password "
+                "configured — password auth disabled"
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="password auth not configured",
+            )
+        if not cfg.auth_token:
+            auth_logger.info(
+                f"⚠️  Login attempt from {client_host} but no auth_token "
+                "configured — nothing to hand back"
+            )
+            raise HTTPException(
+                status_code=503,
+                detail="bearer token not configured",
+            )
+        body = await _maybe_json(request)
+        presented = str(body.get("password") or "")
+        if not presented or not hmac.compare_digest(presented, cfg.auth_password):
+            auth_logger.warning(
+                f"🚨 Failed password attempt from {client_host} "
+                f"(presented: {len(presented)} chars)"
+            )
+            raise HTTPException(status_code=401, detail="bad password")
+        auth_logger.info(f"🔓 Password login from {client_host}")
+        return {"token": cfg.auth_token}
 
     @app.get("/api/status")
     async def status(request: Request) -> Dict[str, Any]:

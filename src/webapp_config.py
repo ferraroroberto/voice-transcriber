@@ -58,6 +58,12 @@ class WebappConfig:
     # Bearer token enforced when the request did NOT come from a
     # loopback / tailnet IP. Empty string disables enforcement entirely.
     auth_token: str = ""
+    # Optional password gate that hands the bearer token back to the
+    # browser when the user types it correctly. Lets a fresh device
+    # bootstrap without copy-pasting a tokenised URL — handy on iOS
+    # PWAs whose localStorage may be partitioned from Safari's. Empty
+    # string disables the password prompt (token-only auth).
+    auth_password: str = ""
     # RMS gate before whisper. Clips quieter than this (dBFS) skip the
     # transcription step entirely so whisper can't hallucinate on silence.
     silence_dbfs_threshold: float = DEFAULT_SILENCE_DBFS_THRESHOLD
@@ -106,6 +112,7 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         ),
         preferred_mic_id=raw.get("preferred_mic_id") or None,
         auth_token=str(raw.get("auth_token", "")),
+        auth_password=str(raw.get("auth_password", "")),
         silence_dbfs_threshold=float(
             raw.get("silence_dbfs_threshold", DEFAULT_SILENCE_DBFS_THRESHOLD)
         ),
@@ -130,6 +137,7 @@ def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
         "force_builtin_mic_default": cfg.force_builtin_mic_default,
         "preferred_mic_id": cfg.preferred_mic_id,
         "auth_token": cfg.auth_token,
+        "auth_password": cfg.auth_password,
         "silence_dbfs_threshold": cfg.silence_dbfs_threshold,
     }
 
