@@ -482,12 +482,13 @@ translate mode by design.
 
 Defaults to `agentic_light` — the local-llm-hub role alias for the
 fast-lane local model (currently `qwen3.5-4b`, swappable from the hub
-without touching this repo). Always-resident in VRAM on the hub host so
-first-token latency is cold-cache, not load time, and it handles
-filler-word polish well at a fraction of the cost of a frontier call.
-Other options surfaced in the dropdown: `agentic_heavy` (deep-lane local
-role, currently `gemma4-26b-a4b-it`), `claude-haiku-4-5`,
-`claude-sonnet-4-6`, `claude-opus-4-7`. Both surfaces (webapp and tk) expose a dropdown so
+without touching this repo). It is a reasoning model, so the polish
+client allocates a generous `max_tokens` (16k) to leave room for
+`<think>…</think>` plus the answer; the hub strips the reasoning
+server-side before returning. Other options surfaced in the dropdown:
+`agentic_heavy` (deep-lane local role, currently `gemma4-26b-a4b-it`),
+`claude-haiku-4-5`, `claude-sonnet-4-6`, `claude-opus-4-7`. Both
+surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
 **⚙️ Settings**; in the tk main window it sits inline on the polish
 row. **💾 Save** in webapp settings (or **⭐ Save defaults** in the tk

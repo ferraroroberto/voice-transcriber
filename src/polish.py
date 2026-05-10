@@ -19,6 +19,7 @@ from __future__ import annotations
 
 # Standard library imports
 import logging
+import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -26,6 +27,9 @@ from typing import Optional
 import requests
 
 logger = logging.getLogger(__name__)
+
+_THINK_BLOCK_RE = re.compile(r"<think\b[^>]*>.*?</think\s*>", re.DOTALL | re.IGNORECASE)
+_OPEN_THINK_RE = re.compile(r"<think\b[^>]*>", re.IGNORECASE)
 
 
 POLISH_SYSTEM_PROMPT = (
@@ -46,7 +50,13 @@ POLISH_SYSTEM_PROMPT = (
 )
 
 DEFAULT_TIMEOUT = 120.0
-DEFAULT_MAX_TOKENS = 4096
+# Reasoning models (qwen3.5-*, glm) emit a <think>...</think> chain before
+# the answer; the hub strips it server-side, but only when both tags are
+# present. With a tight budget the model can spend the whole allowance
+# thinking and never close </think>, so the raw chain leaks through. 16k
+# leaves comfortable headroom for typical transcript polishing; non-thinking
+# models (gemma, claude) ignore the unused budget.
+DEFAULT_MAX_TOKENS = 16384
 
 
 class PolishError(Exception):
@@ -139,6 +149,15 @@ class PolishClient:
             raise PolishError(f"hub returned non-JSON: {exc}") from exc
 
         polished = _extract_text(body)
+        stop_reason = body.get("stop_reason")
+        if _OPEN_THINK_RE.search(polished) or (
+            not polished and stop_reason == "max_tokens"
+        ):
+            raise PolishError(
+                f"polish model exhausted its token budget while reasoning "
+                f"(model={model}, stop_reason={stop_reason}). Try "
+                f"agentic_heavy or one of the claude-* models."
+            )
         if not polished:
             raise PolishError(
                 f"hub returned an empty response (model={model})"
@@ -153,7 +172,14 @@ class PolishClient:
 
 
 def _extract_text(body: dict) -> str:
-    """Pull the assistant's text out of an Anthropic-shaped response."""
+    """Pull the assistant's text out of an Anthropic-shaped response.
+
+    Strips any complete ``<think>...</think>`` blocks the hub didn't catch
+    (defence in depth — the hub already does this, but a future shape change
+    shouldn't leak reasoning into the user-facing transcript). Unterminated
+    ``<think>`` blocks are left intact so the caller can detect the
+    mid-reasoning truncation case and surface a clearer error.
+    """
     content = body.get("content")
     if not isinstance(content, list):
         return ""
@@ -161,4 +187,4 @@ def _extract_text(body: dict) -> str:
     for block in content:
         if isinstance(block, dict) and block.get("type") == "text":
             parts.append(str(block.get("text", "")))
-    return "".join(parts).strip()
+    return _THINK_BLOCK_RE.sub("", "".join(parts)).strip()
