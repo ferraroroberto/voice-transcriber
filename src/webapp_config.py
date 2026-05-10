@@ -26,8 +26,9 @@ SAMPLE_CONFIG_PATH = (
     Path(__file__).resolve().parent.parent / "config" / "webapp_config.sample.json"
 )
 
-DEFAULT_POLISH_MODEL = "gemma4-e4b-it"
+DEFAULT_POLISH_MODEL = "qwen3.5-9b"
 DEFAULT_POLISH_MODELS = (
+    "qwen3.5-9b",
     "gemma4-e4b-it",
     "gemma4-26b-a4b-it",
     "claude-haiku-4-5",

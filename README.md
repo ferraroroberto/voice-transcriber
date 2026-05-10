@@ -480,9 +480,11 @@ translate mode by design.
 
 ### Polish models
 
-Defaults to `gemma4-e4b-it` (smallest, fastest model in
-[`local-llm-hub`](#-see-also)). Larger options: `gemma4-26b-a4b-it`,
-`claude-haiku-4-5`. Both surfaces (webapp and tk) expose a dropdown so
+Defaults to `qwen3.5-9b` — always-resident in VRAM on the hub host so
+first-token latency is cold-cache, not load time, and it handles
+filler-word polish well at a fraction of the cost of a frontier call.
+Other options surfaced in the dropdown: `gemma4-e4b-it`,
+`gemma4-26b-a4b-it`, `claude-haiku-4-5`. Both surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
 **⚙️ Settings**; in the tk main window it sits inline on the polish
 row. **💾 Save** in webapp settings (or **⭐ Save defaults** in the tk

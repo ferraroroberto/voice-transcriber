@@ -2,8 +2,9 @@
   "_comment": "Copy this file to webapp_config.json (gitignored) or let the webapp create it on the first 'Set as default' tap. All keys are optional — missing keys fall back to the defaults documented in src/webapp_config.py.",
   "_comment_auth_token": "Empty string = auth gate OFF (the default). Run scripts/gen_token.py to generate a strong token; the webapp will then require Authorization: Bearer <token> on every API call from non-loopback callers. See README → 'Optional: bearer-token auth'.",
   "_comment_auth_password": "Optional companion to auth_token: when set, a fresh device with no token shows a login overlay; entering the password swaps it for the bearer token. Set/clear via scripts/set_password.py. Failed attempts are logged to webapp/auth.log.",
-  "polish_model_default": "gemma4-e4b-it",
+  "polish_model_default": "qwen3.5-9b",
   "polish_models_available": [
+    "qwen3.5-9b",
     "gemma4-e4b-it",
     "gemma4-26b-a4b-it",
     "claude-haiku-4-5"

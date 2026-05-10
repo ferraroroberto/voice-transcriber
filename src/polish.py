@@ -3,8 +3,8 @@
 Sends transcripts to `local-llm-hub` (Anthropic-shaped `/v1/messages`
 endpoint) with a strict prompt that removes filler words only — no
 rephrasing, no summarising, no reordering. The hub routes to whichever
-model the caller picked (gemma4-e4b-it by default, with larger options
-available for cases where the small model misses something).
+model the caller picked (qwen3.5-9b by default, with gemma4-e4b-it /
+gemma4-26b-a4b-it / claude-haiku-4-5 available as alternatives).
 
 The hub itself lives in `E:\\automation\\local-llm-hub\\` and binds to
 `http://127.0.0.1:8000` by default. The base URL is configurable via
