@@ -752,7 +752,7 @@
           }),
         });
       }
-      if (!r.ok) throw new Error(await r.text());
+      if (!r.ok) throw new Error(await readErrorMessage(r));
       const data = await r.json();
       if (data.session_id) state.sessionId = data.session_id;
       const ms = Date.now() - t0;
@@ -1119,4 +1119,25 @@
 
   function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
   function truncate(s, n) { return (s && s.length > n) ? s.slice(0, n - 1) + '…' : s; }
+
+  // Turn a non-2xx fetch Response into a short, readable error message.
+  // The webapp returns FastAPI-shaped JSON ({"detail": "..."}) on its own
+  // errors, but a Cloudflare tunnel sitting in front can intercept with
+  // an HTML 5xx page (hub timeout, edge cutoff, etc.) — we don't want to
+  // dump that whole document into a toast.
+  async function readErrorMessage(response) {
+    const ct = (response.headers.get('content-type') || '').toLowerCase();
+    let body = '';
+    try { body = await response.text(); } catch (_) { body = ''; }
+    if (ct.includes('application/json')) {
+      try {
+        const j = JSON.parse(body);
+        if (j && typeof j.detail === 'string') return j.detail;
+      } catch (_) { /* fall through */ }
+    }
+    if (ct.includes('text/html') || /^\s*<(!doctype|html)/i.test(body)) {
+      return `HTTP ${response.status} from upstream (tunnel or hub error)`;
+    }
+    return body ? truncate(body.trim(), 200) : `HTTP ${response.status}`;
+  }
 })();

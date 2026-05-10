@@ -512,7 +512,7 @@ def create_app() -> FastAPI:
     async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
         body = await _maybe_json(request)
         cfg: WebappConfig = request.app.state.webapp_config
-        model = str(body.get("model") or cfg.polish_model_default)
+        model = _resolve_model(body.get("model"), cfg)
         prompt = _resolve_prompt(body.get("prompt_id"), cfg)
 
         session = request.app.state.archive.get(session_id)
@@ -542,7 +542,12 @@ def create_app() -> FastAPI:
         except PolishError as exc:
             session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
             session.write_meta()
-            raise HTTPException(status_code=502, detail=str(exc))
+            # 424 (Failed Dependency) instead of 502 so the Cloudflare
+            # tunnel passes the JSON body through to the browser. Cloudflare
+            # rewrites any 5xx from origin into its own HTML error page,
+            # which clobbers the rich "upstream <addr> unreachable: ..."
+            # message the hub returns.
+            raise HTTPException(status_code=424, detail=str(exc))
 
         session.write_polished(
             result.polished_text,
@@ -571,7 +576,7 @@ def create_app() -> FastAPI:
         text = body.get("text")
         if not isinstance(text, str) or not text.strip():
             raise HTTPException(status_code=400, detail="text is required")
-        model = str(body.get("model") or cfg.polish_model_default)
+        model = _resolve_model(body.get("model"), cfg)
         prompt = _resolve_prompt(body.get("prompt_id"), cfg)
         language = body.get("language")
         if language is not None and not isinstance(language, str):
@@ -588,7 +593,12 @@ def create_app() -> FastAPI:
         except PolishError as exc:
             session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
             session.write_meta()
-            raise HTTPException(status_code=502, detail=str(exc))
+            # 424 (Failed Dependency) instead of 502 so the Cloudflare
+            # tunnel passes the JSON body through to the browser. Cloudflare
+            # rewrites any 5xx from origin into its own HTML error page,
+            # which clobbers the rich "upstream <addr> unreachable: ..."
+            # message the hub returns.
+            raise HTTPException(status_code=424, detail=str(exc))
 
         session.write_polished(
             result.polished_text,
@@ -791,6 +801,24 @@ def _resolve_prompt(
     if not pid:
         pid = cfg.polish_prompt_default
     return get_prompt(pid)
+
+
+def _resolve_model(model: Any, cfg: WebappConfig) -> str:
+    """Pick the polish model the client asked for, falling back to the
+    configured default. Reject anything not in ``polish_models_available``
+    with HTTP 400 so a typo can't waste a 120-second hub timeout (and
+    trip the Cloudflare tunnel's 100 s edge cutoff with an HTML error
+    page that the frontend can't render usefully)."""
+    candidate = model if isinstance(model, str) and model.strip() else cfg.polish_model_default
+    if candidate not in cfg.polish_models_available:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"unknown polish model {candidate!r}; "
+                f"allowed: {cfg.polish_models_available}"
+            ),
+        )
+    return candidate
 
 
 # Module-level app for `uvicorn app.webapp.server:app`.
