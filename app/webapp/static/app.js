@@ -164,8 +164,8 @@
 
   function applyConfigDefaults() {
     state.config = state.config || {
-      polish_model_default: 'qwen3.5-9b',
-      polish_models_available: ['qwen3.5-9b', 'gemma4-e4b-it', 'gemma4-26b-a4b-it', 'claude-haiku-4-5'],
+      polish_model_default: 'agentic_light',
+      polish_models_available: ['agentic_light', 'agentic_heavy', 'claude-haiku-4-5', 'claude-sonnet-4-6', 'claude-opus-4-7'],
       polish_prompt_default: 'filler-words',
       polish_prompts: [{
         id: 'filler-words',

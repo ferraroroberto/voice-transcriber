@@ -448,7 +448,7 @@ so a long take never feels stuck:
 | Stop, chunks pending | `Finalising upload · 2 chunks left` |
 | Server processing | `Server: ffmpeg → whisper · 1m 4s of audio…` |
 | Done | `Done in 3.2 s · 20.0× realtime — tap Copy or Polish` |
-| Polish in flight | `LLM hub → claude-haiku-4-5 · polishing…` |
+| Polish in flight | `LLM hub → agentic_light · polishing…` |
 | Polish done | `Polished in 1.4 s — tap Copy` |
 
 ### Translation
@@ -480,11 +480,14 @@ translate mode by design.
 
 ### Polish models
 
-Defaults to `qwen3.5-9b` — always-resident in VRAM on the hub host so
+Defaults to `agentic_light` — the local-llm-hub role alias for the
+fast-lane local model (currently `qwen3.5-4b`, swappable from the hub
+without touching this repo). Always-resident in VRAM on the hub host so
 first-token latency is cold-cache, not load time, and it handles
 filler-word polish well at a fraction of the cost of a frontier call.
-Other options surfaced in the dropdown: `gemma4-e4b-it`,
-`gemma4-26b-a4b-it`, `claude-haiku-4-5`. Both surfaces (webapp and tk) expose a dropdown so
+Other options surfaced in the dropdown: `agentic_heavy` (deep-lane local
+role, currently `gemma4-26b-a4b-it`), `claude-haiku-4-5`,
+`claude-sonnet-4-6`, `claude-opus-4-7`. Both surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
 **⚙️ Settings**; in the tk main window it sits inline on the polish
 row. **💾 Save** in webapp settings (or **⭐ Save defaults** in the tk
@@ -720,7 +723,7 @@ work in one foreground process.
 | Cloudflare Access blocks you | Email not on the policy allowlist | Zero Trust dashboard → Access → Applications → your app → Policies → edit Include rule, add your email, save. Effective immediately |
 | `Init failed: Load failed` toast | Network dropped while the page held a stale connection | Pull down on the page to reload — init retries automatically |
 | iOS prompts for mic on every record | Loaded from Safari URL bar, not from a Home Screen icon | **Add to Home Screen** and launch from the icon. Or whitelist the site under Settings → Safari → Settings for Websites → Microphone |
-| Polish fails with `502 hub returned…upstream :8086 unreachable` | Selected polish model's local llama-server isn't running | Start it from the local-llm-hub tray (Models submenu → toggle on), or pick `claude-haiku-4-5` in the dropdown — that one routes via your Claude subscription and doesn't need a local backend |
+| Polish fails with `502 hub returned…upstream :8088 unreachable` (or `:8087`) | Selected polish role's local llama-server isn't running on the hub | Start it from the local-llm-hub tray (Models submenu → toggle on the model behind `agentic_light` / `agentic_heavy`), or pick `claude-haiku-4-5` / `claude-sonnet-4-6` / `claude-opus-4-7` in the dropdown — those route via your Claude subscription and don't need a local backend |
 | Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings |
 | Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button writes a single `text/plain` MIME type via `ClipboardItem` |
 | Local cert warns in the browser | LAN IP or hostname changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the tray |

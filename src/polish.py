@@ -3,8 +3,11 @@
 Sends transcripts to `local-llm-hub` (Anthropic-shaped `/v1/messages`
 endpoint) with a strict prompt that removes filler words only — no
 rephrasing, no summarising, no reordering. The hub routes to whichever
-model the caller picked (qwen3.5-9b by default, with gemma4-e4b-it /
-gemma4-26b-a4b-it / claude-haiku-4-5 available as alternatives).
+model the caller picked. Clients address the role, not the underlying
+model: `agentic_light` (default — fast lane) and `agentic_heavy`
+(deep lane) are stable aliases that the hub re-points whenever the
+local frontier moves. The Claude subscription path is also exposed
+under `claude-haiku-4-5` / `claude-sonnet-4-6` / `claude-opus-4-7`.
 
 The hub itself lives in `E:\\automation\\local-llm-hub\\` and binds to
 `http://127.0.0.1:8000` by default. The base URL is configurable via

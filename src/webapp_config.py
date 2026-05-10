@@ -26,12 +26,13 @@ SAMPLE_CONFIG_PATH = (
     Path(__file__).resolve().parent.parent / "config" / "webapp_config.sample.json"
 )
 
-DEFAULT_POLISH_MODEL = "qwen3.5-9b"
+DEFAULT_POLISH_MODEL = "agentic_light"
 DEFAULT_POLISH_MODELS = (
-    "qwen3.5-9b",
-    "gemma4-e4b-it",
-    "gemma4-26b-a4b-it",
+    "agentic_light",
+    "agentic_heavy",
     "claude-haiku-4-5",
+    "claude-sonnet-4-6",
+    "claude-opus-4-7",
 )
 DEFAULT_POLISH_PROMPT_ID = "filler-words"
 DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
