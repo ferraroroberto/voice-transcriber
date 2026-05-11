@@ -41,9 +41,12 @@
     <section class="card transcript-card">
       <div class="card-header">
         <h2>🎙️ Transcript</h2>
-        <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
+        <div class="row card-header-actions">
+          <button id="saveTranscript" class="copy-btn" type="button" title="Save the pasted text to history without polishing" disabled>💾 Save</button>
+          <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
+        </div>
       </div>
-      <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Go" rows="4"></textarea>
+      <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Save / Go" rows="4"></textarea>
     </section>
 
     <section class="card polish-card">
@@ -134,6 +137,6 @@
     </form>
   </div>
 
-  <script src="/static/app.js?v=16"></script>
+  <script src="/static/app.js?v=17"></script>
 </body>
 </html>

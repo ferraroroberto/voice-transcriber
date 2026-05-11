@@ -20,6 +20,7 @@
 
     transcript:       document.getElementById('transcript'),
     copyTranscript:   document.getElementById('copyTranscript'),
+    saveTranscript:   document.getElementById('saveTranscript'),
 
     polishModel:        document.getElementById('polishModel'),
     polishStyle:        document.getElementById('polishStyle'),
@@ -234,6 +235,9 @@
       state.transcript = els.transcript.value;
       els.copyTranscript.disabled = !state.transcript;
       els.polishBtn.disabled = !state.transcript;
+      // Save is only meaningful for pasted text that doesn't yet belong
+      // to a session — a real recording already lives in History.
+      els.saveTranscript.disabled = !state.transcript || !!state.sessionId;
     });
     els.polished.addEventListener('input', () => {
       state.polished = els.polished.value;
@@ -242,6 +246,7 @@
 
     els.resetBtn.addEventListener('click', onReset);
     els.polishBtn.addEventListener('click', onPolish);
+    els.saveTranscript.addEventListener('click', onSaveTranscript);
     els.polishStyle.addEventListener('change', refreshPromptPreview);
 
     els.settingsPanel.addEventListener('toggle', () => {
@@ -598,6 +603,8 @@
       els.copyTranscript.disabled = !state.transcript;
       els.copyPolished.disabled = true;
       els.polishBtn.disabled = !state.transcript;
+      // The take already lives on disk — saving again would duplicate it.
+      els.saveTranscript.disabled = true;
       // Auto-copy reads from the textarea so what lands on the clipboard
       // is exactly what's on screen — including the merged accumulator
       // when Append is on.
@@ -784,8 +791,37 @@
     els.copyTranscript.disabled = true;
     els.copyPolished.disabled = true;
     els.polishBtn.disabled = true;
+    els.saveTranscript.disabled = true;
     els.recordStatus.textContent = 'Tap to start';
     els.levelFill.style.width = '0%';
+  }
+
+  async function onSaveTranscript() {
+    if (!state.transcript || state.sessionId) return;
+    const original = els.saveTranscript.textContent;
+    els.saveTranscript.disabled = true;
+    els.saveTranscript.textContent = '…';
+    try {
+      const r = await authFetch('/api/save-text', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          text: state.transcript,
+          language: els.languageSelect.value,
+        }),
+      });
+      if (!r.ok) throw new Error(await readErrorMessage(r));
+      const data = await r.json();
+      if (data.session_id) state.sessionId = data.session_id;
+      els.recordStatus.textContent = 'Saved to history — ready to polish or copy';
+      showToast('Saved to history', 'success');
+      refreshHistory();
+    } catch (err) {
+      showToast('Save failed: ' + truncate(err.message || String(err), 80), 'error');
+      els.saveTranscript.disabled = false;
+    } finally {
+      els.saveTranscript.textContent = original;
+    }
   }
 
   async function cleanupIncognitoSession() {
@@ -945,6 +981,7 @@
       els.copyTranscript.disabled = !state.transcript;
       els.copyPolished.disabled = true;
       els.polishBtn.disabled = !state.transcript;
+      els.saveTranscript.disabled = true;
       refreshHistory();
       showToast('Done', 'success');
     } catch (err) {

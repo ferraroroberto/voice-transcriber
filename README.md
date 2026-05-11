@@ -364,7 +364,11 @@ word before polishing, or tweak the polished output before copying.
 Edits are sent to the server on the next polish call so History matches
 what's on screen. You can also skip recording entirely: paste any text
 into the transcript box and tap **✨ Polish** — a text-only session is
-created and shows up in History alongside dictated takes. The
+created and shows up in History alongside dictated takes. If you only
+want to save the pasted text for later (no polish yet), tap
+**💾 Save** next to the transcript's Copy button — it creates a
+text-only session in History so you can polish or re-copy it from
+there, exactly as if you had dictated it. The
 **🧽** icon button in the top-right of the header clears both boxes
 and the current session so the next record starts fresh. Sits between
 **➕ Append** and **🕵️** Incognito.

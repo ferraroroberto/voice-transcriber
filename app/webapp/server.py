@@ -17,6 +17,7 @@ Routes:
     POST /api/sessions/{id}/finish  → close + transcode + transcribe (Phase 4)
     POST /api/sessions/{id}/polish  → run polish on the transcript
     POST /api/polish-text           → polish pasted text (creates text-only session)
+    POST /api/save-text             → save pasted text to history (no polish)
     POST /api/sessions/{id}/retranscribe → re-run whisper on a saved take
     GET  /api/sessions              → list (newest first)
     DELETE /api/sessions            → cleanup all
@@ -613,6 +614,31 @@ def create_app() -> FastAPI:
             "polished": result.polished_text,
             "model": result.model,
             "prompt_id": prompt.id,
+        }
+
+    @app.post("/api/save-text")
+    async def save_text(request: Request) -> Dict[str, Any]:
+        """Save arbitrary pasted text as a history entry without polishing.
+
+        Mirrors /api/polish-text but skips the LLM call — the text lands in
+        the archive as if it had been dictated, so the user can polish it
+        later from the History list (or just keep it as a record).
+        """
+        body = await _maybe_json(request)
+        text = body.get("text")
+        if not isinstance(text, str) or not text.strip():
+            raise HTTPException(status_code=400, detail="text is required")
+        language = body.get("language")
+        if language is not None and not isinstance(language, str):
+            language = None
+
+        archive: SessionArchive = request.app.state.archive
+        session = archive.new_session(language=language)
+        session.write_transcript(text)
+        session.write_meta()
+        return {
+            "session_id": session.session_id,
+            "transcript": text,
         }
 
     @app.get("/api/sessions/{session_id}/text")
