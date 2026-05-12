@@ -1,7 +1,7 @@
 # LLM eval + observability layer for the polish pipeline
 
 > **Status:** plan only, no code yet.
-> **Scope:** sibling project [`claude-local-calls`](https://github.com/ferraroroberto/claude-local-calls) (the local-llm-hub) plus a thin client-side hook in this repo's polish flow.
+> **Scope:** spans two repos. Bulk of the system lives in sibling project [`claude-local-calls`](https://github.com/ferraroroberto/claude-local-calls) (the local-llm-hub); this repo only contributes a thin client-side feedback hook.
 > **Goal:** make it *measurable* whether a model swap, prompt change, or hub upgrade actually makes polish better — and detect regressions automatically the next time you change something.
 
 ---
@@ -19,6 +19,30 @@ Three layers stack on top of the existing pipeline:
 **Difficulty: 3/5** — no novel CS, but lots of "what do you actually measure" judgement calls. The interesting work *is* the judgement.
 
 **Why it's high-leverage for an AI transformation role:** every enterprise team eventually asks "are we sure the new model is better than the old one?" and 90% can't answer. Doing this once on a project you understand end-to-end gives you the playbook to drop into any team's evaluation conversation.
+
+---
+
+## Responsibilities — who owns what
+
+The eval stack is a hub concern, not a voice-transcriber concern. Voice-transcriber is *one* consumer of the hub; building the eval system inside it would couple cross-cutting infrastructure to a single client and force a re-port the moment a second client (or sibling project) shows up. So the split is asymmetric on purpose:
+
+| Concern | `voice-transcriber` (this repo) | `claude-local-calls` (the hub) |
+|---|---|---|
+| Polish call itself | Already does it | Already serves it |
+| Generate `X-Trace-Id` per polish call | ✅ client-side UUID, sent as header | — |
+| Persist the trace | — | ✅ middleware writes row to `traces.duckdb` |
+| Show 👍/👎 button on polished result | ✅ webapp + tk + tray (parity) | — |
+| Receive thumbs feedback | — | ✅ `POST /api/trace/{id}/feedback` |
+| Golden dataset (`eval/golden.jsonl`) | — | ✅ lives in hub repo |
+| Eval harness CLI | — | ✅ `python -m eval.run …` |
+| Metric implementations (filler regex, embed sim, NLI, etc.) | — | ✅ hub repo |
+| Regression gate | — | ✅ hub repo |
+| Streamlit dashboard | — | ✅ hub repo (or sibling tool reading `traces.duckdb`) |
+| Pairwise human eval UI | — | ✅ hub repo |
+
+Rule of thumb: if removing voice-transcriber from the picture (e.g. you build a chat client tomorrow) breaks the capability, it belongs in the hub. The only things that legitimately belong here are *the moments where the user expresses a preference*, because that's tied to the surface they're looking at.
+
+**Feedback transport:** clients post directly to the hub's `/api/trace/{id}/feedback`. No local queue, no flush — if the hub is unreachable when you tap 👎, the feedback is dropped. Acceptable: the hub is on `localhost`, and missing thumbs are far less costly than a queue subsystem.
 
 ---
 
@@ -81,7 +105,7 @@ The dashboard is its own tiny Streamlit app reading `traces.duckdb`. You already
 
 ### Phase 1 — Golden dataset + offline harness (no production touched)
 
-**Difficulty:** 2/5 · **Time:** 1 weekend
+**Repo:** `claude-local-calls` only · **Difficulty:** 2/5 · **Time:** 1 weekend
 
 - Curate **30–50 takes** from `archive/` you've already dictated. Pick a mix: clean speech, heavy fillers, technical jargon, multilingual, interrupted/restart, very short, very long.
 - For each, hand-write the *ideal* polished output. This is the painful part — but doing it once forces you to articulate what "good polish" means.
@@ -102,7 +126,7 @@ The dashboard is its own tiny Streamlit app reading `traces.duckdb`. You already
 
 ### Phase 2 — Production tracing (low-risk, high-value)
 
-**Difficulty:** 2/5 · **Time:** 1 evening
+**Repos:** `claude-local-calls` (middleware, schema, feedback endpoint) + `voice-transcriber` (trace-id header, 👍/👎 UI) · **Difficulty:** 2/5 · **Time:** 1 evening
 
 Add a tracing middleware to `local-llm-hub` that records every polish call into `traces.duckdb`:
 
@@ -125,12 +149,13 @@ CREATE TABLE traces (
 );
 ```
 
-Webapp + tk + tray attach an `X-Trace-Id` header (already-generated UUID) on every polish call so the thumbs callback can land on the right row later.
+Webapp + tk + tray attach an `X-Trace-Id` header (client-generated UUID) on every polish call so the thumbs callback can land on the right row later. Per the feature-parity rule, all three surfaces ship the 👍/👎 control together — not webapp-first.
 
-**My side:** middleware in `local-llm-hub`, a `/api/trace/{id}/feedback` endpoint, JS hook on the webapp's polish-result panel for 👍/👎.
-**Your side:** restart the hub; from then on every polish call you make is logged automatically.
+**Hub side (`claude-local-calls`):** middleware that writes the row, a `POST /api/trace/{id}/feedback` endpoint that updates the `thumbs` column, schema migration for `traces.duckdb`.
+**Client side (`voice-transcriber`):** generate the UUID per polish call, attach as `X-Trace-Id`, render 👍/👎 next to the polished output in webapp + tk + tray, post directly to the hub's feedback endpoint on click. No local persistence — fire-and-forget.
+**Your side:** restart the hub; from then on every polish call is logged automatically.
 
-**Verification:** dictate three takes, polish each, check `traces.duckdb` has three rows with sensible numbers.
+**Verification:** dictate three takes from each surface (webapp, tk, tray), polish each, tap 👍 on one and 👎 on another; `traces.duckdb` has nine rows with the right `client` values and two have non-null `thumbs`.
 
 **Learnings:**
 - DuckDB is a phenomenal middle-ground here: file-based like SQLite, columnar like ClickHouse, speaks SQL, queries millions of rows in ms. Worth knowing for any "small enterprise analytics" pitch.
@@ -140,7 +165,7 @@ Webapp + tk + tray attach an `X-Trace-Id` header (already-generated UUID) on eve
 
 ### Phase 3 — Dashboard
 
-**Difficulty:** 2/5 · **Time:** 1 evening
+**Repo:** `claude-local-calls` only · **Difficulty:** 2/5 · **Time:** 1 evening
 
 Streamlit app reading `traces.duckdb`:
 
@@ -159,7 +184,7 @@ Streamlit app reading `traces.duckdb`:
 
 ### Phase 4 — Regression gate
 
-**Difficulty:** 3/5 · **Time:** 1 weekend
+**Repo:** `claude-local-calls` only · **Difficulty:** 3/5 · **Time:** 1 weekend
 
 A pre-promotion check: before changing the default model in `webapp_config.json`, run:
 
@@ -181,7 +206,7 @@ Output: green/yellow/red per metric, and a written diff for the takes where the 
 
 ### Phase 5 (optional) — Pairwise human eval
 
-**Difficulty:** 3/5 · **Time:** 1 weekend
+**Repo:** `claude-local-calls` only · **Difficulty:** 3/5 · **Time:** 1 weekend
 
 Sometimes automated metrics tie, but one output is obviously better. Build a two-pane UI in the dashboard: "Take #42, output A vs output B, which do you prefer?" — blind, randomised. Stash preferences as Bradley-Terry pairs, derive an Elo-like ranking per model.
 
@@ -213,7 +238,8 @@ This is the most directly portable skill of the three options. If you only do on
 
 ## Decision points
 
-1. **Where does the harness live** — sibling repo, or a `eval/` folder inside `claude-local-calls`?
+1. ~~**Where does the harness live?**~~ Settled: inside `claude-local-calls` (see Responsibilities table). Voice-transcriber only ships the 👍/👎 hook and `X-Trace-Id` header.
 2. **DuckDB or SQLite?** DuckDB is faster and a better learning experience; SQLite is universal. Default: DuckDB.
 3. **Cost tracking on day one?** Only matters if you also use the Claude API path; trivial to add later.
 4. **Dashboard hosting** — local-only Streamlit, or expose via the same Cloudflare tunnel (with auth) so you can read it from your phone?
+5. **Feedback resilience** — currently fire-and-forget direct to hub (no queue). Revisit if you start using surfaces where the hub may be unreachable (e.g. iOS keyboard over a flaky tunnel).
