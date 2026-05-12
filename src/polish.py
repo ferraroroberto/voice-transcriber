@@ -3,11 +3,13 @@
 Sends transcripts to `local-llm-hub` (Anthropic-shaped `/v1/messages`
 endpoint) with a strict prompt that removes filler words only — no
 rephrasing, no summarising, no reordering. The hub routes to whichever
-model the caller picked. Clients address the role, not the underlying
-model: `agentic_light` (default — fast lane) and `agentic_heavy`
-(deep lane) are stable aliases that the hub re-points whenever the
-local frontier moves. The Claude subscription path is also exposed
-under `claude-haiku-4-5` / `claude-sonnet-4-6` / `claude-opus-4-7`.
+model the caller picked. Clients address the model via a stable
+version-free alias the hub maps to the current display_name:
+`claude_haiku` / `claude_sonnet` / `claude_opus` for the Claude
+subscription path, and `gemini_lite` / `gemini_flash` / `gemini_pro`
+for the Google AI Pro path. When Anthropic or Google ship a new
+version, only the hub's `display_name` needs updating — these aliases
+stay the same.
 
 The hub itself lives in `E:\\automation\\local-llm-hub\\` and binds to
 `http://127.0.0.1:8000` by default. The base URL is configurable via
@@ -155,8 +157,8 @@ class PolishClient:
         ):
             raise PolishError(
                 f"polish model exhausted its token budget while reasoning "
-                f"(model={model}, stop_reason={stop_reason}). Try "
-                f"agentic_heavy or one of the claude-* models."
+                f"(model={model}, stop_reason={stop_reason}). Try one of "
+                f"the claude_* or gemini_* models."
             )
         if not polished:
             raise PolishError(

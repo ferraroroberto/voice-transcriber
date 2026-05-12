@@ -26,14 +26,11 @@ SAMPLE_CONFIG_PATH = (
     Path(__file__).resolve().parent.parent / "config" / "webapp_config.sample.json"
 )
 
-DEFAULT_POLISH_MODEL = "agentic_light"
-DEFAULT_POLISH_MODELS = (
-    "agentic_light",
-    "agentic_heavy",
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6",
-    "claude-opus-4-7",
-)
+# Polish-model defaults come from the committed sample config, not from
+# Python literals — so adding/removing/renaming a hub alias is a single
+# JSON edit, no repo push. The sample file is the source of truth for
+# first-run defaults; the runtime `webapp_config.json` (gitignored) is
+# the user's persisted overrides on top of it.
 DEFAULT_POLISH_PROMPT_ID = "filler-words"
 DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
 DEFAULT_HOST = "0.0.0.0"
@@ -42,13 +39,33 @@ DEFAULT_RETENTION_DAYS = 30
 DEFAULT_SILENCE_DBFS_THRESHOLD = -50.0
 
 
+def _sample_polish_defaults() -> tuple[str, List[str]]:
+    """Read the committed sample config to get the first-run polish-model
+    defaults. Keeps Python free of model-name literals so the list can
+    evolve in JSON alone."""
+    try:
+        raw = json.loads(SAMPLE_CONFIG_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning(
+            f"⚠️  Could not read sample config {SAMPLE_CONFIG_PATH} "
+            f"({exc}); polish defaults will be empty"
+        )
+        return "", []
+    return (
+        str(raw.get("polish_model_default") or ""),
+        list(raw.get("polish_models_available") or []),
+    )
+
+
 @dataclass
 class WebappConfig:
     """User-authored, persisted webapp settings."""
 
-    polish_model_default: str = DEFAULT_POLISH_MODEL
+    polish_model_default: str = field(
+        default_factory=lambda: _sample_polish_defaults()[0]
+    )
     polish_models_available: List[str] = field(
-        default_factory=lambda: list(DEFAULT_POLISH_MODELS)
+        default_factory=lambda: _sample_polish_defaults()[1]
     )
     polish_prompt_default: str = DEFAULT_POLISH_PROMPT_ID
     llm_hub_url: str = DEFAULT_LLM_HUB_URL
@@ -93,12 +110,13 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         )
         return WebappConfig()
 
+    sample_default, sample_available = _sample_polish_defaults()
     cfg = WebappConfig(
         polish_model_default=str(
-            raw.get("polish_model_default", DEFAULT_POLISH_MODEL)
+            raw.get("polish_model_default") or sample_default
         ),
         polish_models_available=list(
-            raw.get("polish_models_available") or DEFAULT_POLISH_MODELS
+            raw.get("polish_models_available") or sample_available
         ),
         polish_prompt_default=str(
             raw.get("polish_prompt_default", DEFAULT_POLISH_PROMPT_ID)

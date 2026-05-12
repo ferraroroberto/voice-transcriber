@@ -452,7 +452,7 @@ so a long take never feels stuck:
 | Stop, chunks pending | `Finalising upload · 2 chunks left` |
 | Server processing | `Server: ffmpeg → whisper · 1m 4s of audio…` |
 | Done | `Done in 3.2 s · 20.0× realtime — tap Copy or Polish` |
-| Polish in flight | `LLM hub → agentic_light · polishing…` |
+| Polish in flight | `LLM hub → gemini_flash · polishing…` |
 | Polish done | `Polished in 1.4 s — tap Copy` |
 
 ### Translation
@@ -484,15 +484,17 @@ translate mode by design.
 
 ### Polish models
 
-Defaults to `agentic_light` — the local-llm-hub role alias for the
-fast-lane local model (currently `qwen3.5-4b`, swappable from the hub
-without touching this repo). It is a reasoning model, so the polish
-client allocates a generous `max_tokens` (16k) to leave room for
-`<think>…</think>` plus the answer; the hub strips the reasoning
-server-side before returning. Other options surfaced in the dropdown:
-`agentic_heavy` (deep-lane local role, currently `gemma4-26b-a4b-it`),
-`claude-haiku-4-5`, `claude-sonnet-4-6`, `claude-opus-4-7`. Both
-surfaces (webapp and tk) expose a dropdown so
+Defaults to `gemini_flash` — the local-llm-hub alias for Google's
+Gemini Flash, routed via the `gemini` CLI on a Google AI Pro
+subscription. The polish client allocates a generous `max_tokens`
+(16k) to leave room for reasoning chains on models that emit them
+(`<think>…</think>`); the hub strips the reasoning server-side before
+returning. Other options surfaced in the dropdown:
+`claude_haiku`, `claude_sonnet`, `claude_opus` (Claude subscription
+via the `claude` CLI), and `gemini_lite`, `gemini_pro` (the other two
+Gemini tiers). All six are stable version-free aliases — when the hub
+points an alias at a newer display_name nothing in this repo needs
+to change. Both surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
 **⚙️ Settings**; in the tk main window it sits inline on the polish
 row. **💾 Save** in webapp settings (or **⭐ Save defaults** in the tk
@@ -728,7 +730,7 @@ work in one foreground process.
 | Cloudflare Access blocks you | Email not on the policy allowlist | Zero Trust dashboard → Access → Applications → your app → Policies → edit Include rule, add your email, save. Effective immediately |
 | `Init failed: Load failed` toast | Network dropped while the page held a stale connection | Pull down on the page to reload — init retries automatically |
 | iOS prompts for mic on every record | Loaded from Safari URL bar, not from a Home Screen icon | **Add to Home Screen** and launch from the icon. Or whitelist the site under Settings → Safari → Settings for Websites → Microphone |
-| Polish fails with `502 hub returned…upstream :8088 unreachable` (or `:8087`) | Selected polish role's local llama-server isn't running on the hub | Start it from the local-llm-hub tray (Models submenu → toggle on the model behind `agentic_light` / `agentic_heavy`), or pick `claude-haiku-4-5` / `claude-sonnet-4-6` / `claude-opus-4-7` in the dropdown — those route via your Claude subscription and don't need a local backend |
+| Polish fails with `502 hub returned…` from the `claude` or `gemini` CLI | Selected polish model's CLI isn't logged in, or the subscription is unreachable | Run `claude /login` (Claude subscription) or `gemini /auth login` (Google AI Pro) on the host running local-llm-hub. Or pick a different model in the dropdown — `gemini_flash` and `gemini_lite` are the cheapest tiers |
 | Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings |
 | Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button writes a single `text/plain` MIME type via `ClipboardItem` |
 | Local cert warns in the browser | LAN IP or hostname changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the tray |

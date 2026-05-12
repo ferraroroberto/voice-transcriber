@@ -165,8 +165,11 @@
 
   function applyConfigDefaults() {
     state.config = state.config || {
-      polish_model_default: 'agentic_light',
-      polish_models_available: ['agentic_light', 'agentic_heavy', 'claude-haiku-4-5', 'claude-sonnet-4-6', 'claude-opus-4-7'],
+      // Empty offline fallback — the real list comes from /api/config,
+      // which serves config/webapp_config.json. Hardcoding aliases here
+      // would defeat the "edit JSON, no code change" rule.
+      polish_model_default: '',
+      polish_models_available: [],
       polish_prompt_default: 'filler-words',
       polish_prompts: [{
         id: 'filler-words',
@@ -183,12 +186,24 @@
     populateConfigUI();
   }
 
+  function polishModelLabel(id) {
+    // Derive a friendly label from the hub alias by title-casing the
+    // segments (claude_haiku → "Claude Haiku"). Keeping this rule
+    // synthesis-only means adding a new model is a single edit in
+    // config/webapp_config.sample.json with no code change here.
+    return String(id || '')
+      .split('_')
+      .filter(Boolean)
+      .map(s => s.charAt(0).toUpperCase() + s.slice(1))
+      .join(' ');
+  }
+
   function populateConfigUI() {
     els.polishModel.innerHTML = '';
     for (const model of state.config.polish_models_available) {
       const opt = document.createElement('option');
       opt.value = model;
-      opt.textContent = model;
+      opt.textContent = polishModelLabel(model);
       if (model === state.config.polish_model_default) opt.selected = true;
       els.polishModel.appendChild(opt);
     }

@@ -2,13 +2,14 @@
   "_comment": "Copy this file to webapp_config.json (gitignored) or let the webapp create it on the first 'Set as default' tap. All keys are optional — missing keys fall back to the defaults documented in src/webapp_config.py.",
   "_comment_auth_token": "Empty string = auth gate OFF (the default). Run scripts/gen_token.py to generate a strong token; the webapp will then require Authorization: Bearer <token> on every API call from non-loopback callers. See README → 'Optional: bearer-token auth'.",
   "_comment_auth_password": "Optional companion to auth_token: when set, a fresh device with no token shows a login overlay; entering the password swaps it for the bearer token. Set/clear via scripts/set_password.py. Failed attempts are logged to webapp/auth.log.",
-  "polish_model_default": "agentic_light",
+  "polish_model_default": "gemini_flash",
   "polish_models_available": [
-    "agentic_light",
-    "agentic_heavy",
-    "claude-haiku-4-5",
-    "claude-sonnet-4-6",
-    "claude-opus-4-7"
+    "claude_haiku",
+    "claude_sonnet",
+    "claude_opus",
+    "gemini_lite",
+    "gemini_flash",
+    "gemini_pro"
   ],
   "_comment_polish_prompts": "polish_prompt_default picks one of the entries in config/polish_prompts.json (committed). Add new entries there to expose more polish styles in the webapp + tk window — no code change needed.",
   "polish_prompt_default": "filler-words",
