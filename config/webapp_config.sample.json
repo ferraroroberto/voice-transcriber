@@ -9,7 +9,9 @@
     "claude_opus",
     "gemini_lite",
     "gemini_flash",
-    "gemini_pro"
+    "gemini_pro",
+    "agentic_light",
+    "agentic_heavy"
   ],
   "_comment_polish_prompts": "polish_prompt_default picks one of the entries in config/polish_prompts.json (committed). Add new entries there to expose more polish styles in the webapp + tk window — no code change needed.",
   "polish_prompt_default": "filler-words",

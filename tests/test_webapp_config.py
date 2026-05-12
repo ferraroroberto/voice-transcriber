@@ -47,7 +47,7 @@ class TestNoModelLiteralsInPython:
             "the source of truth for first-run polish-model defaults."
         )
 
-    def test_sample_lists_six_aliases_with_gemini_flash_default(
+    def test_sample_lists_expected_aliases_with_gemini_flash_default(
         self, sample_polish_payload
     ):
         # Soft pin: if the user evolves the list, only this assertion
@@ -60,6 +60,8 @@ class TestNoModelLiteralsInPython:
             "gemini_lite",
             "gemini_flash",
             "gemini_pro",
+            "agentic_light",
+            "agentic_heavy",
         ]
 
     def test_python_module_does_not_hardcode_model_names(self):
