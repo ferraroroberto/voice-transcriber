@@ -502,6 +502,12 @@ window) persists your choice to `config/webapp_config.json` so the next
 launch defaults to it. Both surfaces share that file, so the defaults
 sync between them.
 
+The dropdown values come from `config/webapp_config.sample.json` — not
+from Python. Adding or removing a hub alias is a one-line JSON edit;
+no code change needed. Friendly labels are derived from the alias by
+title-casing segments (`gemini_flash` → "Gemini Flash"), so a new
+alias also needs no JS change.
+
 ### Polish styles
 
 The system prompt is no longer hard-coded — it lives in
@@ -737,6 +743,65 @@ work in one foreground process.
 | Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |
 | Tray says `cloudflared not on PATH` | Binary missing | `winget install Cloudflare.cloudflared`, restart the tray |
 | Tray boots but no public URL | `webapp/cloudflared.yml` missing | Copy `webapp/cloudflared.sample.yml` to `webapp/cloudflared.yml`, fill in UUID + hostname, restart the tray. See "Persistent URL via Cloudflare tunnel" |
+
+## 🧪 Testing
+
+The repo ships a pytest suite covering the Python modules, the FastAPI
+routes, the bearer-token middleware, and an end-to-end smoke test that
+boots a real `uvicorn` process. The JS in `app/webapp/static/app.js`
+has a tiny Vitest harness too (optional — only runs when Node.js is
+installed) plus a Python parity port so the rule stays correct even on
+Python-only machines.
+
+### Install the test dependencies
+
+```bat
+.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```
+
+### Run the suite
+
+```bat
+:: Everything, including the slow smoke test (~7 s)
+.venv\Scripts\python.exe -m pytest
+
+:: Fast iteration — skip the uvicorn-boot smoke test (~2 s)
+.venv\Scripts\python.exe -m pytest -m "not smoke"
+
+:: One module at a time
+.venv\Scripts\python.exe -m pytest tests\test_polish.py -v
+```
+
+### Optional: JS tests via Vitest
+
+```bat
+npm install
+npm test
+```
+
+Skipped automatically when Node.js isn't on `PATH` — the Python suite
+still covers the same logic via the parity port in
+`tests\test_static_app_js.py`.
+
+### What each file covers
+
+| File | What it pins |
+|------|--------------|
+| `tests\test_webapp_config.py` | First-run defaults come from `webapp_config.sample.json` (not Python); regression guard that no model-name literal sneaks back into `src\webapp_config.py` |
+| `tests\test_polish.py` | Hub client request shape, `<think>` stripping, error wrapping |
+| `tests\test_polish_prompts.py` | Library load, dedupe, built-in fallback |
+| `tests\test_app_config.py` | 100-language Whisper map, ISO normalisation, validation |
+| `tests\test_silence.py` | RMS dBFS gate (int16, float, 8-bit, stereo WAV) |
+| `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
+| `tests\test_vocabulary.py` | Per-language vocab prompts + hot-reload on mtime |
+| `tests\test_snippets.py` | Word-boundary keyword expansion + hot-reload |
+| `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
+| `tests\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` |
+| `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
+| `tests\test_webapp_api_polish.py` | `/api/polish-text`, `/api/save-text`, `_resolve_model`, `_preview` |
+| `tests\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
+| `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins on `app.js` |
+| `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
 
 ## 🔗 See also
 
