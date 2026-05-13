@@ -37,6 +37,17 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8443
 DEFAULT_RETENTION_DAYS = 30
 DEFAULT_SILENCE_DBFS_THRESHOLD = -50.0
+# Pillar 1 (rolling transcription): how often to re-run whisper on the
+# accumulated take while the user is still recording. 0 disables the
+# rolling worker entirely; the webapp falls back to the legacy "one
+# whisper pass on /finish" behaviour.
+DEFAULT_PARTIAL_INTERVAL_SECONDS = 2.0
+# Pillar 3 (VAD-driven auto-stop): off by default. When on, the client
+# watches its own AnalyserNode energy floor and fires Stop after
+# ``auto_stop_silence_ms`` of continuous near-silence. A grace banner on
+# the page lets the user keep talking to cancel.
+DEFAULT_VAD_AUTO_STOP_ENABLED = False
+DEFAULT_AUTO_STOP_SILENCE_MS = 1500
 
 
 def _sample_polish_defaults() -> tuple[str, List[str]]:
@@ -86,6 +97,11 @@ class WebappConfig:
     # RMS gate before whisper. Clips quieter than this (dBFS) skip the
     # transcription step entirely so whisper can't hallucinate on silence.
     silence_dbfs_threshold: float = DEFAULT_SILENCE_DBFS_THRESHOLD
+    # Latency-collapse knobs — see DEFAULT_* constants above for the
+    # rationale and the per-pillar on/off defaults.
+    partial_interval_seconds: float = DEFAULT_PARTIAL_INTERVAL_SECONDS
+    vad_auto_stop_enabled: bool = DEFAULT_VAD_AUTO_STOP_ENABLED
+    auto_stop_silence_ms: int = DEFAULT_AUTO_STOP_SILENCE_MS
 
 
 def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
@@ -136,6 +152,15 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         silence_dbfs_threshold=float(
             raw.get("silence_dbfs_threshold", DEFAULT_SILENCE_DBFS_THRESHOLD)
         ),
+        partial_interval_seconds=float(
+            raw.get("partial_interval_seconds", DEFAULT_PARTIAL_INTERVAL_SECONDS)
+        ),
+        vad_auto_stop_enabled=bool(
+            raw.get("vad_auto_stop_enabled", DEFAULT_VAD_AUTO_STOP_ENABLED)
+        ),
+        auto_stop_silence_ms=int(
+            raw.get("auto_stop_silence_ms", DEFAULT_AUTO_STOP_SILENCE_MS)
+        ),
     )
     _validate(cfg)
     return cfg
@@ -159,6 +184,9 @@ def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
         "auth_token": cfg.auth_token,
         "auth_password": cfg.auth_password,
         "silence_dbfs_threshold": cfg.silence_dbfs_threshold,
+        "partial_interval_seconds": cfg.partial_interval_seconds,
+        "vad_auto_stop_enabled": cfg.vad_auto_stop_enabled,
+        "auto_stop_silence_ms": cfg.auto_stop_silence_ms,
     }
 
     tmp = target.with_suffix(target.suffix + ".tmp")
@@ -204,3 +232,7 @@ def _validate(cfg: WebappConfig) -> None:
         raise ValueError("history_retention_days must be >= 1")
     if not (1 <= cfg.port <= 65535):
         raise ValueError(f"port out of range: {cfg.port}")
+    if cfg.partial_interval_seconds < 0:
+        raise ValueError("partial_interval_seconds must be >= 0 (0 disables)")
+    if cfg.auto_stop_silence_ms < 200:
+        raise ValueError("auto_stop_silence_ms must be >= 200")

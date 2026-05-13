@@ -441,6 +441,38 @@ the connection drops mid-record, the partial recording is still on the
 PC — the **📜 History** view's *🔁 Redo* button replays whisper
 on any saved take.
 
+#### Rolling transcription
+
+Whisper runs every ~2 s on the audio you've already streamed, so the
+transcript box fills in live while you keep talking — no more black
+box between "tap Stop" and "see text". The status line shows
+`Recording · partial v1 · …`, then `v2`, `v3`, as each pass lands.
+When the final `/finish` pass arrives the transcript box gets
+replaced wholesale with the canonical version (whisper is a
+sliding-context model, so consecutive passes can disagree on earlier
+words as the take grows; the *final* pass wins).
+
+Config knobs in `config/webapp_config.json`:
+
+- `partial_interval_seconds` — how often to re-run whisper while you
+  talk (default `2.0`; set to `0` to disable rolling transcription
+  entirely and fall back to the one-shot-on-stop behaviour).
+
+#### Auto-stop on silence
+
+A **🤖 Auto-stop on silence** toggle in the **⚙️ Settings** panel —
+when on, the page watches the mic energy floor and fires Stop after
+`auto_stop_silence_ms` of continuous near-silence (default `1500`).
+A 500 ms "keep talking to cancel" banner appears first so a thinking
+pause doesn't cut you off. The toggle takes effect immediately on
+flip (same UX as Translate / Append / Incognito); **💾 Save**
+persists it as the default for fresh page loads.
+
+The detector runs on the existing `AnalyserNode` energy floor — no
+extra dependencies, no ONNX. A live `🎙️ VAD peak=N (silence trips
+≤ 15)` readout in the status line lets you see exactly what your mic
+floor is, in case the threshold ever needs tuning.
+
 ### What the status line tells you
 
 The line under the record button reports exactly which step is running
@@ -449,6 +481,9 @@ so a long take never feels stuck:
 | Phase | Message |
 |---|---|
 | Live recording | `Recording · 24.3 KB streamed to PC` (live byte counter) |
+| Rolling partial landed | `Recording · partial v3 · 41.2 KB streamed` |
+| Auto-stop armed | `🤫 silence 640 ms / 1500 ms` |
+| Auto-stop firing | `🤖 Auto-stop on silence — keep talking to cancel…` |
 | Stop, chunks pending | `Finalising upload · 2 chunks left` |
 | Server processing | `Server: ffmpeg → whisper · 1m 4s of audio…` |
 | Done | `Done in 3.2 s · 20.0× realtime — tap Copy or Polish` |

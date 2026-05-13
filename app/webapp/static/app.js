@@ -50,6 +50,8 @@
     translateToggle:  document.getElementById('translateToggle'),
     micSelect:        document.getElementById('micSelect'),
     forceBuiltinMic:  document.getElementById('forceBuiltinMic'),
+    vadAutoStopToggle:       document.getElementById('vadAutoStopToggle'),
+    autoStopSilenceMs:       document.getElementById('autoStopSilenceMs'),
     retentionDays:    document.getElementById('retentionDays'),
     saveSettings:     document.getElementById('saveSettings'),
     statusReadout:    document.getElementById('statusReadout'),
@@ -81,6 +83,13 @@
     transcript:  '',
     polished:    '',
     mimeType:    null,
+    // Latency-collapse plumbing (issue #5).
+    eventSource: null,         // open SSE stream against /api/sessions/{id}/events
+    partialVersion: 0,         // last partial version we accepted
+    partialBaseTranscript: '', // transcript prefix when Append mode is on
+    vadSilenceSince: 0,        // ms timestamp of the last loud sample (0 = never)
+    vadStopFired: false,       // guard so the auto-stop fires once per take
+    vadStatusOwnedUntil: 0,    // VAD owns the status line until this ms timestamp
   };
 
   // -------------------------------------------------------- bootstrap
@@ -231,6 +240,12 @@
     }
     els.forceBuiltinMic.checked = !!state.config.force_builtin_mic_default;
     els.retentionDays.value = state.config.history_retention_days;
+    if (els.vadAutoStopToggle) {
+      els.vadAutoStopToggle.checked = !!state.config.vad_auto_stop_enabled;
+    }
+    if (els.autoStopSilenceMs) {
+      els.autoStopSilenceMs.value = state.config.auto_stop_silence_ms || 1500;
+    }
   }
 
   function refreshPromptPreview() {
@@ -292,7 +307,10 @@
         loadConfig().catch(() => {});
       }
     });
-    window.addEventListener('pagehide', releaseCachedStream);
+    window.addEventListener('pagehide', () => {
+      releaseCachedStream();
+      closePartialStream();
+    });
 
     // iOS auto-locks the screen during long records — ask for wake lock if available
     if ('wakeLock' in navigator) {
@@ -516,8 +534,19 @@
 
     state.startedAt = Date.now();
     setMode('recording');
+
+    // Reset latency-collapse plumbing per-take.
+    state.partialVersion = 0;
+    state.partialBaseTranscript =
+      (els.appendToggle && els.appendToggle.checked && state.transcript)
+        ? state.transcript.replace(/\s+$/, '')
+        : '';
+    state.vadSilenceSince = 0;
+    state.vadStopFired = false;
+
     setupLevelMeter(stream);
     startTimer();
+    openPartialStream(state.sessionId);
 
     els.recordLabel.textContent = '◼︎ STOP';
     els.recordTimer.hidden = false;
@@ -538,6 +567,10 @@
     // visibilitychange/pagehide or when the mic selection changes.
     stopTimer();
     teardownLevelMeter();
+    // The /finish call will broadcast a `final` SSE event then close
+    // the worker; closing here too is harmless and frees the connection
+    // a fraction earlier.
+    closePartialStream();
   }
 
   function enqueueChunkUpload(chunk) {
@@ -611,7 +644,12 @@
         refreshHistory();
         return;
       }
-      state.transcript = mergeForAppend(state.transcript, data.transcript || '');
+      // Merge against the pre-take base, not state.transcript (which
+      // already includes any partial that arrived via SSE — using it
+      // would double-append the take onto the base prefix).
+      state.transcript = mergeForAppend(
+        state.partialBaseTranscript, data.transcript || '',
+      );
       state.polished = '';
       els.transcript.value = state.transcript;
       els.polished.value = '';
@@ -680,8 +718,12 @@
       const mm = String(Math.floor(elapsed / 60)).padStart(2, '0');
       const ss = String(elapsed % 60).padStart(2, '0');
       els.recordTimer.textContent = `${mm}:${ss}`;
-      els.recordStatus.textContent =
-        `Recording · ${formatBytes(state.bytesSent)} streamed to PC`;
+      // Don't trample the VAD status line during its update window —
+      // peak / silence readouts would flicker every 250 ms otherwise.
+      if (Date.now() >= state.vadStatusOwnedUntil) {
+        els.recordStatus.textContent =
+          `Recording · ${formatBytes(state.bytesSent)} streamed to PC`;
+      }
     }, 250);
   }
 
@@ -712,6 +754,20 @@
       src.connect(analyser);
       state.analyser = analyser;
       const data = new Uint8Array(analyser.frequencyBinCount);
+      // VAD threshold: byte-time-domain values are 0..255 centred on
+      // 128, so |sample-128| is the analyser's peak deviation per
+      // ~10 ms frame. Threshold tuning notes:
+      //   ~3-8  → typical quiet-room floor with mic AGC engaged.
+      //          (Bug found 2026-05-13: 6 was too tight, silence
+      //          accumulator never advanced because room noise kept
+      //          tripping it.)
+      //   ~15   → "barely audible" — fits speech pauses and tail
+      //          silence; matches roughly 23% on the level bar.
+      //   ~25+  → "actually quiet" — risk of late triggering when
+      //          a quiet mumble follows a strong sentence.
+      // 15 is a deliberate compromise; expose as a config knob later
+      // if it needs per-mic tuning.
+      const VAD_LOUDNESS_THRESHOLD = 15;
       state.levelTimer = setInterval(() => {
         analyser.getByteTimeDomainData(data);
         let max = 0;
@@ -721,11 +777,143 @@
         }
         const pct = Math.min(100, (max / 128) * 200);
         els.levelFill.style.width = pct + '%';
+        maybeFireAutoStop(max, VAD_LOUDNESS_THRESHOLD);
       }, 80);
     } catch (err) {
       console.warn('VU meter setup failed', err);
     }
   }
+
+  function maybeFireAutoStop(loudness, threshold) {
+    // Pillar 3 — client-side VAD auto-stop. The toggle in the Settings
+    // panel is the live source of truth (like the existing Translate /
+    // Append / Incognito toggles): flip it and the next take honours
+    // it without tapping Save. Save persists the choice as the default
+    // for fresh page loads.
+    const enabled = els.vadAutoStopToggle && els.vadAutoStopToggle.checked;
+    if (!enabled) return;
+    if (state.mode !== 'recording' || state.vadStopFired) return;
+    const now = Date.now();
+    // Ignore the first ~600 ms — the AnalyserNode warms up and a fresh
+    // mic stream can flat-line briefly before audio reaches it.
+    if (now - state.startedAt < 600) return;
+    const trigger = parseInt(
+      (els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10,
+    ) || 1500;
+    if (loudness > threshold) {
+      if (state.vadSilenceSince) state.vadSilenceSince = 0;
+      // Live peak readout — once a second so the user can see the mic
+      // floor and pick a sensible threshold. Held for 250 ms so the
+      // recording-byte-counter writer doesn't immediately stamp on it.
+      if (now - state.vadStatusOwnedUntil > 800) {
+        els.recordStatus.textContent =
+          `🎙️ VAD peak=${loudness} (silence trips ≤ ${threshold}) · ${formatBytes(state.bytesSent)}`;
+        state.vadStatusOwnedUntil = now + 250;
+      }
+      return;
+    }
+    if (!state.vadSilenceSince) {
+      state.vadSilenceSince = now;
+      return;
+    }
+    const silentFor = now - state.vadSilenceSince;
+    // Live indicator so the user can see the detector working — hold
+    // status-line ownership for 250 ms so the byte-counter writer
+    // doesn't immediately overwrite it.
+    els.recordStatus.textContent =
+      `🤫 silence ${silentFor} ms / ${trigger} ms`;
+    state.vadStatusOwnedUntil = now + 250;
+    if (silentFor >= trigger) {
+      state.vadStopFired = true;
+      els.recordStatus.textContent =
+        '🤖 Auto-stop on silence — keep talking to cancel…';
+      // 500 ms grace before actually stopping; if the user resumes
+      // talking the next tick clears state.vadStopFired's effect.
+      setTimeout(() => {
+        if (!state.vadStopFired || state.mode !== 'recording') return;
+        // One last loudness probe — if the user resumed talking during
+        // the grace window, abort the stop.
+        if (state.analyser) {
+          const probe = new Uint8Array(state.analyser.frequencyBinCount);
+          state.analyser.getByteTimeDomainData(probe);
+          let pmax = 0;
+          for (let i = 0; i < probe.length; i++) {
+            const v = Math.abs(probe[i] - 128);
+            if (v > pmax) pmax = v;
+          }
+          if (pmax > threshold) {
+            state.vadStopFired = false;
+            state.vadSilenceSince = 0;
+            els.recordStatus.textContent = 'Recording…';
+            return;
+          }
+        }
+        stopRecording();
+      }, 500);
+    }
+  }
+
+  function openPartialStream(sessionId) {
+    closePartialStream();
+    if (!state.config || !state.config.rolling_transcription_enabled) return;
+    if (!('EventSource' in window)) return;
+    const tok = getStoredToken();
+    let url = `/api/sessions/${sessionId}/events`;
+    if (tok) url += `?token=${encodeURIComponent(tok)}`;
+    let es;
+    try {
+      es = new EventSource(url);
+    } catch (err) {
+      console.warn('EventSource open failed', err);
+      return;
+    }
+    state.eventSource = es;
+    es.addEventListener('partial', (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        applyPartial(data);
+      } catch (_) {}
+    });
+    es.addEventListener('final', (e) => {
+      // Final transcript arrived via SSE — leave the user-facing
+      // settling to onRecorderStopped which also handles status, history
+      // refresh, and the auto-copy. Close the stream so we don't hold
+      // the connection open after the take ends.
+      closePartialStream();
+    });
+    es.onerror = () => {
+      // Browser will auto-retry; we just leave the handle in place so
+      // the next reconnect drops its events in.
+    };
+  }
+
+  function closePartialStream() {
+    if (state.eventSource) {
+      try { state.eventSource.close(); } catch (_) {}
+      state.eventSource = null;
+    }
+  }
+
+  function applyPartial(data) {
+    if (!data || typeof data.transcript !== 'string') return;
+    if (typeof data.version === 'number') {
+      if (data.version < state.partialVersion) return; // stale
+      state.partialVersion = data.version;
+    }
+    const merged = state.partialBaseTranscript
+      ? state.partialBaseTranscript + '\n\n' + data.transcript
+      : data.transcript;
+    state.transcript = merged;
+    els.transcript.value = merged;
+    els.copyTranscript.disabled = !merged;
+    els.polishBtn.disabled = !merged;
+    els.saveTranscript.disabled = true;
+    if (state.mode === 'recording' && Date.now() >= state.vadStatusOwnedUntil) {
+      els.recordStatus.textContent =
+        `Recording · partial v${state.partialVersion} · ${formatBytes(state.bytesSent)} streamed`;
+    }
+  }
+
 
   function teardownLevelMeter() {
     if (state.levelTimer) clearInterval(state.levelTimer);
@@ -798,9 +986,12 @@
 
   function onReset() {
     cleanupIncognitoSession();
+    closePartialStream();
     state.sessionId = null;
     state.transcript = '';
     state.polished = '';
+    state.partialVersion = 0;
+    state.partialBaseTranscript = '';
     els.transcript.value = '';
     els.polished.value = '';
     els.copyTranscript.disabled = true;
@@ -859,6 +1050,8 @@
       force_builtin_mic_default: els.forceBuiltinMic.checked,
       preferred_mic_id: els.micSelect.value || null,
       history_retention_days: parseInt(els.retentionDays.value, 10) || 30,
+      vad_auto_stop_enabled: !!(els.vadAutoStopToggle && els.vadAutoStopToggle.checked),
+      auto_stop_silence_ms: parseInt((els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10),
     };
     try {
       const r = await authFetch('/api/config', {

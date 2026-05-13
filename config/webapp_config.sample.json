@@ -24,5 +24,9 @@
   "auth_token": "",
   "auth_password": "",
   "_comment_silence": "Peak-RMS dBFS threshold below which a take skips whisper entirely (so it can't hallucinate 'Thanks for watching' on silence). Default -50 is conservative; lower (-55) to be more permissive, raise (-45) if hallucinations still slip through.",
-  "silence_dbfs_threshold": -50.0
+  "silence_dbfs_threshold": -50.0,
+  "_comment_latency": "Rolling transcription: re-run whisper on the accumulated take every N seconds while still recording so the transcript box is already filled by the time you tap Stop. Set partial_interval_seconds to 0 to disable. VAD-driven auto-stop (off by default): when on, the client auto-stops after auto_stop_silence_ms of continuous near-silence (with a 500 ms 'keep talking to cancel' grace banner).",
+  "partial_interval_seconds": 2.0,
+  "vad_auto_stop_enabled": false,
+  "auto_stop_silence_ms": 1500
 }

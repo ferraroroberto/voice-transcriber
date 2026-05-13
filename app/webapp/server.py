@@ -31,6 +31,7 @@ when "the app cleans the history".
 from __future__ import annotations
 
 # Standard library imports
+import asyncio
 import hmac
 import logging
 from contextlib import asynccontextmanager
@@ -39,7 +40,7 @@ from typing import Any, Dict, List, Optional
 
 # Third-party imports
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -71,6 +72,7 @@ from .audio import (
     find_ffmpeg,
     transcode_to_wav,
 )
+from .partial_worker import PartialWorker, encode_sse
 
 logger = logging.getLogger(__name__)
 
@@ -242,6 +244,10 @@ def create_app() -> FastAPI:
     app.state.archive = archive
     app.state.transcription_client = transcription_client
     app.state.polish_client = polish_client
+    # Per-session rolling-transcription workers. Keyed by session_id;
+    # populated lazily on the first chunk and cleaned up on /finish or
+    # session delete.
+    app.state.partial_workers: Dict[str, PartialWorker] = {}
 
     # ----------------------------------------------------- static routes
 
@@ -304,6 +310,13 @@ def create_app() -> FastAPI:
             "history_retention_days": cfg.history_retention_days,
             "force_builtin_mic_default": cfg.force_builtin_mic_default,
             "preferred_mic_id": cfg.preferred_mic_id,
+            # Latency-collapse knobs exposed read-only to the client so
+            # the JS can decide whether to subscribe to SSE partials and
+            # arm the client-side VAD auto-stop.
+            "partial_interval_seconds": cfg.partial_interval_seconds,
+            "rolling_transcription_enabled": cfg.partial_interval_seconds > 0,
+            "vad_auto_stop_enabled": cfg.vad_auto_stop_enabled,
+            "auto_stop_silence_ms": cfg.auto_stop_silence_ms,
             # Languages exposed in the picker — narrowed by
             # AppConfig.enabled_languages when set, otherwise the full
             # 99-language Whisper list. Sorted alphabetically by label so
@@ -326,6 +339,8 @@ def create_app() -> FastAPI:
             "force_builtin_mic_default",
             "preferred_mic_id",
             "history_retention_days",
+            "vad_auto_stop_enabled",
+            "auto_stop_silence_ms",
         }
         patch = {k: v for k, v in body.items() if k in allowed}
         try:
@@ -463,7 +478,50 @@ def create_app() -> FastAPI:
         if ctype and not session.meta.raw_format:
             session.meta.raw_format = ctype
         # Don't rewrite meta.json on every chunk — too much I/O. /finish writes it.
+        # Kick the rolling-transcription worker so the next pass picks
+        # up the freshly-appended bytes. No-op when the feature is off
+        # (partial_interval_seconds == 0) or when the worker can't be
+        # spawned (e.g. silence-skip flow).
+        _ensure_partial_worker(request.app, session).mark_dirty()
         return {"session_id": session_id, "raw_bytes": size}
+
+    @app.get("/api/sessions/{session_id}/events")
+    async def session_events(session_id: str, request: Request) -> StreamingResponse:
+        """Server-Sent Events stream for one session's partial transcripts.
+
+        The client opens this on record start and consumes ``partial``,
+        ``polish_partial``, ``final``, and ``polish_final`` events as
+        they arrive. Cloudflare passes SSE through cleanly without any
+        special config. The middleware accepts the bearer token from
+        the ``?token=`` query string so EventSource (no custom headers)
+        still authenticates.
+        """
+        session = request.app.state.archive.get(session_id)
+        if session is None:
+            raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        worker = _ensure_partial_worker(request.app, session)
+
+        async def event_gen():
+            # Open with a comment so intermediaries flush the connection
+            # immediately — some proxies buffer until the first message.
+            yield ":ok\n\n"
+            try:
+                async for evt in worker.subscribe():
+                    if await request.is_disconnected():
+                        break
+                    yield encode_sse(evt.kind, evt.payload)
+            except asyncio.CancelledError:
+                pass
+
+        return StreamingResponse(
+            event_gen(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "X-Accel-Buffering": "no",
+                "Connection": "keep-alive",
+            },
+        )
 
     @app.post("/api/sessions/{session_id}/finish")
     async def finish_session(
@@ -472,7 +530,12 @@ def create_app() -> FastAPI:
         language: Optional[str] = None,
         translate: bool = False,
     ) -> Dict[str, Any]:
-        """Close a chunked session, transcode, transcribe, return text."""
+        """Close a chunked session, transcode, transcribe, return text.
+
+        When rolling transcription is enabled and the latest partial
+        already covers the full audio (no new bytes since the last
+        pass), we skip the final whisper call and serve the partial.
+        """
         session = request.app.state.archive.get(session_id)
         if session is None:
             raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
@@ -489,7 +552,41 @@ def create_app() -> FastAPI:
         if isinstance(duration, (int, float)):
             session.meta.duration_seconds = float(duration)
         session.write_meta()
-        return await _transcribe_session_payload(request, session, language, translate=translate)
+
+        worker: Optional[PartialWorker] = (
+            request.app.state.partial_workers.get(session_id)
+        )
+        # Skip final whisper when the rolling worker already has the
+        # whole take covered. Even a one-byte difference is enough to
+        # justify a final pass — Cloudflare can briefly buffer the last
+        # chunk and we want the canonical transcript on disk.
+        if (
+            worker is not None
+            and worker.partial_text
+            and worker.last_bytes_at_partial == session.meta.raw_bytes
+        ):
+            text = worker.partial_text
+            session.write_transcript(text)
+            session.meta.language = language or session.meta.language
+            session.write_meta()
+            await worker.finalise(text)
+            await _shutdown_partial_worker(request.app, session_id)
+            return {
+                "session_id": session.session_id,
+                "transcript": text,
+                "language": session.meta.language,
+                "from_partial": True,
+            }
+
+        result = await _transcribe_session_payload(
+            request, session, language, translate=translate,
+        )
+        # Broadcast the final transcript to any open SSE stream and
+        # tear down the worker so subscribers exit cleanly.
+        if worker is not None:
+            await worker.finalise(result.get("transcript", "") or "")
+            await _shutdown_partial_worker(request.app, session_id)
+        return result
 
     @app.post("/api/sessions/{session_id}/retranscribe")
     async def retranscribe(
@@ -695,6 +792,9 @@ def create_app() -> FastAPI:
     async def delete_all_sessions(request: Request) -> Dict[str, Any]:
         archive: SessionArchive = request.app.state.archive
         removed = archive.cleanup_all()
+        # Stop every active worker — sessions they were tied to are gone.
+        for sid in list(request.app.state.partial_workers.keys()):
+            await _shutdown_partial_worker(request.app, sid)
         return {"removed": removed}
 
     @app.delete("/api/sessions/{session_id}")
@@ -704,6 +804,7 @@ def create_app() -> FastAPI:
         archive: SessionArchive = request.app.state.archive
         if not archive.delete_session(session_id):
             raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+        await _shutdown_partial_worker(request.app, session_id)
         return {"removed": session_id}
 
     @app.delete("/api/sessions/older-than/{days}")
@@ -845,6 +946,58 @@ def _resolve_model(model: Any, cfg: WebappConfig) -> str:
             ),
         )
     return candidate
+
+
+def _ensure_partial_worker(app: FastAPI, session) -> PartialWorker:
+    """Get-or-create the rolling-transcription worker for ``session``.
+
+    Returns a worker even when rolling transcription is disabled — its
+    ``mark_dirty`` and ``subscribe`` methods are cheap no-ops in that
+    case (no background loop ever runs, no events ever fire). Keeping
+    the handler call sites unconditional simplifies the code.
+    """
+    workers: Dict[str, PartialWorker] = app.state.partial_workers
+    existing = workers.get(session.session_id)
+    if existing is not None:
+        return existing
+
+    cfg: WebappConfig = app.state.webapp_config
+    app_cfg = app.state.app_config
+    interval = float(cfg.partial_interval_seconds or 0.0)
+
+    transcription_client: TranscriptionClient = app.state.transcription_client
+
+    def _resolve_iso_for_session() -> Optional[str]:
+        chosen = session.meta.language or app_cfg.language
+        return resolve_iso(chosen)
+
+    async def _transcribe(wav_path: Path) -> str:
+        iso = _resolve_iso_for_session()
+        return await asyncio.to_thread(
+            transcription_client.transcribe_file, wav_path, iso, False,
+        )
+
+    async def _transcode(src: Path, dst: Path) -> None:
+        await asyncio.to_thread(
+            transcode_to_wav, src, dst, app_cfg.sample_rate,
+        )
+
+    worker = PartialWorker(
+        session=session,
+        interval_seconds=interval if interval > 0 else 2.0,
+        transcribe=_transcribe,
+        transcode=_transcode,
+    )
+    workers[session.session_id] = worker
+    if interval > 0:
+        worker.start()
+    return worker
+
+
+async def _shutdown_partial_worker(app: FastAPI, session_id: str) -> None:
+    worker = app.state.partial_workers.pop(session_id, None)
+    if worker is not None:
+        await worker.stop()
 
 
 # Module-level app for `uvicorn app.webapp.server:app`.
