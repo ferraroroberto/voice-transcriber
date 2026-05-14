@@ -76,6 +76,7 @@ EVT_QUIT = "quit"
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TUNNEL_CONFIG_PATH = PROJECT_ROOT / "webapp" / "cloudflared.yml"
+TUNNEL_URL_FILE = PROJECT_ROOT / "webapp" / "last_tunnel_url.txt"
 
 
 def _read_tunnel_hostname(config_path: Path) -> Optional[str]:
@@ -598,6 +599,28 @@ class TrayApp:
             f"🌍 Cloudflare tunnel started → https://{self._tunnel_hostname} "
             f"(pid={self._cloudflared_proc.pid})"
         )
+        self._persist_tunnel_url()
+
+    def _persist_tunnel_url(self) -> None:
+        """Write the public URL to webapp/last_tunnel_url.txt so external
+        tooling (the launcher hub) can surface it. Includes ?token=… when
+        an auth_token is configured."""
+        if self._tunnel_hostname is None:
+            return
+        url = f"https://{self._tunnel_hostname}"
+        try:
+            token = (load_webapp_config().auth_token or "").strip()
+        except Exception as exc:  # noqa: BLE001
+            logger.debug(f"could not read auth_token: {exc}")
+            token = ""
+        if token:
+            url = append_auth_token(url, token)
+        try:
+            TUNNEL_URL_FILE.parent.mkdir(parents=True, exist_ok=True)
+            TUNNEL_URL_FILE.write_text(url + "\n", encoding="utf-8")
+            logger.info(f"📡 Tunnel URL → {TUNNEL_URL_FILE}")
+        except OSError as exc:
+            logger.warning(f"⚠️  Could not write {TUNNEL_URL_FILE}: {exc}")
 
     def _stop_tunnel(self) -> None:
         proc = self._cloudflared_proc
@@ -618,6 +641,11 @@ class TrayApp:
                 proc.kill()
         except Exception as exc:
             logger.debug(f"cloudflared stop failed: {exc}")
+        try:
+            if TUNNEL_URL_FILE.exists():
+                TUNNEL_URL_FILE.unlink()
+        except OSError:
+            pass
 
     def _show_model_info(self) -> None:
         """Surface model/memory/runtime info either through the open main
