@@ -807,6 +807,25 @@ Python-only machines.
 .venv\Scripts\python.exe -m pytest tests\test_polish.py -v
 ```
 
+### Playwright browser smoke tests
+
+A small `pytest-playwright` suite under `tests/e2e/` catches SPA boot regressions (JS errors, empty `<select>`s, broken settings toggle, missing login overlay). Runs against the **live tray on `https://127.0.0.1:8443`** — does not boot anything itself; if the tray isn't up, every test is skipped with a clear message.
+
+One-time setup:
+
+```powershell
+& .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+& .\.venv\Scripts\python.exe -m playwright install chromium
+```
+
+Then with the tray running (`tray.bat`):
+
+```powershell
+.\scripts\run-e2e.ps1
+# or directly:
+& .\.venv\Scripts\python.exe -m pytest -m smoke -v tests/e2e
+```
+
 ### Optional: JS tests via Vitest
 
 ```bat
@@ -837,6 +856,7 @@ still covers the same logic via the parity port in
 | `tests\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
 | `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins on `app.js` |
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
+| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, settings panel toggles, login overlay DOM wired (marked `smoke`; requires live tray on :8443) |
 
 ## 🔗 See also
 

@@ -22,11 +22,14 @@ if not exist "%VENV_PYW%" (
 cd /d "%SCRIPT_DIR%" || exit /b 1
 
 REM Prefer pythonw.exe so no console window stays open.
+REM Window title differentiates this tray from sister apps' trays so
+REM `taskkill /FI "WINDOWTITLE eq VoiceTranscriber Tray"` can target
+REM it selectively. The same trick is in app-launcher and photo-ocr.
 if exist "%VENV_PYW%" (
-    start "" "%VENV_PYW%" launcher.py tray
+    start "VoiceTranscriber Tray" "%VENV_PYW%" launcher.py tray
 ) else if exist "%VENV_PY%" (
-    start "" "%VENV_PY%" launcher.py tray
+    start "VoiceTranscriber Tray" "%VENV_PY%" launcher.py tray
 ) else (
-    start "" pythonw launcher.py tray
+    start "VoiceTranscriber Tray" pythonw launcher.py tray
 )
 exit /b 0
