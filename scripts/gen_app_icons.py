@@ -10,6 +10,7 @@ into ``app/webapp/static/``:
                                 glyph shrunk to ~60% so adaptive icon
                                 masks (circle, squircle, rounded square)
                                 don't crop it.
+- ``favicon.ico``            — multi-size (16/32/48) browser tab icon.
 
 Run from the repo root:
 
@@ -121,6 +122,14 @@ def main() -> None:
         img.convert("RGB").save(OUT_DIR / name, format="PNG", optimize=True)
         log = logging.getLogger("gen_app_icons")
         log.info("✅ wrote %s (%dx%d)", OUT_DIR / name, size, size)
+
+    favicon = draw_mic(256, 0.70).convert("RGB")
+    favicon.save(
+        OUT_DIR / "favicon.ico",
+        format="ICO",
+        sizes=[(16, 16), (32, 32), (48, 48)],
+    )
+    log.info("✅ wrote %s (16/32/48)", OUT_DIR / "favicon.ico")
 
 
 if __name__ == "__main__":

@@ -27,6 +27,9 @@ models/
 .DS_Store
 Thumbs.db
 
+# --- Node deps (Vitest harness for app/webapp/static/__tests__/) ----------
+node_modules/
+
 # --- Config overrides (keep the committed template) -----------------------
 config/config.local.json
 config/webapp_config.json
