@@ -13,6 +13,7 @@
 
   const els = {
     recordBtn:        document.getElementById('recordBtn'),
+    resumeBtn:        document.getElementById('resumeBtn'),
     recordLabel:      document.getElementById('recordLabel'),
     recordTimer:      document.getElementById('recordTimer'),
     recordStatus:     document.getElementById('recordStatus'),
@@ -92,6 +93,7 @@
     vadStopFired: false,       // guard so the auto-stop fires once per take
     vadStatusOwnedUntil: 0,    // VAD owns the status line until this ms timestamp
     backgroundFinalized: false, // take was finalised because the app got backgrounded
+    forceAppend: false,         // this take appends regardless of the Append toggle (Resume)
   };
 
   // -------------------------------------------------------- bootstrap
@@ -279,6 +281,7 @@
 
   function bindEvents() {
     els.recordBtn.addEventListener('click', onRecordToggle);
+    if (els.resumeBtn) els.resumeBtn.addEventListener('click', resumeRecording);
     els.copyTranscript.addEventListener('click', () => copyText(state.transcript, els.copyTranscript));
     els.copyPolished.addEventListener('click', () => copyText(state.polished, els.copyPolished));
 
@@ -497,6 +500,7 @@
 
   async function startRecording() {
     setMode('starting');
+    hideResumeButton();
 
     const constraints = buildAudioConstraints();
     const wantedKey = JSON.stringify(constraints);
@@ -574,7 +578,7 @@
     // Reset latency-collapse plumbing per-take.
     state.partialVersion = 0;
     state.partialBaseTranscript =
-      (els.appendToggle && els.appendToggle.checked && state.transcript)
+      (appendActive() && state.transcript)
         ? state.transcript.replace(/\s+$/, '')
         : '';
     state.vadSilenceSince = 0;
@@ -625,6 +629,24 @@
     stopRecording();
   }
 
+  // The yellow ▶ Resume button — shown only after a take was finalised
+  // by backgrounding (issue #14). It starts a fresh take that
+  // force-appends onto the existing transcript regardless of the
+  // ➕ Append toggle, so the seam across the app-switch is invisible.
+  function resumeRecording() {
+    if (state.mode !== 'idle') return;
+    state.forceAppend = true;
+    startRecording();
+  }
+
+  function showResumeButton() {
+    if (els.resumeBtn) els.resumeBtn.hidden = false;
+  }
+
+  function hideResumeButton() {
+    if (els.resumeBtn) els.resumeBtn.hidden = true;
+  }
+
   function enqueueChunkUpload(chunk) {
     state.pendingUploads += 1;
     state.uploadChain = state.uploadChain.then(async () => {
@@ -648,6 +670,9 @@
   }
 
   async function onRecorderStopped(mimeType) {
+    // Captured before the finally clears the flag — drives whether the
+    // ▶ Resume button is offered once this take settles.
+    const wasBackgrounded = state.backgroundFinalized;
     try {
       // Wait for any in-flight chunks to land before asking the server
       // to transcode + transcribe.
@@ -720,7 +745,7 @@
       if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyTranscript);
       const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
       els.recordStatus.textContent = state.backgroundFinalized
-        ? '✅ Saved while you were away — tap RECORD to continue'
+        ? '✅ Saved while you were away — tap ▶ to continue'
         : `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
       refreshHistory();
     } catch (err) {
@@ -736,6 +761,10 @@
       els.levelFill.style.width = '0%';
       setMode('idle');
       state.backgroundFinalized = false;
+      state.forceAppend = false;
+      // Offer the one-tap continue only when this take ended because the
+      // app was backgrounded and there is a transcript to continue.
+      if (wasBackgrounded && state.transcript) showResumeButton();
     }
   }
 
@@ -1044,6 +1073,8 @@
   function onReset() {
     cleanupIncognitoSession();
     closePartialStream();
+    hideResumeButton();
+    state.forceAppend = false;
     state.sessionId = null;
     state.transcript = '';
     state.polished = '';
@@ -1332,10 +1363,17 @@
 
   function setMode(m) { state.mode = m; }
 
-  // When the Append toggle is on, glue the new take onto the existing
+  // Append is active when the ➕ toggle is on, or when this take was
+  // started via the ▶ Resume button (state.forceAppend) — Resume
+  // continues the transcript no matter how the toggle is set.
+  function appendActive() {
+    return (!!els.appendToggle && els.appendToggle.checked) || state.forceAppend;
+  }
+
+  // When append is active, glue the new take onto the existing
   // transcript with a blank-line separator. Otherwise replace.
   function mergeForAppend(prev, next) {
-    if (!els.appendToggle || !els.appendToggle.checked) return next;
+    if (!appendActive()) return next;
     const prevTrimmed = (prev || '').replace(/\s+$/, '');
     if (!prevTrimmed) return next;
     if (!next) return prevTrimmed;

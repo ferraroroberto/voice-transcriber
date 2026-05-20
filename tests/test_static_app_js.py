@@ -72,6 +72,15 @@ class TestAppJsSourcePins:
         # page freeze when the take is finalised due to backgrounding.
         assert "keepalive: state.backgroundFinalized" in app_js
 
+    def test_resume_button_wired(self, app_js: str):
+        """The ▶ Resume button continues a background-finalised take by
+        force-appending, regardless of the ➕ Append toggle (issue #14)."""
+        assert "function resumeRecording" in app_js
+        assert "function appendActive" in app_js
+        assert "state.forceAppend" in app_js
+        assert "showResumeButton" in app_js
+        assert "hideResumeButton" in app_js
+
     def test_build_version_line_wired(self, app_js: str):
         """The SPA must fetch /api/version on boot and render it into the
         #buildInfo line so the loaded build is glanceable (issue #13)."""

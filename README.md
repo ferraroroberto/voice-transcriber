@@ -484,11 +484,13 @@ relying on that would make the two platforms behave differently.)
 So the webapp does the next best thing, symmetrically on both: the
 moment you background it mid-record, the take is **finalised** — the
 audio streamed so far is transcribed and saved to History instead of
-silently lost. When you come back the status line reads
-`✅ Saved while you were away — tap RECORD to continue`; with
-**➕ Append** on, the next take continues the same transcript. Worst
-case — the page is discarded before the finalise lands — the streamed
-chunks are still on the PC, recoverable via History → **🔁 Redo**.
+silently lost. When you come back, a yellow **▶ Resume** button appears
+next to the record button — one tap starts a new take that continues
+the same transcript (it force-appends, whatever the **➕ Append** toggle
+is set to), so the seam across the app-switch is invisible. The plain
+**⬤ RECORD** button still starts a fresh take. Worst case — the page is
+discarded before the finalise lands — the streamed chunks are still on
+the PC, recoverable via History → **🔁 Redo**.
 
 True background recording on iPhone is only possible from a native
 app; see issue #7 (Custom Keyboard Extension spin-off).

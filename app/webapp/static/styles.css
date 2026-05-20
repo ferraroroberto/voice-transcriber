@@ -117,6 +117,7 @@ html, body {
   align-items: center;
   margin-top: 12px;
   margin-bottom: 18px;
+  position: relative;
 }
 
 .record-btn {
@@ -150,6 +151,35 @@ html, body {
   50%      { box-shadow: 0 0 0 18px rgba(255, 0, 0, 0); }
 }
 .record-btn[disabled] { background: #333; box-shadow: none; cursor: not-allowed; }
+
+/* Appears beside the record circle only after a take was finalised by
+   backgrounding the app — one tap continues the same transcript (#14). */
+.resume-btn {
+  position: absolute;
+  /* Record circle is the first child of .record-zone, so its vertical
+     centre sits at half its height from the zone's top. translateY(-50%)
+     below lines the button's centre up with it exactly. */
+  top: min(16vw, 62.5px);
+  left: 50%;
+  transform: translate(calc(min(16vw, 62.5px) + 22px), -50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: #0a0a0a;
+  border: 0;
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(240, 161, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.resume-btn:active {
+  transform: translate(calc(min(16vw, 62.5px) + 22px), -50%) scale(.94);
+}
+.resume-btn[hidden] { display: none; }
 
 .record-label { font-size: 16px; }
 .record-timer { font-size: 22px; margin-top: 4px; font-variant-numeric: tabular-nums; }
