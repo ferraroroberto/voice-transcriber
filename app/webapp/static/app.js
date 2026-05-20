@@ -55,6 +55,7 @@
     retentionDays:    document.getElementById('retentionDays'),
     saveSettings:     document.getElementById('saveSettings'),
     statusReadout:    document.getElementById('statusReadout'),
+    buildInfo:        document.getElementById('buildInfo'),
 
     toast:            document.getElementById('toast'),
   };
@@ -154,6 +155,26 @@
     try { await populateMics(); } catch (err) { console.warn('populateMics:', err); }
     refreshStatus();
     refreshHistory();
+    loadVersion();
+  }
+
+  // Surface the loaded build in the Settings panel so "is the phone
+  // running the current code?" is answerable at a glance — see issue #13.
+  async function loadVersion() {
+    if (!els.buildInfo) return;
+    try {
+      const r = await authFetch('/api/version');
+      if (!r.ok) throw new Error(String(r.status));
+      const v = await r.json();
+      const when = String(v.built_at || '')
+        .replace('T', ' ')
+        .replace(/(\+00:00|Z)$/, ' UTC');
+      els.buildInfo.textContent =
+        `Build: ${v.git_sha || '?'} · ${when}`.trim();
+    } catch (_) {
+      // Non-critical — leave the placeholder rather than alarming the user.
+      els.buildInfo.textContent = 'Build: unavailable';
+    }
   }
 
   async function fetchJsonWithRetry(url, init, attempts) {

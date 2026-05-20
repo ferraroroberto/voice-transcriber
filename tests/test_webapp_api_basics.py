@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # Standard library imports
 import json
+import re
 
 # Third-party imports
 import pytest
@@ -22,8 +23,44 @@ class TestHealth:
         client, _, _ = webapp_client
         resp = client.get("/")
         assert resp.status_code == 200
-        # FileResponse for the static index — should be text/html-ish.
         assert "text/html" in resp.headers.get("content-type", "")
+
+
+class TestBuildVersion:
+    """Cache hygiene + build identity — see issue #13."""
+
+    def test_version_endpoint_shape(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/api/version")
+        assert resp.status_code == 200
+        body = resp.json()
+        for key in ("git_sha", "built_at", "asset_hash"):
+            assert key in body and isinstance(body[key], str) and body[key]
+
+    def test_index_is_content_hash_stamped(self, webapp_client):
+        client, _, _ = webapp_client
+        html = client.get("/").text
+        # The manual ?v=N stamps and their placeholders are both gone —
+        # replaced by an 8-hex content hash computed at startup.
+        assert "__APP_JS__" not in html and "__STYLES_CSS__" not in html
+        assert re.search(r"/static/app\.js\?v=[0-9a-f]{8}", html)
+        assert re.search(r"/static/styles\.css\?v=[0-9a-f]{8}", html)
+
+    def test_index_revalidates(self, webapp_client):
+        client, _, _ = webapp_client
+        cc = client.get("/").headers.get("cache-control", "")
+        assert "no-cache" in cc
+
+    def test_static_assets_are_long_cached(self, webapp_client):
+        client, _, _ = webapp_client
+        for asset in ("app.js", "styles.css"):
+            cc = client.get(f"/static/{asset}").headers.get("cache-control", "")
+            assert "max-age=31536000" in cc and "immutable" in cc
+
+    def test_icons_revalidate_daily(self, webapp_client):
+        client, _, _ = webapp_client
+        cc = client.get("/static/favicon.ico").headers.get("cache-control", "")
+        assert "max-age=86400" in cc
 
 
 class TestApiConfig:

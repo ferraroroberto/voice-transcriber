@@ -72,6 +72,14 @@ class TestAppJsSourcePins:
         # page freeze when the take is finalised due to backgrounding.
         assert "keepalive: state.backgroundFinalized" in app_js
 
+    def test_build_version_line_wired(self, app_js: str):
+        """The SPA must fetch /api/version on boot and render it into the
+        #buildInfo line so the loaded build is glanceable (issue #13)."""
+        assert "function loadVersion" in app_js
+        assert "loadVersion()" in app_js
+        assert "/api/version" in app_js
+        assert "buildInfo" in app_js
+
     def test_no_hardcoded_alias_list_in_offline_fallback(self, app_js: str):
         """`applyConfigDefaults` should not hardcode the alias list — the
         offline fallback should be empty so the model list always comes
