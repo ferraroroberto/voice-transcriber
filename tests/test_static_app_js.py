@@ -57,6 +57,21 @@ class TestAppJsSourcePins:
         assert ".split('_')" in body or '.split("_")' in body
         assert "toUpperCase" in body
 
+    def test_background_finalize_wired(self, app_js: str):
+        """Backgrounding the app mid-record must finalise the take rather
+        than letting it die silently. Pins the function and its wiring
+        into the visibilitychange / pagehide handlers (issue #12)."""
+        assert "function finalizeForBackground" in app_js
+        # The visibilitychange handler must call it when a recording is
+        # in flight, and pagehide must make the same best-effort call.
+        assert app_js.count("finalizeForBackground()") >= 2, (
+            "finalizeForBackground must be called from both the "
+            "visibilitychange and pagehide handlers"
+        )
+        # The /finish request carries keepalive so it can outlive an iOS
+        # page freeze when the take is finalised due to backgrounding.
+        assert "keepalive: state.backgroundFinalized" in app_js
+
     def test_no_hardcoded_alias_list_in_offline_fallback(self, app_js: str):
         """`applyConfigDefaults` should not hardcode the alias list — the
         offline fallback should be empty so the model list always comes

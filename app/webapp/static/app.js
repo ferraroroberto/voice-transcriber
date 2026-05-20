@@ -90,6 +90,7 @@
     vadSilenceSince: 0,        // ms timestamp of the last loud sample (0 = never)
     vadStopFired: false,       // guard so the auto-stop fires once per take
     vadStatusOwnedUntil: 0,    // VAD owns the status line until this ms timestamp
+    backgroundFinalized: false, // take was finalised because the app got backgrounded
   };
 
   // -------------------------------------------------------- bootstrap
@@ -301,13 +302,27 @@
     // the same page session. Also opportunistically reload config when
     // the tab becomes visible again, in case Tailscale was asleep.
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && state.mode === 'idle') {
-        releaseCachedStream();
-      } else if (document.visibilityState === 'visible' && !state.config) {
-        loadConfig().catch(() => {});
+      if (document.visibilityState === 'hidden') {
+        if (state.mode === 'recording') {
+          // App switch / screen lock mid-record — finalise the take so it
+          // is saved rather than dying silently. See finalizeForBackground.
+          finalizeForBackground();
+        } else if (state.mode === 'idle') {
+          releaseCachedStream();
+        }
+      } else if (document.visibilityState === 'visible') {
+        if (state.backgroundFinalized && state.mode === 'uploading') {
+          els.recordStatus.textContent =
+            '⏸️ Paused while you were away — finalising…';
+        }
+        if (!state.config) loadConfig().catch(() => {});
       }
     });
     window.addEventListener('pagehide', () => {
+      // pagehide can mean the page is being discarded outright — make a
+      // best-effort finalise so the take is saved, not just left as
+      // streamed chunks for History → Redo to recover.
+      if (state.mode === 'recording') finalizeForBackground();
       releaseCachedStream();
       closePartialStream();
     });
@@ -543,6 +558,7 @@
         : '';
     state.vadSilenceSince = 0;
     state.vadStopFired = false;
+    state.backgroundFinalized = false;
 
     setupLevelMeter(stream);
     startTimer();
@@ -571,6 +587,21 @@
     // the worker; closing here too is harmless and frees the connection
     // a fraction earlier.
     closePartialStream();
+  }
+
+  // Mobile browsers can't keep a web page recording in the background.
+  // iOS suspends the page and revokes the mic the moment you switch apps
+  // or lock the screen; there is no web API to capture audio in the
+  // background. (Android Chrome can keep a mic-capturing tab alive, but
+  // relying on that would make the two platforms behave differently.)
+  // So when the page is backgrounded mid-record we finalise the take
+  // now — the audio streamed so far is transcribed and saved instead of
+  // silently lost. With Append on, the next take continues the same
+  // transcript when the user returns.
+  function finalizeForBackground() {
+    if (state.mode !== 'recording') return;
+    state.backgroundFinalized = true;
+    stopRecording();
   }
 
   function enqueueChunkUpload(chunk) {
@@ -627,6 +658,9 @@
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ duration_seconds: elapsedSec }),
+        // When the take is being finalised because the app was backgrounded,
+        // keepalive lets the request outlive an iOS page freeze/discard.
+        keepalive: state.backgroundFinalized,
       });
       if (!r.ok) {
         const text = await r.text();
@@ -664,8 +698,9 @@
       const transcriptForCopy = els.transcript.value;
       if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyTranscript);
       const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
-      els.recordStatus.textContent =
-        `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
+      els.recordStatus.textContent = state.backgroundFinalized
+        ? '✅ Saved while you were away — tap RECORD to continue'
+        : `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
       refreshHistory();
     } catch (err) {
       console.error(err);
@@ -679,6 +714,7 @@
       els.recordBtn.setAttribute('aria-pressed', 'false');
       els.levelFill.style.width = '0%';
       setMode('idle');
+      state.backgroundFinalized = false;
     }
   }
 

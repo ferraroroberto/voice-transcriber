@@ -473,6 +473,26 @@ extra dependencies, no ONNX. A live `🎙️ VAD peak=N (silence trips
 ≤ 15)` readout in the status line lets you see exactly what your mic
 floor is, in case the threshold ever needs tuning.
 
+#### Switching apps while recording
+
+Mobile browsers can't keep a web page recording in the background.
+iOS suspends the page and revokes the mic the moment you switch apps
+or lock the screen, and there is no web API to capture audio in the
+background. (Android Chrome *can* keep a mic-capturing tab alive, but
+relying on that would make the two platforms behave differently.)
+
+So the webapp does the next best thing, symmetrically on both: the
+moment you background it mid-record, the take is **finalised** — the
+audio streamed so far is transcribed and saved to History instead of
+silently lost. When you come back the status line reads
+`✅ Saved while you were away — tap RECORD to continue`; with
+**➕ Append** on, the next take continues the same transcript. Worst
+case — the page is discarded before the finalise lands — the streamed
+chunks are still on the PC, recoverable via History → **🔁 Redo**.
+
+True background recording on iPhone is only possible from a native
+app; see issue #7 (Custom Keyboard Extension spin-off).
+
 ### What the status line tells you
 
 The line under the record button reports exactly which step is running
