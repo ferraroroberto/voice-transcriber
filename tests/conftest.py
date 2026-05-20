@@ -85,6 +85,19 @@ def webapp_client(tmp_path: Path, monkeypatch):
         archive_mod, "DEFAULT_ARCHIVE_DIR", tmp_path / "archive"
     )
 
+    # Isolate the webapp config from the developer's real, gitignored
+    # config/webapp_config.json. Without this, local overrides (e.g. a
+    # different polish_model_default) leak into create_app() and make
+    # sample-driven assertions environment-dependent — passing on a clean
+    # CI box, failing on a machine that has run the webapp. Pointing at a
+    # non-existent temp path makes load_webapp_config() fall back to
+    # WebappConfig(), whose polish defaults come from the committed sample.
+    from src import webapp_config as webapp_config_mod
+    monkeypatch.setattr(
+        webapp_config_mod, "DEFAULT_CONFIG_PATH",
+        tmp_path / "webapp_config.json",
+    )
+
     # Replace WhisperServerManager with a stub — the real one spawns
     # subprocesses, binds ports, and reads yaml off disk. None of that
     # is in scope for these tests.
