@@ -33,10 +33,13 @@ STATIC_DIR = Path(__file__).resolve().parent.parent / "app" / "webapp" / "static
 
 @pytest.fixture
 def app_js() -> str:
-    target = STATIC_DIR / "app.js"
-    if not target.exists():
-        pytest.skip("app.js missing")
-    return target.read_text(encoding="utf-8")
+    """The full webapp JS source — every ES module under static/
+    concatenated. ``app.js`` was split into focused modules (issue #15),
+    so these source pins scan the whole module graph, not one file."""
+    modules = sorted(STATIC_DIR.glob("*.js"))
+    if not modules:
+        pytest.skip("no JS modules found under static/")
+    return "\n".join(m.read_text(encoding="utf-8") for m in modules)
 
 
 class TestAppJsSourcePins:
@@ -96,8 +99,10 @@ class TestAppJsSourcePins:
         team's earlier check-in had a hardcoded array here; this test
         guards against regressing to that shape."""
         # Find the applyConfigDefaults block.
+        # applyConfigDefaults is a top-level export in config.js, so its
+        # closing brace sits at column 0 (`\n}`).
         match = re.search(
-            r"function applyConfigDefaults\([^\)]*\)\s*\{(.*?)\n  \}",
+            r"function applyConfigDefaults\([^\)]*\)\s*\{(.*?)\n\}",
             app_js,
             re.DOTALL,
         )

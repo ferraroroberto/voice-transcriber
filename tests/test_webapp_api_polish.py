@@ -107,7 +107,7 @@ class TestSaveText:
 
 class TestPolishHelpers:
     def test_resolve_model_default_when_missing(self, webapp_client, sample_polish_payload):
-        from app.webapp.server import _resolve_model
+        from app.webapp.routers.sessions import _resolve_model
         cfg = MagicMock()
         cfg.polish_model_default = sample_polish_payload["polish_model_default"]
         cfg.polish_models_available = sample_polish_payload["polish_models_available"]
@@ -116,14 +116,14 @@ class TestPolishHelpers:
         assert _resolve_model("  ", cfg) == sample_polish_payload["polish_model_default"]
 
     def test_resolve_model_passes_through_valid(self, webapp_client, sample_polish_payload):
-        from app.webapp.server import _resolve_model
+        from app.webapp.routers.sessions import _resolve_model
         cfg = MagicMock()
         cfg.polish_model_default = sample_polish_payload["polish_model_default"]
         cfg.polish_models_available = sample_polish_payload["polish_models_available"]
         assert _resolve_model("claude_opus", cfg) == "claude_opus"
 
     def test_resolve_model_rejects_unknown(self, webapp_client, sample_polish_payload):
-        from app.webapp.server import _resolve_model
+        from app.webapp.routers.sessions import _resolve_model
         from fastapi import HTTPException
         import pytest
         cfg = MagicMock()
@@ -136,21 +136,21 @@ class TestPolishHelpers:
 
 class TestPreview:
     def test_preview_returns_none_for_empty(self):
-        from app.webapp.server import _preview
+        from app.webapp.routers.sessions import _preview
         assert _preview(None, 100) is None
         assert _preview("", 100) is None
 
     def test_preview_returns_short_text_intact(self):
-        from app.webapp.server import _preview
+        from app.webapp.routers.sessions import _preview
         assert _preview("short", 100) == "short"
 
     def test_preview_truncates_with_ellipsis(self):
-        from app.webapp.server import _preview
+        from app.webapp.routers.sessions import _preview
         out = _preview("a" * 300, 50)
         assert out is not None
         assert out.endswith("…")
         assert len(out) == 50
 
     def test_preview_flattens_newlines(self):
-        from app.webapp.server import _preview
+        from app.webapp.routers.sessions import _preview
         assert _preview("line1\nline2", 100) == "line1 line2"

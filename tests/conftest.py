@@ -109,11 +109,15 @@ def webapp_client(tmp_path: Path, monkeypatch):
     )
 
     from app.webapp import server as server_mod
+    from app.webapp.routers import config as config_router
     monkeypatch.setattr(server_mod, "WhisperServerManager", lambda: fake_wsm)
 
-    # Replace ffmpeg lookup so /api/status doesn't depend on a binary
-    # being installed on the test machine.
-    monkeypatch.setattr(server_mod, "find_ffmpeg", lambda _root: None)
+    # Replace ffmpeg lookup so neither the lifespan probe (server.py) nor
+    # /api/status (config router) depends on a binary being installed on
+    # the test machine. Both modules bind the name via a direct import,
+    # so each one is patched at its own reference.
+    monkeypatch.setattr(server_mod, "find_ffmpeg", lambda _root=None: None)
+    monkeypatch.setattr(config_router, "find_ffmpeg", lambda _root=None: None)
 
     app = server_mod.create_app()
 

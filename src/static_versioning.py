@@ -4,8 +4,12 @@ Lets the mobile webapp prove which build it is running, so "did the
 deploy take, or is the iPhone serving stale cached code?" stops being
 answered by feel:
 
-  * content-hash query stamps on ``app.js`` / ``styles.css`` so any edit
-    changes the URL — no manual ``?v=N`` bumps, no stale iOS cache,
+  * content-hash query stamps on every ``.js`` / ``.css`` asset so any
+    edit changes the URL — no manual ``?v=N`` bumps, no stale iOS cache.
+    ``index.html`` carries a ``?v=__NAME__`` placeholder for the two
+    assets it references directly (``app.js`` + ``styles.css``); every
+    other module is a transitive ``import`` from ``app.js`` and gets its
+    ``?v=`` stamped by :meth:`BuildInfo.rewrite_js_imports` at serve time,
   * a build identity (git SHA + build time) surfaced via ``/api/version``
     and a glanceable line in the Settings panel.
 
@@ -19,6 +23,7 @@ from __future__ import annotations
 # Standard library imports
 import hashlib
 import logging
+import re
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,11 +31,23 @@ from typing import Dict
 
 logger = logging.getLogger(__name__)
 
-# Assets that carry a manual ``?v=`` stamp in index.html today and are
-# content-hash stamped instead. The placeholder in index.html for each
-# is the uppercased name with dots turned to underscores, e.g.
-# ``app.js`` -> ``__APP_JS__``.
-STAMPED_ASSETS = ("app.js", "styles.css")
+# Suffixes hashed + content-stamped. Everything else under static/
+# (icons, manifest, mobileconfig) is cached more conservatively by the
+# static mount itself.
+STAMPED_SUFFIXES = (".js", ".css")
+
+# Assets that ``index.html`` references directly via a ``?v=__NAME__``
+# placeholder. The placeholder for each is the uppercased name with dots
+# turned to underscores, e.g. ``app.js`` -> ``__APP_JS__``. Every other
+# ``.js`` module is reached only through an ``import`` inside ``app.js``.
+HTML_STAMPED_ASSETS = ("app.js", "styles.css")
+
+# Static ES-module imports inside the JS graph: ``from './x.js'`` and the
+# bare ``import './x.js'`` side-effect form. The optional ``?v=`` group
+# makes re-stamping an already-stamped body idempotent.
+_JS_IMPORT_RE = re.compile(
+    r"""(from\s*['"]|import\s*['"])\./([\w\-.]+\.js)(\?v=[^'"]*)?(['"])"""
+)
 
 
 def _placeholder(asset_name: str) -> str:
@@ -79,8 +96,12 @@ class BuildInfo:
     """Immutable build identity, computed once at webapp startup."""
 
     def __init__(self, static_dir: Path, repo_root: Path) -> None:
+        # Hash every .js/.css file in static/ — the whole ES-module graph,
+        # not just the two assets index.html names directly.
         self.asset_hashes: Dict[str, str] = {
-            name: asset_hash(static_dir / name) for name in STAMPED_ASSETS
+            path.name: asset_hash(path)
+            for path in sorted(static_dir.glob("*"))
+            if path.is_file() and path.suffix.lower() in STAMPED_SUFFIXES
         }
         self.git_sha: str = _git_short_sha(repo_root)
         self.built_at: str = datetime.now(timezone.utc).isoformat(
@@ -89,10 +110,32 @@ class BuildInfo:
 
     def stamp_html(self, html: str) -> str:
         """Replace the ``?v=__NAME__`` placeholders in index.html with the
-        content hash of each stamped asset."""
-        for name, digest in self.asset_hashes.items():
-            html = html.replace(_placeholder(name), digest)
+        content hash of each directly-referenced asset."""
+        for name in HTML_STAMPED_ASSETS:
+            digest = self.asset_hashes.get(name)
+            if digest:
+                html = html.replace(_placeholder(name), digest)
         return html
+
+    def rewrite_js_imports(self, body: str) -> str:
+        """Stamp ``?v=<hash>`` onto every ``from './foo.js'`` import.
+
+        Imports with no matching entry in :attr:`asset_hashes` are left
+        untouched — robust against a dynamic import or a file added but
+        not yet hashed. Any existing ``?v=…`` is replaced so re-rewriting
+        an already-stamped body is idempotent.
+        """
+        if not self.asset_hashes:
+            return body
+
+        def _sub(match: re.Match) -> str:
+            prefix, filename, _existing, quote_close = match.group(1, 2, 3, 4)
+            digest = self.asset_hashes.get(filename)
+            if not digest:
+                return match.group(0)
+            return f"{prefix}./{filename}?v={digest}{quote_close}"
+
+        return _JS_IMPORT_RE.sub(_sub, body)
 
     def as_dict(self) -> Dict[str, str]:
         """Payload for the ``/api/version`` endpoint."""
