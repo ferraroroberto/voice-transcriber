@@ -832,13 +832,15 @@ Python-only machines.
 
 ### Playwright browser smoke tests
 
-A small `pytest-playwright` suite under `tests/e2e/` catches SPA boot regressions (JS errors, empty `<select>`s, broken settings toggle, missing login overlay). Runs against the **live tray on `https://127.0.0.1:8443`** — does not boot anything itself; if the tray isn't up, every test is skipped with a clear message.
+A `pytest-playwright` suite under `tests/e2e/` catches SPA boot regressions (JS errors, empty `<select>`s, broken settings toggle, missing login overlay) plus regression pins for past iPhone-only bugs (cache hygiene, background-finalize, ▶ Resume). Runs against the **live tray on `https://127.0.0.1:8443`** — does not boot anything itself; if the tray isn't up, every test is skipped with a clear message. Set `VT_E2E_BASE_URL` to point the suite at a different instance.
+
+Every test runs in **two engine projections**: Chromium-desktop and **WebKit + iPhone** (the iOS-Safari engine family, projected onto an `iPhone 15 Pro Max` viewport — issue #31). Pin one engine for a faster loop with `--browser chromium`. The record-flow regression tests are marked `desktop_only`: they need Chromium's fake-media-stream flags and skip under the WebKit projection.
 
 One-time setup:
 
 ```powershell
 & .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-& .\.venv\Scripts\python.exe -m playwright install chromium
+& .\.venv\Scripts\python.exe -m playwright install chromium webkit
 ```
 
 Then with the tray running (`tray.bat`):

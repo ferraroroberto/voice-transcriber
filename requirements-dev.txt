@@ -11,5 +11,7 @@ pytest-mock>=3.12
 httpx>=0.27
 
 # Playwright browser-E2E smoke tests (tests/e2e). After install:
-#   .venv\Scripts\python.exe -m playwright install chromium
+#   .venv\Scripts\python.exe -m playwright install chromium webkit
+# WebKit is the iOS-Safari engine family — the suite runs every test in
+# both a Chromium-desktop and a WebKit/iPhone projection (issue #31).
 pytest-playwright>=0.5
