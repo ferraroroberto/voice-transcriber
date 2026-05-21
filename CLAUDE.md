@@ -84,6 +84,14 @@ POSIX:
 
 If no checker exists for a project, say so explicitly. Don't claim "tests pass" when there are no tests.
 
+**Webapp pre-ship gate.** For any change touching `app/webapp/` or the
+webapp-facing `src/` modules, also run `pwsh -File scripts/verify-before-ship.ps1`
+(Windows PowerShell 5.1 works too) — and it must pass before the task is
+declared done. The tray may or may not be running: the script boots its
+own disposable webapp on a free port, runs byte-compile + the non-e2e
+pytest suite + the Playwright e2e suite (Chromium + WebKit/iPhone), and
+tears the webapp down. A green run ends with `✅ Ready to ship.`
+
 ## Documentation discipline
 The `docs/` folder is for **work that is already done** — retrospective changelogs, design records, reference material. Never put plans, roadmaps, TODOs, or "future work" docs in `docs/`. If you find yourself writing one, that content belongs in a GitHub issue instead.
 
@@ -122,3 +130,6 @@ Before finishing, ask: "What would a senior, perfectionist dev reject in review?
 ## This repository
 Tray-resident local voice-to-text app powered by a bundled whisper.cpp server, with a global hotkey workflow.
 See `README.md` for setup, layout, and usage.
+
+Before declaring any webapp-touching change done, run the pre-ship gate:
+`pwsh -File scripts/verify-before-ship.ps1` — see the Verification section above.

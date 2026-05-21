@@ -851,6 +851,18 @@ Then with the tray running (`tray.bat`):
 & .\.venv\Scripts\python.exe -m pytest -m smoke -v tests/e2e
 ```
 
+Without a tray, run the suite against a disposable webapp it boots itself on a free port — `--e2e-autoboot` (or `VT_E2E_AUTOBOOT=1`).
+
+### Verifying changes before ship
+
+For any change touching the webapp, run the pre-ship gate before declaring it done:
+
+```powershell
+pwsh -File scripts\verify-before-ship.ps1
+```
+
+It byte-compiles `app src tests`, runs the non-e2e pytest suite, then runs the Playwright e2e suite (Chromium + WebKit/iPhone) against a **disposable webapp it boots on a free port** and tears down — so a running tray on :8443 is left untouched, and a forgotten tray can't let a regression pass silently. Exits non-zero on the first failure; a green run ends with `✅ Ready to ship.`
+
 ### Optional: JS tests via Vitest
 
 ```bat
