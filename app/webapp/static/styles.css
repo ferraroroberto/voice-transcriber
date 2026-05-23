@@ -68,25 +68,30 @@ html, body {
 }
 .header-icon-btn:active { background: var(--bg-elev-2); }
 
+/* Append toggle — modelled on the sibling .incognito-btn below. The
+   checkbox is hidden; the <label> itself is the button. Opacity +
+   accent border flip on `:has(input:checked)` so on/off reads at a
+   glance instead of relying on a tiny tick (issue #22). */
 .append-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   font-size: 13px;
-  color: var(--muted);
+  padding: 4px 10px;
+  min-height: 36px;
+  border: 1px solid #333;
+  border-radius: 10px;
   cursor: pointer;
   user-select: none;
-  padding: 6px 4px;
-  min-height: 36px;
+  opacity: 0.55;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
 }
-.append-toggle input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  accent-color: var(--polish);
-  cursor: pointer;
-}
+.append-toggle:active { background: var(--bg-elev-2); }
 .append-toggle:has(input:checked) {
-  color: var(--fg);
+  opacity: 1;
+  border-color: var(--polish);
+  background: rgba(74, 138, 243, 0.18);
 }
 
 .incognito-btn {
