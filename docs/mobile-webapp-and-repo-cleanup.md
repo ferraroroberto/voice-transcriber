@@ -116,7 +116,7 @@ voice-transcriber/
 │   ├── webapp_config.json          gitignored
 │   └── webapp_config.sample.json   committed schema
 ├── docs/
-│   └── 2026-05-07-mobile-webapp-and-repo-cleanup.md   ← this file
+│   └── mobile-webapp-and-repo-cleanup.md   ← this file
 ├── scripts/
 │   ├── install_whisper_cpp.py
 │   ├── download_model.py
@@ -438,7 +438,7 @@ the new one comes up. Hardened `init()`:
 - `app/webapp/static/app.js` — all five behaviour changes above.
 - `README.md` — full first-time setup guide, status line legend,
   polish models, history, troubleshooting table.
-- `docs/2026-05-07-mobile-webapp-and-repo-cleanup.md` (this file) —
+- `docs/mobile-webapp-and-repo-cleanup.md` (this file) —
   this section.
 
 No backend changes. No new dependencies. No new HTML elements. The whole

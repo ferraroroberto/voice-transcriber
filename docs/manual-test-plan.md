@@ -157,8 +157,8 @@ Expectations:
   - `scripts/gen_ssl_cert.py`, `scripts/run_tunnel.py`
   - `webapp.bat`, `webapp_tunnel.bat`
   - `config/webapp_config.sample.json`
-  - `docs/2026-05-07-mobile-webapp-and-repo-cleanup.md`
-  - `docs/2026-05-07-manual-test-plan.md` (this file)
+  - `docs/mobile-webapp-and-repo-cleanup.md`
+  - `docs/manual-test-plan.md` (this file)
 - `git diff` on `app/cli/`, `app/gui/`, `src/` — should be just import
   rewrites + tray polish-row + AppConfig webapp section.
 - `archive/`, `webapp/certificates/`, `app/webapp/static/voice-transcriber-ca.mobileconfig`,

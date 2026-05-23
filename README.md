@@ -229,8 +229,7 @@ voice-transcriber/
 │   ├── webapp_config.json         # gitignored — polish model/style, retention, mic prefs
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
-│   ├── 2026-05-07-mobile-webapp-and-repo-cleanup.md   # design doc
-│   └── 2026-05-08-multi-prompt-polish-and-webapp-ui.md
+│   └── mobile-webapp-and-repo-cleanup.md   # design doc
 ├── scripts/
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF

@@ -34,7 +34,7 @@ The two flows now coexist: pick the one that fits the moment.
 - `webapp/cloudflared.yml` — gitignored, holds the user's actual
   tunnel UUID + hostname. Pattern matches the existing
   `webapp_config.json` / `webapp_config.sample.json` split.
-- `docs/2026-05-09-named-cloudflare-tunnel.md` — this entry.
+- `docs/named-cloudflare-tunnel.md` — this entry.
 
 ## Files modified
 
