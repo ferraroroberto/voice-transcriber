@@ -71,26 +71,6 @@ class TranscriptionClient:
     def close(self) -> None:
         self._session.close()
 
-    def is_translate_reachable(self, timeout: float = 0.5) -> bool:
-        """Quick liveness probe for the translate-capable whisper server.
-
-        Mirrors ``WhisperServerManager.is_reachable()``: a whisper.cpp
-        server (or the local-llm-hub's lazy-spawn proxy) answers 200 on
-        ``GET /``. When ``translate_base_url`` was left as the primary
-        URL (no two-server wiring), this just re-checks the primary.
-
-        Timeout is intentionally short: ``/api/status`` is polled from
-        the SPA and a slow translate proxy (the local-llm-hub lazy-spawn
-        path can take seconds on a cold first response after idle) must
-        not block the indicator update. A short timeout reads as "down"
-        until the proxy warms up — fine for a glanceable dot.
-        """
-        try:
-            r = self._session.get(self.translate_base_url + "/", timeout=timeout)
-            return r.status_code == 200
-        except requests.RequestException:
-            return False
-
     # ------------------------------------------------------------- public API
 
     def transcribe_wav_bytes(

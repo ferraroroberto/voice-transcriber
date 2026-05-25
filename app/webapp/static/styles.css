@@ -51,27 +51,6 @@ html, body {
   gap: 10px;
 }
 
-/* Discreet whisper + translate health dots next to the title (issue #25).
-   Sits at the very left of .header-actions so the user sees backend
-   readiness before tapping Record. Tooltip carries the detail; the dot
-   itself is intentionally tiny on mobile. */
-.health-dots {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.health-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--muted);
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.4) inset;
-  flex: 0 0 auto;
-}
-.health-dot--up   { background: var(--good); }
-.health-dot--down { background: var(--danger); }
-.health-dot--unknown { background: var(--muted); opacity: 0.6; }
-
 .header-icon-btn {
   display: inline-flex;
   align-items: center;
