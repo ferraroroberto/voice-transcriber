@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 from src.app_config import resolve_iso
 from src.polish import PolishClient
 from src.polish_prompts import load_polish_prompts
+from src.transcription_client import TranscriptionClient
 from src.webapp_config import WebappConfig, update_webapp_config
 from src.whisper_server import WhisperServerManager
 
@@ -91,6 +92,7 @@ async def patch_config(request: Request) -> Dict[str, Any]:
 async def status(request: Request) -> Dict[str, Any]:
     sm: WhisperServerManager = request.app.state.server_manager
     polish: PolishClient = request.app.state.polish_client
+    tx: TranscriptionClient = request.app.state.transcription_client
     whisper_status = sm.status()
     return {
         "whisper": {
@@ -98,6 +100,10 @@ async def status(request: Request) -> Dict[str, Any]:
             "ownership": whisper_status.ownership,
             "base_url": whisper_status.base_url,
             "detail": whisper_status.detail,
+        },
+        "translate": {
+            "reachable": tx.is_translate_reachable(),
+            "base_url": tx.translate_base_url,
         },
         "llm_hub": {
             "reachable": polish.is_reachable(),
