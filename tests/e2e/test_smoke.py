@@ -71,6 +71,29 @@ def test_settings_panel_toggles(authed_page: Page, base_url: str) -> None:
     expect(panel).to_have_attribute("open", "")
 
 
+def test_header_health_dots_render(authed_page: Page, base_url: str) -> None:
+    """Issue #25 — two backend health dots sit next to the title.
+
+    The dots are painted by refreshStatus() after /api/status resolves.
+    Both must end up on a definite up/down class (not the boot-time
+    ``--unknown``) so the user can read backend readiness at a glance.
+    """
+    _navigate_collecting_errors(authed_page, base_url)
+    dots = authed_page.locator(".health-dots .health-dot")
+    expect(dots).to_have_count(2)
+    expect(authed_page.locator("#dotWhisper")).to_be_visible()
+    expect(authed_page.locator("#dotTranslate")).to_be_visible()
+    # Wait until /api/status has resolved and the boot-time --unknown
+    # class has been replaced with a definite up/down. The polling tick
+    # is 5 s but the initial call fires on boot.
+    authed_page.wait_for_function(
+        "() => { const d = document.getElementById('dotWhisper');"
+        " return d && (d.classList.contains('health-dot--up')"
+        " || d.classList.contains('health-dot--down')); }",
+        timeout=10_000,
+    )
+
+
 def test_login_overlay_dom_present(authed_page: Page, base_url: str) -> None:
     """The login overlay markup is wired so showLogin() can reveal it.
 
