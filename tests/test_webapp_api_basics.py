@@ -131,21 +131,14 @@ class TestApiConfig:
 
 
 class TestApiStatus:
-    def test_returns_all_sections(self, webapp_client):
-        client, _, overrides = webapp_client
-        # Translate probe is stubbed via the transcription mock so the
-        # test doesn't hit a live socket — see conftest.
-        overrides["transcription"].is_translate_reachable.return_value = True
-        overrides["transcription"].translate_base_url = "http://stub:8091"
+    def test_returns_three_sections(self, webapp_client):
+        client, _, _ = webapp_client
         resp = client.get("/api/status")
         assert resp.status_code == 200
         body = resp.json()
         assert "whisper" in body
-        assert "translate" in body
         assert "llm_hub" in body
         assert "ffmpeg_present" in body
         assert body["ffmpeg_present"] is False  # stubbed in fixture
         assert body["llm_hub"]["reachable"] is True
         assert body["whisper"]["base_url"] == "http://stub:8090"
-        assert body["translate"]["reachable"] is True
-        assert body["translate"]["base_url"] == "http://stub:8091"

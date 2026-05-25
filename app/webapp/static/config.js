@@ -112,24 +112,11 @@ export async function refreshStatus() {
     const s = await r.json();
     const bits = [];
     bits.push(s.whisper.running ? '🟢 whisper' : '🔴 whisper');
-    bits.push(s.translate && s.translate.reachable ? '🟢 translate' : '🔴 translate');
     bits.push(s.llm_hub.reachable ? '🟢 hub' : '🔴 hub');
     bits.push(s.ffmpeg_present ? '🟢 ffmpeg' : '🔴 ffmpeg');
     els.statusReadout.textContent = bits.join('   ');
     els.polishBtn.disabled = !s.llm_hub.reachable || !state.transcript;
-    paintHealthDot(els.dotWhisper, !!s.whisper.running,
-      'Whisper server', s.whisper.base_url);
-    paintHealthDot(els.dotTranslate, !!(s.translate && s.translate.reachable),
-      'Translate server', s.translate && s.translate.base_url);
   } catch (err) { /* swallow */ }
-}
-
-function paintHealthDot(dot, up, label, baseUrl) {
-  if (!dot) return;
-  dot.classList.remove('health-dot--up', 'health-dot--down', 'health-dot--unknown');
-  dot.classList.add(up ? 'health-dot--up' : 'health-dot--down');
-  const where = baseUrl ? ` (${baseUrl})` : '';
-  dot.title = `${label}${where} — ${up ? 'up' : 'down'}`;
 }
 
 export async function onSaveSettings() {

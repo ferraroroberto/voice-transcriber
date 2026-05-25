@@ -55,9 +55,6 @@ export const els = {
   statusReadout:    document.getElementById('statusReadout'),
   buildInfo:        document.getElementById('buildInfo'),
 
-  dotWhisper:       document.getElementById('dotWhisper'),
-  dotTranslate:     document.getElementById('dotTranslate'),
-
   toast:            document.getElementById('toast'),
 };
 
