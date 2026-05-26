@@ -89,10 +89,14 @@ Other knobs:
   the text lands at the caret instead of just on the clipboard. Tray menu
   has a 📌 Paste at caret toggle. Hotkey-flow only — tk window and webapp
   records are unaffected.
-- `ptt_threshold_ms` — F10 is a single key with two modes: tap to toggle
-  (start/stop), or hold ≥ this many ms and release for push-to-talk. The
-  default 300 ms is comfortable; raise it if a tap occasionally registers
-  as PTT.
+- `ptt_threshold_ms` — the hotkey (default `<F8>`) is a single key with two
+  modes: tap to toggle (start/stop), or hold ≥ this many ms and release for
+  push-to-talk. Default **600 ms** — comfortably above the natural tap
+  distribution so a deliberate "press to start" reliably sticks. Lower it
+  if you want a snappier PTT; raise it further if a tap still occasionally
+  registers as PTT. A second safety net inside the tray ignores any PTT
+  release that fires while the recorder has been live for less than 400 ms,
+  so a press that races the event pump can't kill a fresh take.
 - `translate_base_url` — the secondary whisper-server URL used when the
   🌐 Translate toggle is on. Defaults to the local-llm-hub's `:8091`
   contract. See "Translation" below.

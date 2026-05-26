@@ -124,6 +124,11 @@ class TrayApp:
         # ``time.monotonic()`` of the press that started the current take, while
         # the user is still holding. Used to discriminate tap vs PTT on release.
         self._hotkey_press_started_recording_at: Optional[float] = None
+        # ``time.monotonic()`` of the moment the recorder was actually created.
+        # Set by ``_toggle_record`` on start, cleared on stop. Used as a second
+        # gate on PTT release so a press that races the 80 ms event pump can't
+        # stop a take that's barely begun (issue #28).
+        self._record_started_monotonic: Optional[float] = None
         self._transcription_client: Optional[TranscriptionClient] = None
         # Model label is queried by pystray on every menu draw; cache so the
         # TCP probe + psutil lookup don't fire on each open.
@@ -395,6 +400,12 @@ class TrayApp:
             self._enqueue_hotkey_toggle(start=False)
         # else: press while still holding the original — ignore
 
+    # Minimum age of an in-flight recording before a PTT release will stop
+    # it. Guards against the press → release happening so fast that the
+    # take has barely begun: in that case the user almost certainly meant
+    # a tap-toggle (and would lose the take if we stopped it here).
+    _MIN_PTT_RECORD_AGE_MS = 400
+
     def _on_hotkey_release(self, key) -> None:
         if key != self._hotkey_target_key:
             return
@@ -405,9 +416,20 @@ class TrayApp:
         held_ms = (time.monotonic() - started_at) * 1000
         self._hotkey_press_started_recording_at = None
         threshold = max(0, int(self.config.ptt_threshold_ms))
-        if held_ms >= threshold and self._current_recorder is not None:
+        record_started = self._record_started_monotonic
+        recorder_age_ms = (
+            (time.monotonic() - record_started) * 1000
+            if record_started is not None
+            else 0.0
+        )
+        if (
+            held_ms >= threshold
+            and self._current_recorder is not None
+            and recorder_age_ms >= self._MIN_PTT_RECORD_AGE_MS
+        ):
             self._enqueue_hotkey_toggle(start=False)
-        # else: tap. Recording continues; await the second tap.
+        # else: tap (or PTT release that raced a barely-started recorder).
+        # Recording continues; await the second tap.
 
     def _enqueue_hotkey_toggle(self, start: Optional[bool]) -> None:
         """Enqueue a toggle event from the hotkey path.
@@ -682,6 +704,7 @@ class TrayApp:
             preferred_mics=self.config.resolve_preferred_mics(),
         )
         self._current_recorder = recorder
+        self._record_started_monotonic = time.monotonic()
         self._set_icon_color(recording=True)
 
         self._recording_popup = RecordingPopup(
@@ -694,6 +717,7 @@ class TrayApp:
 
     def _on_record_done(self, recording: Optional[Recording], error: Optional[str]) -> None:
         self._current_recorder = None
+        self._record_started_monotonic = None
         self._recording_popup = None
         self._set_icon_color(recording=False)
         if error is not None:

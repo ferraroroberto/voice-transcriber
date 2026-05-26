@@ -114,7 +114,7 @@ class AppConfig:
     show_notifications: bool = True
     # Push-to-talk threshold: hold the hotkey ≥ this many ms and release
     # ends the take. Anything shorter is treated as a tap (toggle).
-    ptt_threshold_ms: int = 300
+    ptt_threshold_ms: int = 600
     # Translation server URL — a second whisper-server instance loaded with
     # a translate-capable model (e.g. ggml-medium.bin). When the translate
     # toggle is on, requests route here instead of the primary turbo server.
@@ -204,7 +204,7 @@ def load_app_config(path: Optional[Path] = None) -> AppConfig:
         auto_paste_after_hotkey=bool(raw.get("auto_paste_after_hotkey", True)),
         suppress_hotkey=bool(raw.get("suppress_hotkey", True)),
         show_notifications=bool(raw.get("show_notifications", True)),
-        ptt_threshold_ms=int(raw.get("ptt_threshold_ms", 300)),
+        ptt_threshold_ms=int(raw.get("ptt_threshold_ms", 600)),
         translate_base_url=str(raw.get("translate_base_url") or "http://127.0.0.1:8091"),
         webapp=raw.get("webapp") or {},
         enabled_languages=raw.get("enabled_languages") or None,
