@@ -80,6 +80,10 @@ class WebappConfig:
     )
     polish_prompt_default: str = DEFAULT_POLISH_PROMPT_ID
     llm_hub_url: str = DEFAULT_LLM_HUB_URL
+    # Persisted for reference/UI only — the authoritative bind host/port
+    # the tray spawns uvicorn on lives in config/config.json's `webapp`
+    # section (see app.webapp.manager.WebappRuntimeConfig). These are not
+    # read for binding.
     host: str = DEFAULT_HOST
     port: int = DEFAULT_PORT
     history_retention_days: int = DEFAULT_RETENTION_DAYS

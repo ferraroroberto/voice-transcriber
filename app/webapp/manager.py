@@ -40,8 +40,16 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 @dataclass(frozen=True)
-class WebappConfig:
-    """Runtime knobs read from config/config.json's `webapp` section."""
+class WebappRuntimeConfig:
+    """Process-spawn knobs for the uvicorn webapp, read from
+    config/config.json's `webapp` section.
+
+    Distinct from `src.webapp_config.WebappConfig`, which holds the
+    user-authored, persisted settings (polish models, auth, retention).
+    This is the authoritative source of the bind `host`/`port` the tray
+    spawns uvicorn on; the `host`/`port` fields on the persisted config
+    are not used for binding.
+    """
     enabled: bool = True
     host: str = "0.0.0.0"
     port: int = 8443
@@ -60,10 +68,10 @@ class WebappStatus:
     detail: str
 
 
-def load_config(raw: Optional[Dict[str, Any]] = None) -> WebappConfig:
-    """Build a WebappConfig from the optional `webapp` section of config.json."""
+def load_config(raw: Optional[Dict[str, Any]] = None) -> WebappRuntimeConfig:
+    """Build a WebappRuntimeConfig from the optional `webapp` section of config.json."""
     raw = raw or {}
-    return WebappConfig(
+    return WebappRuntimeConfig(
         enabled=bool(raw.get("enabled", True)),
         host=str(raw.get("host", "0.0.0.0")),
         port=int(raw.get("port", 8443)),
@@ -87,8 +95,8 @@ def _probe_url(scheme: str, host: str, port: int) -> str:
 class WebappManager:
     """Start / stop / health-check the webapp uvicorn process."""
 
-    def __init__(self, config: Optional[WebappConfig] = None) -> None:
-        self.config = config or WebappConfig()
+    def __init__(self, config: Optional[WebappRuntimeConfig] = None) -> None:
+        self.config = config or WebappRuntimeConfig()
         self._proc: Optional[subprocess.Popen] = None
         self._session = requests.Session()
         self._session.verify = False  # self-signed cert in HTTPS mode

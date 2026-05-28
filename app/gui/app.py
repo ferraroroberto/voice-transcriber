@@ -12,7 +12,7 @@ import logging
 import threading
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 if TYPE_CHECKING:
     from .tray import TrayApp
