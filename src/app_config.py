@@ -54,16 +54,11 @@ _LEGACY_MODE_TO_ISO: Dict[str, str] = {
     **{label.lower(): iso for iso, label in WHISPER_LANGUAGES.items()},
 }
 
-# Public re-exports retained for callers that still iterate the original
-# 3-mode list (tk window). They now point at the legacy subset to keep the
-# old UI working until it's migrated to the full 99-language picker.
+# Legacy 3-language tuple, kept only for the CLI's `--language` choices
+# (app/cli/commands/{record,transcribe}.py). The tk window and webapp use
+# the full 99-language picker via enabled_language_map(); resolve_iso()
+# accepts these legacy names as well as ISO codes.
 LANGUAGE_MODES: Tuple[str, ...] = ("english", "spanish", "italian")
-
-LANGUAGE_MODE_LABELS: Dict[str, str] = {
-    "english": "English",
-    "spanish": "Spanish",
-    "italian": "Italian",
-}
 
 VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 

@@ -14,7 +14,6 @@ import requests
 
 # Local imports
 from src.transcription_client import (
-    ISO_LANGUAGE_CODES,
     TranscriptionClient,
     TranscriptionError,
     _extract_text,
@@ -220,10 +219,3 @@ class TestTranscribeArray:
         # The file body should be a valid WAV starting with RIFF.
         body = files["file"][1]
         assert body[:4] == b"RIFF"
-
-
-class TestIsoLanguageCodes:
-    def test_known_languages(self):
-        assert ISO_LANGUAGE_CODES["English"] == "en"
-        assert ISO_LANGUAGE_CODES["Spanish"] == "es"
-        assert ISO_LANGUAGE_CODES["auto"] is None

@@ -28,20 +28,11 @@ from typing import Optional, Union
 import numpy as np
 import requests
 
+from .app_config import resolve_iso
 from .snippets import apply_snippets
 from .vocabulary import prompt_for_language
 
 logger = logging.getLogger(__name__)
-
-ISO_LANGUAGE_CODES = {
-    "Spanish": "es",
-    "English": "en",
-    "Italian": "it",
-    "French": "fr",
-    "German": "de",
-    "Portuguese": "pt",
-    "auto": None,
-}
 
 DEFAULT_TIMEOUT = 300  # long audio on slow GPUs
 
@@ -83,7 +74,7 @@ class TranscriptionClient:
         base = self.translate_base_url if translate else self.base_url
         url = base + "/v1/audio/transcriptions"
 
-        iso = ISO_LANGUAGE_CODES.get(language, language) if language else None
+        iso = resolve_iso(language) if language else None
         data = {"response_format": "json"}
         # Only send `language` when transcribing — the :8091 translate proxy
         # (as of 2026-05-09) treats `language` as a hard "transcribe in this

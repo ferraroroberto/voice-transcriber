@@ -25,9 +25,6 @@ import sounddevice as sd
 from src import (
     AppConfig,
     AudioRecorder,
-    LANGUAGE_MODE_LABELS,
-    LANGUAGE_MODES,
-    WHISPER_LANGUAGES,
     resolve_iso,
     TranscriptionClient,
     TranscriptionError,
