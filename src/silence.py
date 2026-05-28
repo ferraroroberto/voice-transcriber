@@ -12,7 +12,7 @@ import logging
 import math
 import wave
 from pathlib import Path
-from typing import Union
+from typing import Tuple, Union
 
 import numpy as np
 
@@ -83,3 +83,27 @@ def rms_dbfs_from_wav(path: Path) -> float:
 
 def is_silent(dbfs: float, threshold_dbfs: float = DEFAULT_SILENCE_DBFS) -> bool:
     return dbfs < threshold_dbfs
+
+
+def is_silent_samples(
+    samples: Union[np.ndarray, None],
+    threshold_dbfs: float = DEFAULT_SILENCE_DBFS,
+) -> Tuple[bool, float]:
+    """Gate decision for an in-memory sample buffer.
+
+    Returns ``(silent, dbfs)`` so callers can both branch and surface the
+    measured loudness in their own notification. Centralises the
+    "compute dBFS then compare" pair shared by the tray and tk surfaces.
+    """
+    dbfs = rms_dbfs_from_samples(samples)
+    return is_silent(dbfs, threshold_dbfs), dbfs
+
+
+def is_silent_wav(
+    path: Path,
+    threshold_dbfs: float = DEFAULT_SILENCE_DBFS,
+) -> Tuple[bool, float]:
+    """Gate decision for a PCM WAV file. Returns ``(silent, dbfs)`` — the
+    WAV-path counterpart to :func:`is_silent_samples`, used by the webapp."""
+    dbfs = rms_dbfs_from_wav(path)
+    return is_silent(dbfs, threshold_dbfs), dbfs

@@ -33,7 +33,7 @@ from src import (
     TranscriptionError,
 )
 from src.polish import PolishClient, PolishError
-from src.silence import is_silent, rms_dbfs_from_samples
+from src.silence import is_silent_samples
 from src.polish_prompts import (
     PolishPrompt,
     get_prompt,
@@ -701,8 +701,8 @@ class TranscriberApp:
         # Silence gate — skip whisper on near-silent takes so it can't
         # hallucinate "Thanks for watching" on an empty recording.
         threshold = self.webapp_config.silence_dbfs_threshold
-        dbfs = rms_dbfs_from_samples(recording.samples)
-        if is_silent(dbfs, threshold):
+        silent, dbfs = is_silent_samples(recording.samples, threshold)
+        if silent:
             logger.info(
                 f"🤫 Skipping whisper: {dbfs:.1f} dBFS < {threshold} dBFS"
             )

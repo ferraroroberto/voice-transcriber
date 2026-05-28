@@ -22,7 +22,7 @@ from src import TranscriptionClient, TranscriptionError
 from src.archive import SessionArchive
 from src.polish import PolishClient, PolishError
 from src.polish_prompts import PolishPrompt, get_prompt
-from src.silence import is_silent, rms_dbfs_from_wav
+from src.silence import is_silent_wav
 from src.webapp_config import WebappConfig
 
 from app.webapp.audio import (
@@ -487,8 +487,8 @@ async def _transcribe_session_payload(
     # Silence gate — skip whisper entirely on near-silent audio so it
     # can't hallucinate "Thanks for watching" on an empty take.
     cfg: WebappConfig = request.app.state.webapp_config
-    dbfs = rms_dbfs_from_wav(wav_path)
-    if is_silent(dbfs, cfg.silence_dbfs_threshold):
+    silent, dbfs = is_silent_wav(wav_path, cfg.silence_dbfs_threshold)
+    if silent:
         session.write_transcript("")
         session.meta.language = chosen_lang
         session.meta.extra["silence_dbfs"] = round(dbfs, 1)

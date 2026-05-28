@@ -28,8 +28,9 @@ DEFAULT_PROMPTS_PATH = (
 DEFAULT_PROMPT_ID = "filler-words"
 
 # Kept in code so a deleted / corrupt config/polish_prompts.json never
-# breaks polish — the loader falls back to this.
-_BUILTIN_FILLER_SYSTEM = (
+# breaks polish — the loader falls back to this. Also the canonical
+# default prompt imported by src.polish (single source of truth).
+FILLER_WORDS_SYSTEM_PROMPT = (
     "You are a transcript polisher. Your only job is to remove filler "
     "words (uh, um, like, you know, sort of, kind of), false starts, "
     "and word repetitions. Do NOT summarize. Do NOT rephrase. Do NOT "
@@ -64,7 +65,7 @@ def _builtin_prompts() -> List[PolishPrompt]:
                 "Remove uh/um/like, false starts, repetitions. "
                 "No rephrasing."
             ),
-            system=_BUILTIN_FILLER_SYSTEM,
+            system=FILLER_WORDS_SYSTEM_PROMPT,
         ),
     ]
 
