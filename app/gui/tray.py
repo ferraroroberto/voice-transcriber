@@ -50,7 +50,7 @@ from src import (
 )
 from src.inject import parse_simple_hotkey, paste_at_caret
 from src.recorder import Recording
-from src.silence import is_silent, rms_dbfs_from_samples
+from src.silence import is_silent_samples
 from src.webapp_config import append_auth_token, load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from app.webapp.manager import WebappManager, load_config as load_webapp_runtime_config
@@ -740,8 +740,8 @@ class TrayApp:
             threshold = load_webapp_config().silence_dbfs_threshold
         except Exception:
             threshold = -50.0
-        dbfs = rms_dbfs_from_samples(recording.samples)
-        if is_silent(dbfs, threshold):
+        silent, dbfs = is_silent_samples(recording.samples, threshold)
+        if silent:
             logger.info(
                 f"🤫 Skipping whisper: {dbfs:.1f} dBFS < {threshold} dBFS"
             )

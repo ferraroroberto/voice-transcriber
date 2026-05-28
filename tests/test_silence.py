@@ -16,6 +16,8 @@ from src.silence import (
     DEFAULT_SILENCE_DBFS,
     SILENT_FLOOR_DBFS,
     is_silent,
+    is_silent_samples,
+    is_silent_wav,
     rms_dbfs_from_samples,
     rms_dbfs_from_wav,
 )
@@ -143,3 +145,39 @@ class TestIsSilent:
     def test_custom_threshold(self):
         assert is_silent(-30.0, threshold_dbfs=-20.0) is True
         assert is_silent(-10.0, threshold_dbfs=-20.0) is False
+
+
+# ---------------------------------------------------------------------------
+# is_silent_samples / is_silent_wav — shared gate helpers returning (silent, dbfs).
+# ---------------------------------------------------------------------------
+
+class TestIsSilentSamples:
+    def test_empty_buffer_is_silent(self):
+        silent, dbfs = is_silent_samples(np.array([], dtype=np.int16))
+        assert silent is True
+        assert dbfs == SILENT_FLOOR_DBFS
+
+    def test_loud_buffer_is_not_silent(self):
+        arr = (np.ones(1000, dtype=np.float32) * 0.5)
+        silent, dbfs = is_silent_samples(arr)
+        assert silent is False
+        assert dbfs > DEFAULT_SILENCE_DBFS
+
+    def test_threshold_passed_through(self):
+        arr = (np.ones(1000, dtype=np.float32) * 0.5)
+        # ~-6 dBFS signal: silent only when the threshold is raised above it.
+        assert is_silent_samples(arr, threshold_dbfs=0.0)[0] is True
+        assert is_silent_samples(arr, threshold_dbfs=-50.0)[0] is False
+
+
+class TestIsSilentWav:
+    def test_silent_wav(self, tmp_path: Path):
+        path = tmp_path / "silent.wav"
+        with wave.open(str(path), "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(16000)
+            wf.writeframes(struct.pack("<" + "h" * 1600, *([0] * 1600)))
+        silent, dbfs = is_silent_wav(path)
+        assert silent is True
+        assert dbfs == SILENT_FLOOR_DBFS
