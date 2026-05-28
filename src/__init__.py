@@ -7,7 +7,6 @@ nothing in here imports any UI framework. See `CLAUDE.md` for the
 
 from .app_config import (
     AppConfig,
-    LANGUAGE_MODE_LABELS,
     LANGUAGE_MODES,
     WHISPER_LANGUAGES,
     load_app_config,
@@ -34,7 +33,6 @@ __all__ = [
     "BACKEND_CUDA",
     "BACKEND_CUDA_BUILD",
     "BACKEND_UNKNOWN",
-    "LANGUAGE_MODE_LABELS",
     "LANGUAGE_MODES",
     "PortOwner",
     "RecordingError",
