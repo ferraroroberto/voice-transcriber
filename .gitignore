@@ -20,6 +20,7 @@ models/
 .whisper_server.pid
 .tray.pid
 *.log
+.launcher-tmp/
 
 # --- Editor / OS ----------------------------------------------------------
 .vscode/
