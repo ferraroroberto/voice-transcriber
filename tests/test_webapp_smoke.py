@@ -112,7 +112,15 @@ class TestWebappSmoke:
 
     def test_api_status_returns_expected_shape(self, uvicorn_proc):
         _, port = uvicorn_proc
-        r = requests.get(f"http://127.0.0.1:{port}/api/status", timeout=2.0)
+        # Generous read timeout: /api/status synchronously probes whisper
+        # (request_timeout_seconds≈1.5) and the LLM hub (timeout≈2.0). When
+        # both backends are absent — as on the CI runner — those probes time
+        # out sequentially (~3.7s) before the handler responds. A dev box
+        # usually has the hub/whisper running, so the endpoint answers fast
+        # there; the wider budget keeps this shape assertion green on a
+        # backend-less runner without slowing local runs. This test asserts
+        # shape, not latency.
+        r = requests.get(f"http://127.0.0.1:{port}/api/status", timeout=10.0)
         assert r.status_code == 200
         body = r.json()
         assert set(body.keys()) >= {"whisper", "llm_hub", "ffmpeg_present"}
