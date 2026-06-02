@@ -27,7 +27,7 @@ server it started.
 
 | Command                  | What it does                                                              |
 |--------------------------|---------------------------------------------------------------------------|
-| `tray.bat`               | Resident tray icon + global hotkey (default: `F8` — **tap to toggle**, **hold ≥ 300 ms for push-to-talk**). Result auto-pastes at the caret in the focused window. Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
+| `tray.bat`               | Resident tray icon + global hotkey (default: `F8` — **tap to toggle**, **hold ≥ 600 ms for push-to-talk**). Result auto-pastes at the caret in the focused window. Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
 | `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
 | `webapp_tunnel_named.bat`| Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See "Persistent URL via Cloudflare tunnel" below for the one-time setup. |
 | `server.bat start|stop|status|logs` | Direct control of the whisper-server process.             |
@@ -67,7 +67,7 @@ Two config files live under the repo: one for the app, one for the server.
   "auto_start_server": false,
   "log_level": "INFO",
   "auto_paste_after_hotkey": true,
-  "ptt_threshold_ms": 300,
+  "ptt_threshold_ms": 600,
   "translate_base_url": "http://127.0.0.1:8091"
 }
 ```
@@ -233,7 +233,7 @@ voice-transcriber/
 │   ├── webapp_config.json         # gitignored — polish model/style, retention, mic prefs
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
-│   └── mobile-webapp-and-repo-cleanup.md   # design doc
+│   └── webapp-architecture.md     # webapp design & architecture record
 ├── scripts/
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF

@@ -77,7 +77,7 @@ class TestAppConfigDefaults:
         assert cfg.language == "english"
         assert cfg.max_record_seconds == 300
         assert cfg.sample_rate == 16000
-        assert cfg.hotkey == "<ctrl>+<alt>+<space>"
+        assert cfg.hotkey == "<F8>"
         assert cfg.auto_copy is True
         assert cfg.show_notifications is True
         assert cfg.log_level == "INFO"

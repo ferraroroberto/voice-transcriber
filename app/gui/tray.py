@@ -2,7 +2,7 @@
 
 - Tray icon sits in the system tray.
 - Menu: Record / Open / Start server / Stop server / Quit.
-- Global hotkey (default F10) supports both tap-toggle and push-to-talk on
+- Global hotkey (default F8) supports both tap-toggle and push-to-talk on
   the same key: tap once to start, tap again to stop; or hold for ≥
   ``ptt_threshold_ms`` and release to stop. Transcribed text is copied to
   the clipboard and (when ``auto_paste_after_hotkey`` is on) pasted at the

@@ -90,7 +90,7 @@ class AppConfig:
     sample_rate: int = 16000
     preferred_mics: Optional[List[str]] = None
     machine_specific_mics: Dict[str, List[str]] = field(default_factory=dict)
-    hotkey: str = "<ctrl>+<alt>+<space>"
+    hotkey: str = "<F8>"
     auto_copy: bool = True
     auto_start_server: bool = False
     log_level: str = "INFO"
@@ -100,8 +100,9 @@ class AppConfig:
     # records are unaffected.
     auto_paste_after_hotkey: bool = True
     # When True, the global hotkey is consumed before reaching the focused
-    # window (pynput low-level hook). Avoids collisions like F10 activating
-    # the Office ribbon. Tray menu exposes a live toggle; default on.
+    # window (pynput low-level hook). Avoids collisions like a function key
+    # (e.g. F10) opening an app's menu/ribbon. Tray menu exposes a live
+    # toggle; default on.
     suppress_hotkey: bool = True
     # Toast notifications for record/transcribe lifecycle events. Tray menu
     # exposes a live toggle; turn off for a fully silent workflow once the
@@ -144,7 +145,7 @@ class AppConfig:
 
     @property
     def hotkey_label(self) -> str:
-        """Human-readable form of ``hotkey`` (e.g. ``<f10>`` → ``F10``)."""
+        """Human-readable form of ``hotkey`` (e.g. ``<f8>`` → ``F8``)."""
         parts = []
         for token in self.hotkey.split("+"):
             token = token.strip().lstrip("<").rstrip(">")
@@ -192,7 +193,7 @@ def load_app_config(path: Optional[Path] = None) -> AppConfig:
         sample_rate=int(raw.get("sample_rate", 16000)),
         preferred_mics=raw.get("preferred_mics") or None,
         machine_specific_mics=raw.get("machine_specific_mics") or {},
-        hotkey=raw.get("hotkey", "<ctrl>+<alt>+<space>"),
+        hotkey=raw.get("hotkey", "<F8>"),
         auto_copy=bool(raw.get("auto_copy", True)),
         auto_start_server=bool(raw.get("auto_start_server", False)),
         log_level=raw.get("log_level", "INFO"),

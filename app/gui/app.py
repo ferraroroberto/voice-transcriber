@@ -843,7 +843,7 @@ class TranscriberApp:
             pass
 
     def _start_hotkey_listener(self) -> None:
-        """Global Ctrl+Alt+Space (configurable) — toggles the same recorder
+        """Global F8 (configurable) — toggles the same recorder
         as the Record button. Only registered in standalone gui mode; when
         the main window is opened from the tray, the tray owns the hotkey.
         """
