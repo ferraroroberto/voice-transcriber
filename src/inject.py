@@ -46,7 +46,7 @@ def paste_at_caret(delay_before: float = 0.05) -> bool:
 
 
 def parse_simple_hotkey(hotkey: str):
-    """Map a single-key hotkey string (e.g. ``<F10>``) to a pynput ``Key``.
+    """Map a single-key hotkey string (e.g. ``<F8>``) to a pynput ``Key``.
 
     Returns ``None`` for modifier combos (``<ctrl>+<alt>+<space>``) or any
     unparseable input — callers fall back to plain toggle behaviour in that

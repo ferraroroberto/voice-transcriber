@@ -3,7 +3,7 @@ chcp 65001 >nul
 REM ============================================================================
 REM  TRANSCRIBE VOICE - tray + global hotkey (day-to-day mode)
 REM ----------------------------------------------------------------------------
-REM  Runs resident in the system tray. Default hotkey: Ctrl+Alt+Space.
+REM  Runs resident in the system tray. Default hotkey: F8.
 REM  Launch this on login (Startup folder) for always-on voice input.
 REM ============================================================================
 

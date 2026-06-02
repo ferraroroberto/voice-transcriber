@@ -42,14 +42,14 @@ Click **📋 Copy mobile URL** → check your clipboard, you should have
 
 ## 2. Hotkey + tk window (2 min)
 
-- Press F10 anywhere → recording popup, speak, press F10 again → toast
+- Press F8 anywhere → recording popup, speak, press F8 again → toast
   "📋 Copied to clipboard" + transcript on the clipboard.
 - Tray menu → **🪟 Open window**. Window opens.
 - New row visible at the bottom: **✨ Polish:** with a model dropdown,
   ⭐ Default, ✨ Polish button, polished text area, 📋 Copy polished.
 - The dropdown shows: `gemma4-e4b-it`, `gemma4-26b-a4b-it`,
   `claude-haiku-4-5`. Default is `gemma4-e4b-it`.
-- After a successful F10 recording, **✨ Polish** is enabled. Click it.
+- After a successful F8 recording, **✨ Polish** is enabled. Click it.
   - If `gemma4-e4b-it` backend is up → polished text appears.
   - If down → MessageBox with the 502 from the hub. (Try a different
     model in the dropdown then re-tap Polish.)
@@ -157,7 +157,7 @@ Expectations:
   - `scripts/gen_ssl_cert.py`, `scripts/run_tunnel.py`
   - `webapp.bat`, `webapp_tunnel.bat`
   - `config/webapp_config.sample.json`
-  - `docs/mobile-webapp-and-repo-cleanup.md`
+  - `docs/webapp-architecture.md`
   - `docs/manual-test-plan.md` (this file)
 - `git diff` on `app/cli/`, `app/gui/`, `src/` — should be just import
   rewrites + tray polish-row + AppConfig webapp section.
