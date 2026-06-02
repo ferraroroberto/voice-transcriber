@@ -22,11 +22,14 @@ concurrency:
 
 jobs:
   verify-before-ship:
-    runs-on: windows-latest
+    # Pinned explicitly: `windows-latest` is being redirected to windows-2025
+    # by GitHub, and this is a Windows-only app whose runner shouldn't drift
+    # under us. Action majors are on Node 24 (the Node 20 ones are deprecated).
+    runs-on: windows-2025
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -58,7 +61,7 @@ jobs:
         # Runs even when the gate fails — the autoboot webapp output makes any
         # future e2e failure diagnosable from the run page without a local repro.
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-logs
           path: webapp/e2e-autoboot-webapp.log
