@@ -212,7 +212,7 @@ def update_webapp_config(**fields) -> WebappConfig:
 def append_auth_token(url: str, token: Optional[str]) -> str:
     """Return ``url`` with ``?token=<token>`` appended when ``token`` is set.
 
-    Used by the tray's "Copy mobile URL" and the cloudflared launcher so a
+    Used by the tray's "Copy local URL" / "Copy Cloudflare URL" and the cloudflared launcher so a
     phone opening the link bootstraps its localStorage on the first visit
     without the user typing anything. Falls through unchanged when the
     token is empty (the auth gate is then disabled server-side anyway).
