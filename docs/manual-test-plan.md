@@ -30,14 +30,15 @@ Expectations:
 - Notification (or just log) about whisper-server starting if it wasn't running.
 - New menu items visible:
   - 🌐 webapp :8443 (disabled label)
-  - 📋 Copy mobile URL
+  - 📋 Copy local URL
+  - 📋 Copy Cloudflare URL (only when named tunnel is running)
   - 🔄 Restart web app
 - Within ~10 s, this returns 200:
   ```powershell
   Invoke-WebRequest -Uri https://127.0.0.1:8443/healthz -SkipCertificateCheck
   ```
 
-Click **📋 Copy mobile URL** → check your clipboard, you should have
+Click **📋 Copy local URL** → check your clipboard, you should have
 `https://127.0.0.1:8443` (or whichever bind host).
 
 ## 2. Hotkey + tk window (2 min)
@@ -108,8 +109,12 @@ Pre-condition: Tailscale connected on both devices.
 
 ## 5. Cloudflare tunnel (only if you want to test work-mode now, 3 min)
 
+Pre-condition: named tunnel already configured (`webapp/cloudflared.yml` present
+with your tunnel UUID + hostname). See the README's "Persistent URL via Cloudflare
+tunnel" section for one-time setup.
+
 ```powershell
-.\webapp_tunnel.bat
+.\webapp_tunnel_named.bat
 ```
 
 Expectations:
@@ -119,7 +124,7 @@ Expectations:
 - A line like:
   ```
   📡 Tunnel URL → ...\webapp\last_tunnel_url.txt
-     https://wonderful-cat-1234.trycloudflare.com
+     https://voice.<your-domain>
   ```
 - Open the URL on your phone (off Tailscale, or just a different
   browser). Cloudflare provides HTTPS, so no cert warnings.
@@ -154,8 +159,8 @@ Expectations:
   *new* files are:
   - `app/webapp/` (whole folder)
   - `src/polish.py`, `src/archive.py`, `src/webapp_config.py`
-  - `scripts/gen_ssl_cert.py`, `scripts/run_tunnel.py`
-  - `webapp.bat`, `webapp_tunnel.bat`
+  - `scripts/gen_ssl_cert.py`, `scripts/run_named_tunnel.py`
+  - `webapp.bat`, `webapp_tunnel_named.bat`
   - `config/webapp_config.sample.json`
   - `docs/webapp-architecture.md`
   - `docs/manual-test-plan.md` (this file)

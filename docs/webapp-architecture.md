@@ -64,7 +64,7 @@ publicly reachable until the tunnel closes.
 The tray is the umbrella process. Starting `tray.bat` brings up the
 whisper-server **and** the web app under the same adopt-or-spawn pattern.
 The hotkey workflow is unchanged. Tray menu gains "Web app: <url>",
-"Copy mobile URL", "Restart web app".
+"Copy local URL", "Copy Cloudflare URL", "Restart web app".
 
 Three launch surfaces, **identical feature surface**:
 
@@ -131,17 +131,18 @@ When the tray boots it adopt-or-spawns uvicorn on `:8443` the same way
 it adopt-or-spawns whisper-server on `:8090`. Set `webapp.enabled:false`
 to keep the tray purely as it is today.
 
-### Cloudflare quick-tunnel URL discovery
-`scripts/run_tunnel.py` pipes cloudflared's stdout, regex-extracts the
-generated `https://*.trycloudflare.com` URL, writes it to
-`webapp/last_tunnel_url.txt`. The tray menu reads that file and offers
-"Copy tunnel URL" so you can grab it from your phone via the launcher
-without seeing the PC console.
+### Cloudflare named-tunnel URL discovery
+`scripts/run_named_tunnel.py` reads the hostname from the tunnel's YAML
+config and writes `https://<hostname>` to `webapp/last_tunnel_url.txt`
+before cloudflared even starts (the URL is fixed, not discovered from
+stdout). The tray menu reads that file and offers "📋 Copy Cloudflare URL"
+so you can grab it from your phone via the launcher without seeing the PC
+console.
 
 ## Bearer-token auth for the public tunnel
 
-`webapp_tunnel.bat` puts the recorder on a public
-`https://*.trycloudflare.com` URL. Anyone who guesses or intercepts that
+`webapp_tunnel_named.bat` puts the recorder on a persistent
+`https://<your-domain>` URL. Anyone who guesses or intercepts that
 URL while the tunnel is up can record / transcribe / polish on the home
 PC, burning local hardware and (for the `claude-*` models) Claude
 subscription quota. Tailscale-only / loopback paths are already gated by

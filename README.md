@@ -14,7 +14,7 @@ and used from there — no shared system install required.
 
 ```bat
 git clone <this-repo>
-cd transcribe_voice
+cd voice-transcriber
 setup.bat                 :: creates .venv, installs deps, fetches whisper.cpp + model
 tray.bat                  :: system-tray mode, global hotkey F8 (tap = toggle, hold = push-to-talk)
 ```
@@ -233,7 +233,10 @@ voice-transcriber/
 │   ├── webapp_config.json         # gitignored — polish model/style, retention, mic prefs
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
-│   └── webapp-architecture.md     # webapp design & architecture record
+│   ├── webapp-architecture.md     # webapp design & architecture record
+│   ├── manual-test-plan.md        # end-to-end manual validation steps
+│   ├── iphone-debugging.md        # iOS PWA / cert troubleshooting
+│   └── market-scan/               # market research notes
 ├── scripts/
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF
@@ -258,8 +261,8 @@ REM 2. Server comes up?
 server.bat start
 server.bat status
 
-REM 3. Quick record test
-quick_record.bat
+REM 3. Quick record test (tap F8 to start, F8 again to stop)
+tray.bat
 ```
 
 If the server doesn't come up, `server.bat logs` prints what
