@@ -34,18 +34,9 @@ REM ============================================================================
 
 setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
-
-REM Prefer a repo-local .venv (standalone layout), fall back to the enclosing
-REM automation repo's .venv for the in-place case.
-set "VENV_PYW=%SCRIPT_DIR%.venv\Scripts\pythonw.exe"
-set "VENV_PY=%SCRIPT_DIR%.venv\Scripts\python.exe"
-set "VENV_SCRIPTS=%SCRIPT_DIR%.venv\Scripts"
-if not exist "%VENV_PYW%" (
-    for %%I in ("%SCRIPT_DIR%..\..") do set "OUTER_DIR=%%~fI"
-    set "VENV_PYW=!OUTER_DIR!\.venv\Scripts\pythonw.exe"
-    set "VENV_PY=!OUTER_DIR!\.venv\Scripts\python.exe"
-    set "VENV_SCRIPTS=!OUTER_DIR!\.venv\Scripts"
-)
+set "VENV_DIR=%SCRIPT_DIR%.venv\Scripts"
+set "VENV_PYW=%VENV_DIR%\pythonw.exe"
+set "VENV_PY=%VENV_DIR%\python.exe"
 
 cd /d "%SCRIPT_DIR%" || exit /b 1
 
@@ -54,7 +45,7 @@ if /i "%~1"=="--restart" set "WANT_RESTART=1"
 if /i "%~1"=="-r"        set "WANT_RESTART=1"
 
 set "PS=C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
-set "TRAY_VENV=%VENV_SCRIPTS%"
+set "TRAY_VENV=%SCRIPT_DIR%.venv"
 set "TRAY_PIDS="
 for /f "usebackq delims=" %%P in (`%PS% -NoProfile -NonInteractive -Command "$v=$env:TRAY_VENV; Get-CimInstance Win32_Process -Filter 'Name = ''pythonw.exe'' OR Name = ''python.exe''' | Where-Object { $_.CommandLine -and $_.CommandLine.IndexOf($v, [System.StringComparison]::OrdinalIgnoreCase) -ge 0 -and $_.CommandLine -match 'launcher\.py\s+tray' } | Select-Object -ExpandProperty ProcessId"`) do (
     if defined TRAY_PIDS (set "TRAY_PIDS=!TRAY_PIDS! %%P") else (set "TRAY_PIDS=%%P")
@@ -80,19 +71,17 @@ if defined WANT_RESTART (
     REM the shared base python while CommandLine still carries the .venv path.
     REM Matching the image path would miss the real webapp; the CommandLine scope
     REM keeps the sweep on THIS repo's children only.
-    REM NOTE: :8090 and :8091 are intentionally excluded — they are mutex-shared
+    REM NOTE: :8090 and :8091 are intentionally excluded - they are mutex-shared
     REM with claude-local-calls (whisper-server, translate-server). Reclaiming
     REM them would kill a running sibling hub.
-    for %%I in ("%VENV_SCRIPTS%\..") do set "RECLAIM_VENV=%%~fI"
+    set "RECLAIM_VENV=%SCRIPT_DIR%.venv"
     %PS% -NoProfile -NonInteractive -Command "$v=$env:RECLAIM_VENV; foreach ($port in 8443) { Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | ForEach-Object { $opid = $_.OwningProcess; $cim = Get-CimInstance Win32_Process -Filter ('ProcessId = {0}' -f $opid) -ErrorAction SilentlyContinue; if ($cim -and $cim.CommandLine -and $cim.CommandLine.IndexOf($v, [System.StringComparison]::OrdinalIgnoreCase) -ge 0) { Write-Host ('Reclaiming :{0} from PID {1}' -f $port, $opid); Stop-Process -Id $opid -Force -ErrorAction SilentlyContinue } } }"
     REM Give Windows a moment to release :8443 before rebinding.
     ping 127.0.0.1 -n 3 >nul
 )
 
-REM Prefer pythonw.exe so no console window stays open.
-REM Window title differentiates this tray from sister apps' trays so
-REM `taskkill /FI "WINDOWTITLE eq VoiceTranscriber Tray"` can target
-REM it selectively. The same trick is in app-launcher and photo-ocr.
+REM Prefer pythonw.exe so no console window stays open. The window title
+REM differentiates this tray from sister apps' trays.
 if exist "%VENV_PYW%" (
     start "VoiceTranscriber Tray" "%VENV_PYW%" launcher.py tray
 ) else if exist "%VENV_PY%" (
