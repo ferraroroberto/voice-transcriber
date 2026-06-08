@@ -15,7 +15,6 @@
 from __future__ import annotations
 
 # Standard library imports
-import atexit
 import logging
 import os
 import queue
@@ -30,7 +29,6 @@ from pathlib import Path
 from typing import Optional
 
 # Third-party imports
-import psutil
 import pyperclip
 import yaml
 from PIL import Image, ImageDraw
@@ -53,6 +51,7 @@ from src.recorder import Recording
 from src.silence import is_silent_samples
 from src.webapp_config import append_auth_token, load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
+from app.tray.single_instance import SingleInstance
 from app.webapp.manager import WebappManager, load_config as load_webapp_runtime_config
 from .app import TranscriberApp
 from .recording_popup import RecordingPopup
@@ -862,43 +861,32 @@ def _make_icon_image(color=(70, 180, 120)) -> Image.Image:
     return img
 
 
-_TRAY_LOCK_FILE = Path(__file__).resolve().parent.parent.parent / ".tray.pid"
+# In-process single-instance guard (project-scaffolding#39): a named mutex held
+# by the tray process, NOT a PID file. The former PID-file lock was racy — two
+# near-simultaneous starts could both read no-valid-lock and both proceed; the
+# named mutex closes that TOCTOU and is freed by the OS on exit (so a crashed
+# tray never locks us out). Vendored primitive: app/tray/single_instance.py.
+_TRAY_INSTANCE: Optional[SingleInstance] = None
 
 
 def _acquire_single_instance_lock() -> bool:
-    """Return True if we got the lock, False if another tray is already running.
-
-    Uses a PID file validated against psutil so a stale lock from a crashed
-    process doesn't permanently lock us out.
-    """
-    if _TRAY_LOCK_FILE.exists():
-        try:
-            pid = int(_TRAY_LOCK_FILE.read_text().strip())
-        except (ValueError, OSError):
-            pid = None
-        if pid and psutil.pid_exists(pid):
-            try:
-                proc = psutil.Process(pid)
-                cmdline = " ".join(proc.cmdline()).lower()
-                if "launcher.py" in cmdline and "tray" in cmdline:
-                    logger.warning(f"⚠️  Tray already running (pid {pid}); exiting.")
-                    return False
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                pass
-    _TRAY_LOCK_FILE.write_text(str(os.getpid()))
-    atexit.register(_release_single_instance_lock)
-    return True
+    """Return True if we got the lock, False if another tray is already running."""
+    global _TRAY_INSTANCE
+    _TRAY_INSTANCE = SingleInstance(r"Global\voice-transcriber-tray")
+    if not _TRAY_INSTANCE.acquired:
+        logger.warning("⚠️  Tray already running; exiting.")
+    return _TRAY_INSTANCE.acquired
 
 
 def _release_single_instance_lock() -> None:
-    try:
-        if _TRAY_LOCK_FILE.exists() and _TRAY_LOCK_FILE.read_text().strip() == str(os.getpid()):
-            _TRAY_LOCK_FILE.unlink()
-    except OSError:
-        pass
+    if _TRAY_INSTANCE is not None:
+        _TRAY_INSTANCE.release()
 
 
 def run_tray(config: AppConfig) -> int:
     if not _acquire_single_instance_lock():
         return 0
-    return TrayApp(config).run()
+    try:
+        return TrayApp(config).run()
+    finally:
+        _release_single_instance_lock()
