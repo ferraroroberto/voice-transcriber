@@ -10,8 +10,9 @@ from __future__ import annotations
 # Standard library imports
 import asyncio
 import logging
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 # Third-party imports
 from fastapi import APIRouter, File, FastAPI, HTTPException, Request, UploadFile
@@ -19,7 +20,7 @@ from fastapi.responses import StreamingResponse
 
 from src.app_config import resolve_iso
 from src import TranscriptionClient, TranscriptionError
-from src.archive import SessionArchive
+from src.archive import SessionArchive, parse_created_at
 from src.polish import PolishClient, PolishError
 from src.polish_prompts import PolishPrompt, get_prompt
 from src.silence import is_silent_wav
@@ -392,16 +393,43 @@ async def get_session_text(session_id: str, request: Request) -> Dict[str, Any]:
     }
 
 
+def _resolve_since(days: Optional[int], since: Optional[str]) -> Optional[datetime]:
+    """Compute the window cutoff (naive local) from ``days``/``since``.
+
+    Explicit ``since`` (ISO 8601) wins; otherwise ``days`` is taken as N
+    days back from now. Returns ``None`` when neither is given (no
+    window). Raises 400 on an unparseable ``since`` or non-positive
+    ``days``.
+    """
+    if since is not None:
+        cutoff = parse_created_at(since)
+        if cutoff is None:
+            raise HTTPException(
+                status_code=400, detail=f"unparseable 'since' value: {since!r}"
+            )
+        return cutoff
+    if days is not None:
+        if days < 1:
+            raise HTTPException(status_code=400, detail="'days' must be >= 1")
+        return datetime.now() - timedelta(days=days)
+    return None
+
+
 @router.get("/api/sessions")
 async def list_sessions(
-    request: Request, limit: int = 10, offset: int = 0,
+    request: Request,
+    limit: int = 10,
+    offset: int = 0,
+    days: Optional[int] = None,
+    since: Optional[str] = None,
 ) -> Dict[str, Any]:
     archive: SessionArchive = request.app.state.archive
     if limit < 1:
         limit = 10
     if offset < 0:
         offset = 0
-    sessions = archive.list_sessions(limit=limit, offset=offset)
+    window = _resolve_since(days, since)
+    sessions = archive.list_sessions(limit=limit, offset=offset, since=window)
     total = archive.count_sessions()
     return {
         "sessions": [
@@ -424,6 +452,40 @@ async def list_sessions(
         "offset": offset,
         "limit": limit,
     }
+
+
+@router.get("/api/sessions/transcripts")
+async def list_session_transcripts(
+    request: Request,
+    days: Optional[int] = None,
+    since: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Bulk full-transcript export over a date window — the mining path.
+
+    Returns the full ``transcript`` text for every non-incognito session
+    in the window in one call, avoiding the N+1 ``/text`` fetches a
+    consumer would otherwise make. Backs the hub dictionary miner
+    (voice-transcriber#60 / local-llm-hub#94). Empty transcripts are
+    omitted. Newest-first.
+    """
+    archive: SessionArchive = request.app.state.archive
+    window = _resolve_since(days, since)
+    if limit is not None and limit < 1:
+        limit = None
+    sessions = archive.list_sessions(limit=limit, since=window)
+    transcripts: List[Dict[str, Any]] = []
+    for s in sessions:
+        text = s.read_transcript()
+        if text and text.strip():
+            transcripts.append(
+                {
+                    "session_id": s.session_id,
+                    "created_at": s.meta.created_at,
+                    "transcript": text,
+                }
+            )
+    return {"transcripts": transcripts, "count": len(transcripts)}
 
 
 @router.delete("/api/sessions")
