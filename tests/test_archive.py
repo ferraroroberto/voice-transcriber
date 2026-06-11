@@ -165,6 +165,36 @@ class TestSessionListing:
         page = archive.list_sessions(limit=2, offset=1)
         assert len(page) == 2
 
+    def test_since_window_keeps_only_recent(self, archive):
+        old = self._make(archive, datetime.now() - timedelta(days=30))
+        new = self._make(archive, datetime.now() - timedelta(hours=1))
+        out = archive.list_sessions(since=datetime.now() - timedelta(days=7))
+        ids = [s.session_id for s in out]
+        assert new.session_id in ids
+        assert old.session_id not in ids
+
+    def test_since_window_boundary_is_inclusive(self, archive):
+        ts = datetime(2026, 5, 12, 10, 0, 0)
+        s = self._make(archive, ts)
+        # A session whose created_at == since is kept (>=).
+        out = archive.list_sessions(since=ts)
+        assert [x.session_id for x in out] == [s.session_id]
+
+    def test_since_window_still_excludes_incognito(self, archive):
+        self._make(archive, datetime.now() - timedelta(hours=1))
+        self._make(archive, datetime.now() - timedelta(hours=2), incognito=True)
+        out = archive.list_sessions(since=datetime.now() - timedelta(days=7))
+        assert len(out) == 1
+
+    def test_since_drops_unparseable_created_at(self, archive):
+        s = self._make(archive, datetime.now() - timedelta(hours=1))
+        # Corrupt created_at so it can't be parsed — windowed query drops it.
+        meta = json.loads((s.folder / META_FILENAME).read_text(encoding="utf-8"))
+        meta["created_at"] = "not-a-date"
+        (s.folder / META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
+        out = archive.list_sessions(since=datetime.now() - timedelta(days=7))
+        assert out == []
+
     def test_get_by_id(self, archive):
         s = self._make(archive, datetime(2026, 1, 1))
         found = archive.get(s.session_id)

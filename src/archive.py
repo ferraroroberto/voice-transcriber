@@ -37,6 +37,23 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_ARCHIVE_DIR = Path(__file__).resolve().parent.parent / "archive"
 META_FILENAME = "meta.json"
+
+
+def parse_created_at(value: str) -> Optional[datetime]:
+    """Parse a session ``created_at`` string to a naive *local* datetime.
+
+    ``created_at`` is written as ``datetime.now().isoformat(...)`` — naive
+    local time. A tz-aware value (e.g. a caller-supplied ``since``) is
+    converted to local time and stripped to naive so all comparisons
+    happen in one frame. Returns ``None`` if the value can't be parsed.
+    """
+    try:
+        dt = datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
+    if dt.tzinfo is not None:
+        dt = dt.astimezone().replace(tzinfo=None)
+    return dt
 RAW_AUDIO_FILENAME = "raw.webm"
 WAV_AUDIO_FILENAME = "audio.wav"
 TRANSCRIPT_FILENAME = "transcript.txt"
@@ -208,11 +225,19 @@ class SessionArchive:
         self,
         limit: Optional[int] = None,
         offset: int = 0,
+        since: Optional[datetime] = None,
     ) -> List[Session]:
-        """Newest-first listing, optionally paginated.
+        """Newest-first listing, optionally paginated and date-windowed.
 
         Incognito sessions are excluded — they exist on disk while the
         recording flow needs them but never surface in History.
+
+        ``since`` (naive local datetime) keeps only sessions created at or
+        after that instant — the date-window retrieval the hub dictionary
+        miner uses (voice-transcriber#60). A session whose ``created_at``
+        can't be parsed is dropped from a windowed query rather than
+        leaking ancient data; with no ``since`` it is kept as before. The
+        window is applied before ``offset``/``limit``.
         """
         sessions = sorted(
             (self._hydrate(f) for f in self._iter_session_folders()),
@@ -220,6 +245,13 @@ class SessionArchive:
             reverse=True,
         )
         sessions = [s for s in sessions if not s.meta.incognito]
+        if since is not None:
+            kept: List[Session] = []
+            for s in sessions:
+                created = parse_created_at(s.meta.created_at)
+                if created is not None and created >= since:
+                    kept.append(s)
+            sessions = kept
         if offset:
             sessions = sessions[offset:]
         if limit is not None:

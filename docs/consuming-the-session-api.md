@@ -256,6 +256,53 @@ after the fact. Same query params and response shape as `/finish`.
   (folder and all). `404` if unknown.
 - `DELETE /api/sessions` → `{removed: <count>}` — drop everything.
 
+#### Date-window retrieval (`days` / `since`)
+
+`GET /api/sessions` accepts an optional date window so a consumer can
+pull a last-N-days slice directly instead of paging the whole history
+and filtering client-side:
+
+- `days=N` → only sessions created within the last `N` days.
+- `since=<ISO 8601>` → only sessions created at or after that instant;
+  overrides `days` when both are given.
+
+The window is applied **before** `offset`/`limit`, and incognito
+sessions stay excluded. A non-positive `days` or an unparseable `since`
+returns `400`. Timestamps are compared in the server's local time
+frame (the same frame `created_at` is written in).
+
+```bash
+# the 7-day history window, newest first
+curl -sk "https://127.0.0.1:8443/api/sessions?days=7&limit=200" | jq '.total'
+```
+
+#### Bulk transcript export (`GET /api/sessions/transcripts`)
+
+For mining/analytics over a window without the N+1 `/text` fetches, the
+bulk endpoint returns every non-incognito session's **full transcript**
+in one call:
+
+```
+GET /api/sessions/transcripts?days=7        → {transcripts: [...], count}
+```
+
+Each entry is `{session_id, created_at, transcript}` (newest-first);
+empty/whitespace-only transcripts are omitted. Accepts the same
+`days`/`since` window as the list endpoint, plus an optional `limit`.
+
+```bash
+curl -sk "https://127.0.0.1:8443/api/sessions/transcripts?days=7" \
+  | jq '.count'
+```
+
+> **Blessed use-case: transcript mining.** The hub dictionary miner
+> ([`ferraroroberto/local-llm-hub#94`](https://github.com/ferraroroberto/local-llm-hub/issues/94))
+> consumes this window/bulk surface over loopback to infer recurring
+> domain vocabulary and mis-transcriptions, then suggests glossary
+> updates. The corpus stays here (provider-agnostic ownership); the hub
+> depends only on this documented contract + a configured base URL. Pin
+> the tested build via `GET /api/version` (`git_sha`).
+
 ### `GET /api/version` — build identity (pin point)
 
 ```json
@@ -416,6 +463,11 @@ with httpx.Client(base_url=BASE, verify=False, timeout=None) as c:
 Breaking changes to the `/api/sessions*` contract are recorded here.
 Pin a build via `GET /api/version` (`git_sha`) if you need certainty.
 
+- **2026-06-11** — `GET /api/sessions` gains optional `days`/`since`
+  date-window params; new `GET /api/sessions/transcripts` bulk
+  full-transcript export over the same window. Additive — existing
+  callers are unaffected. Blesses transcript mining as a supported
+  downstream use-case (issue #60, for hub miner #94).
 - **2026-06-11** — Initial publication of the session API as a supported
   consumable surface (issue #57). No behavioural change; the routes
   already worked over loopback.
