@@ -709,6 +709,21 @@ remains). The bearer token must be set for the password to do
 anything — the password is just a UX wrapper that hands the
 existing token back.
 
+### Consuming the session API from another app
+
+The webapp's session API (`POST /api/sessions` → `/chunk` → `/events`
+→ `/finish` → `/retranscribe`, plus single-shot `/upload`) is a
+**supported, consumable integration surface**. Other fleet apps can get
+robust, never-lose-it recording + transcription by calling this app over
+loopback instead of re-implementing the `MediaRecorder` → whisper
+plumbing — the voice-transcriber is the canonical local audio service
+the way `claude-local-calls` is the canonical LLM hub.
+
+Same-host callers bypass auth and only need `verify=False` for the
+loopback cert. See **[docs/consuming-the-session-api.md](docs/consuming-the-session-api.md)**
+for the full lifecycle, request/response shapes, auth, MIME handling,
+the on-disk safety guarantee, and runnable curl + Python examples.
+
 ### Persistent URL via Cloudflare tunnel
 
 A named Cloudflare tunnel binds a subdomain you own (e.g.
@@ -909,3 +924,6 @@ still covers the same logic via the parity port in
   that instance instead of spawning your own.
 - [ggerganov/whisper.cpp](https://github.com/ggerganov/whisper.cpp)
   — upstream inference engine and release artefacts.
+- [docs/consuming-the-session-api.md](docs/consuming-the-session-api.md)
+  — integration guide for downstream apps consuming the session API
+  (record → transcribe) over loopback.
