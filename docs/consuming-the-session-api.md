@@ -100,7 +100,7 @@ Every chunk is archived to disk the moment it lands, **before**
 Request body (JSON, all optional):
 
 ```json
-{ "language": "en", "incognito": false }
+{ "language": "en", "incognito": false, "source": "app-launcher" }
 ```
 
 - `language` — Whisper ISO code (`en`, `es`, …) or lowercase English
@@ -108,6 +108,13 @@ Request body (JSON, all optional):
 - `incognito` — when `true`, the session never appears in the History
   list. Pair with `DELETE` when you're done (see
   [Incognito](#incognito)).
+- `source` — a short label identifying who created the session, so the
+  take is **attributable** in History rather than indistinguishable from
+  a take dictated in the voice-transcriber UI. Pass your app's name
+  (e.g. `"app-launcher"`); it's trimmed and capped at 40 chars. When
+  omitted it defaults to `"api"` (a consumer that didn't self-identify);
+  the webapp's own UI records `"webapp"`. See
+  [History attribution](#history-attribution).
 
 Response:
 
@@ -116,7 +123,8 @@ Response:
   "session_id": "14-32-07-a1b2c3d4",
   "folder": "E:\\automation\\voice-transcriber\\archive\\2026\\06\\11\\14-32-07-a1b2c3d4",
   "created_at": "2026-06-11T14:32:07+00:00",
-  "incognito": false
+  "incognito": false,
+  "source": "app-launcher"
 }
 ```
 
@@ -251,7 +259,9 @@ after the fact. Same query params and response shape as `/finish`.
 - `GET /api/sessions/{id}/text` → `{session_id, transcript, polished}`
   — the full text (the list endpoint only returns 200-char previews).
 - `GET /api/sessions?limit=10&offset=0` → `{sessions: [...], total, offset, limit}`
-  — history list with per-session metadata + previews.
+  — history list with per-session metadata + previews. Each session
+  entry carries its `source` (see [History attribution](#history-attribution))
+  alongside `created_at`, `language`, and the transcript/polished previews.
 - `DELETE /api/sessions/{id}` → `{removed: "<id>"}` — drop one session
   (folder and all). `404` if unknown.
 - `DELETE /api/sessions` → `{removed: <count>}` — drop everything.
@@ -358,6 +368,33 @@ can decode works for the single-shot `/upload` path.
 
 ---
 
+## History attribution
+
+Every transcription this app produces lands in History — including ones
+triggered by **other apps** through this session API, not just takes
+dictated in the voice-transcriber UI. That makes History the **single
+source of truth for transcription across the fleet**: an externally
+triggered take is never lost just because it was dictated from another
+app's 🎤 button.
+
+To keep History a *usable* cross-fleet audit trail, each session records
+a **`source`** so an externally triggered take is **attributable**, not
+indistinguishable from a manual one:
+
+- The webapp's own UI records `"webapp"`.
+- A session-API caller passes its own label on create — e.g.
+  `{"source": "app-launcher"}`. Pass your app's name so your takes are
+  identifiable.
+- A create with no `source` defaults to `"api"`.
+
+`source` is surfaced in `GET /api/sessions` (per-session field) and in
+the webapp's History panel as a small badge — externally sourced takes
+render in the accent colour so they stand out from `"webapp"` takes.
+
+The guarantee is **attribution, not retention exemption**: an
+attributed take still obeys the 30-day retention window and the
+[Incognito](#incognito) opt-out below.
+
 ## Incognito
 
 A consumer that doesn't want its takes sitting in History for the
@@ -463,6 +500,12 @@ with httpx.Client(base_url=BASE, verify=False, timeout=None) as c:
 Breaking changes to the `/api/sessions*` contract are recorded here.
 Pin a build via `GET /api/version` (`git_sha`) if you need certainty.
 
+- **2026-06-12** — `POST /api/sessions` accepts an optional `source`
+  label (caller self-identification, e.g. `"app-launcher"`; defaults to
+  `"api"`), echoed in the create response and surfaced per-session in
+  `GET /api/sessions` and the History UI badge. Blesses History as the
+  attributable single-source-of-truth for cross-fleet transcription
+  (issue #59). Additive — existing callers are unaffected.
 - **2026-06-11** — `GET /api/sessions` gains optional `days`/`since`
   date-window params; new `GET /api/sessions/transcripts` bulk
   full-transcript export over the same window. Additive — existing

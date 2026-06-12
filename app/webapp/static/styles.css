@@ -498,6 +498,24 @@ textarea.text-out.editable::placeholder {
 }
 .history-list li .content { flex: 1; min-width: 0; }
 .history-list li .when { color: var(--muted); font-size: 12px; }
+.history-list li .source-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.5;
+  background: var(--bg-elev);
+  color: var(--muted);
+  border: 1px solid var(--bg-elev-2);
+  vertical-align: middle;
+}
+/* Externally-sourced takes (anything but the webapp itself) pop in the
+ * accent colour so the History list reads as a cross-fleet audit trail. */
+.history-list li .source-badge.external {
+  background: rgba(74, 138, 243, 0.16);
+  color: var(--polish);
+  border-color: rgba(74, 138, 243, 0.35);
+}
 .history-list li .preview { margin-top: 4px; font-size: 14px; color: var(--fg); }
 .history-list li .actions {
   display: flex;

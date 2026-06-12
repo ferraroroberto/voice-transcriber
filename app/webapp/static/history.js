@@ -65,6 +65,15 @@ function renderHistoryItem(s) {
   const when = document.createElement('div');
   when.className = 'when';
   when.textContent = s.created_at + (s.language ? ` · ${s.language}` : '');
+  // Attribution badge — who created the take. "webapp" gets a muted
+  // pill; an external consumer (e.g. "app-launcher") gets the accented
+  // variant so externally-sourced takes stand out in History.
+  if (s.source) {
+    const badge = document.createElement('span');
+    badge.className = 'source-badge' + (s.source === 'webapp' ? '' : ' external');
+    badge.textContent = s.source;
+    when.append(' ', badge);
+  }
   const preview = document.createElement('div');
   preview.className = 'preview';
   preview.textContent = s.polished_preview || s.transcript_preview || '(no transcript)';

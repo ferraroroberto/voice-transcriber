@@ -60,6 +60,14 @@ class TestNewSession:
         s = archive.new_session(incognito=True)
         assert s.meta.incognito is True
 
+    def test_source_defaults_to_none(self, archive: SessionArchive):
+        s = archive.new_session()
+        assert s.meta.source is None
+
+    def test_source_propagates(self, archive: SessionArchive):
+        s = archive.new_session(source="app-launcher")
+        assert s.meta.source == "app-launcher"
+
 
 # ---------------------------------------------------------------------------
 # Session writers — append, write_transcript, write_polished, mark_failed
@@ -256,6 +264,24 @@ class TestHydrate:
         again = archive.get(s.session_id)
         assert again is not None
         assert again.meta.session_id == s.session_id
+
+    def test_hydrate_round_trips_source(self, archive):
+        """A source recorded on create survives a write_meta → hydrate cycle."""
+        s = archive.new_session(source="app-launcher")
+        again = archive.get(s.session_id)
+        assert again is not None
+        assert again.meta.source == "app-launcher"
+
+    def test_hydrate_missing_source_is_none(self, archive):
+        """Legacy sessions (meta predating the source field) hydrate with
+        source=None rather than raising."""
+        s = archive.new_session()
+        meta = json.loads((s.folder / META_FILENAME).read_text(encoding="utf-8"))
+        meta.pop("source", None)  # simulate a pre-source archive
+        (s.folder / META_FILENAME).write_text(json.dumps(meta), encoding="utf-8")
+        again = archive.get(s.session_id)
+        assert again is not None
+        assert again.meta.source is None
 
     def test_hydrate_preserves_polish_model_string(self, archive):
         """Old archived sessions with the previous `agentic_light` model

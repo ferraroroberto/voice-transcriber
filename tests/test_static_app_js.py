@@ -92,6 +92,18 @@ class TestAppJsSourcePins:
         assert "/api/version" in app_js
         assert "buildInfo" in app_js
 
+    def test_record_flow_self_identifies_source(self, app_js: str):
+        """The webapp's record flow must tag its created sessions with
+        source 'webapp' so History can tell UI-dictated takes apart from
+        externally-sourced (session-API consumer) ones (issue #59)."""
+        assert "source: 'webapp'" in app_js
+
+    def test_history_renders_source_badge(self, app_js: str):
+        """The History list must render the per-session source attribution
+        badge (issue #59)."""
+        assert "source-badge" in app_js
+        assert "s.source" in app_js
+
     def test_no_hardcoded_alias_list_in_offline_fallback(self, app_js: str):
         """`applyConfigDefaults` should not hardcode the alias list — the
         offline fallback should be empty so the model list always comes

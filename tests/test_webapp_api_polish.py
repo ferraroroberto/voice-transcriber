@@ -37,6 +37,13 @@ class TestPolishText:
         assert body["session_id"]
         overrides["polish"].polish.assert_called_once()
 
+    def test_session_attributed_to_webapp(self, webapp_client):
+        client, app, overrides = webapp_client
+        overrides["polish"].polish.return_value = _make_polish_result()
+        body = client.post("/api/polish-text", json={"text": "x"}).json()
+        same = app.state.archive.get(body["session_id"])
+        assert same.meta.source == "webapp"
+
     def test_uses_default_model_when_omitted(self, webapp_client, sample_polish_payload):
         client, _, overrides = webapp_client
         overrides["polish"].polish.return_value = _make_polish_result()
@@ -76,13 +83,16 @@ class TestPolishText:
 
 class TestSaveText:
     def test_happy_path_creates_session_without_polish(self, webapp_client):
-        client, _, overrides = webapp_client
+        client, app, overrides = webapp_client
         resp = client.post("/api/save-text", json={"text": "save me"})
         assert resp.status_code == 200
         body = resp.json()
         assert body["transcript"] == "save me"
         assert body["session_id"]
         overrides["polish"].polish.assert_not_called()
+        # Saved-text takes are a webapp UI action, attributed as such.
+        same = app.state.archive.get(body["session_id"])
+        assert same.meta.source == "webapp"
 
     def test_rejects_empty_text(self, webapp_client):
         client, _, _ = webapp_client

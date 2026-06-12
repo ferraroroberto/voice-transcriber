@@ -25,6 +25,32 @@ class TestCreateSession:
         resp = client.post("/api/sessions", json={"incognito": True})
         assert resp.json()["incognito"] is True
 
+    def test_source_defaults_to_api_when_absent(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.post("/api/sessions", json={})
+        assert resp.json()["source"] == "api"
+
+    def test_source_caller_label_recorded(self, webapp_client):
+        client, app, _ = webapp_client
+        body = client.post(
+            "/api/sessions", json={"source": "app-launcher"}
+        ).json()
+        assert body["source"] == "app-launcher"
+        same = app.state.archive.get(body["session_id"])
+        assert same.meta.source == "app-launcher"
+
+    def test_blank_source_falls_back_to_api(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.post("/api/sessions", json={"source": "   "})
+        assert resp.json()["source"] == "api"
+
+    def test_source_is_trimmed_and_capped(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.post(
+            "/api/sessions", json={"source": "  " + "x" * 80 + "  "}
+        )
+        assert resp.json()["source"] == "x" * 40
+
 
 class TestListSessions:
     def test_returns_empty_when_no_sessions(self, webapp_client):
@@ -71,6 +97,13 @@ class TestListSessions:
         s.write_meta()
         body = client.get("/api/sessions").json()
         assert body["sessions"][0]["transcript_preview"] == "hello world"
+
+    def test_surfaces_source(self, webapp_client):
+        client, app, _ = webapp_client
+        s = app.state.archive.new_session(source="app-launcher")
+        s.write_meta()
+        body = client.get("/api/sessions").json()
+        assert body["sessions"][0]["source"] == "app-launcher"
 
 
 class TestListSessionsWindow:
