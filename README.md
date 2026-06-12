@@ -101,7 +101,7 @@ Other knobs:
   🌐 Translate toggle is on. Defaults to the local-llm-hub's `:8091`
   contract. See "Translation" below.
 
-Two optional companion files (both gitignored, sample-tracked):
+Three optional companion files (all gitignored, sample-tracked):
 
 - `config/vocabulary.json` — per-language buckets of proper nouns, brands,
   and jargon Whisper would otherwise mishear. Joined into the request's
@@ -111,8 +111,14 @@ Two optional companion files (both gitignored, sample-tracked):
   before it hits clipboard / caret paste (e.g. `"myemail"` →
   `"you@domain.com"`). Word-boundary, case-insensitive matching. See
   `config/snippets.sample.json`.
+- `config/speaker_blocklist.json` — names whisper recurrently hallucinates
+  as a leading `Name:` label glued to the front of real speech. Titled
+  labels (`Name, Ph.D.:`, `Dr. X:`, `Speaker N:`) are stripped
+  automatically with no config; this object-keyed file adds bare,
+  untitled names (e.g. `"Claudio Couto"`). See
+  `config/speaker_blocklist.sample.json`.
 
-Both files hot-reload on mtime change — no restart needed after editing.
+All three hot-reload on mtime change — no restart needed after editing.
 
 Hotkey uses [`pynput.keyboard.GlobalHotKeys`](https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys)
 syntax: angle-bracketed modifiers + a key, `+`-separated.
@@ -916,6 +922,7 @@ still covers the same logic via the parity port in
 | `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
 | `tests\test_vocabulary.py` | Per-language vocab prompts + hot-reload on mtime |
 | `tests\test_snippets.py` | Word-boundary keyword expansion + hot-reload |
+| `tests\test_speaker_label.py` | Strip fabricated leading speaker labels (titled + blocklist) |
 | `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
 | `tests\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` |
 | `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |

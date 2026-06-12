@@ -36,6 +36,7 @@ config/config.local.json
 config/webapp_config.json
 config/vocabulary.json
 config/snippets.json
+config/speaker_blocklist.json
 
 # --- Webapp runtime data --------------------------------------------------
 archive/

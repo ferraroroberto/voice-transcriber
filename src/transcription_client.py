@@ -30,6 +30,7 @@ import requests
 
 from .app_config import resolve_iso
 from .snippets import apply_snippets
+from .speaker_label import strip_speaker_label
 from .vocabulary import prompt_for_language
 
 logger = logging.getLogger(__name__)
@@ -108,7 +109,7 @@ class TranscriptionClient:
                 f"server returned {response.status_code}: {response.text[:500]}"
             )
 
-        return apply_snippets(_extract_text(response))
+        return apply_snippets(strip_speaker_label(_extract_text(response)))
 
     def transcribe_array(
         self,
