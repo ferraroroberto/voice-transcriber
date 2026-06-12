@@ -621,6 +621,15 @@ The summary line reads `📜 History (10/N)` while more pages exist
 and collapses to `(N)` once everything is loaded — keeps the page
 light even after weeks of daily use.
 
+Each row carries a small **source badge** next to its timestamp so
+you can tell where a take came from: `webapp` for ones dictated in
+this UI, or a consumer's own label (e.g. `app-launcher`, shown in the
+accent colour) for transcriptions triggered by another app through the
+[session API](docs/consuming-the-session-api.md). History is the
+single attributable source of truth for transcription across the
+fleet — externally triggered takes are captured *and* identifiable,
+not just recoverable on disk.
+
 Three buttons live above the list, all in a single right-aligned row:
 
 | Button | What it does |

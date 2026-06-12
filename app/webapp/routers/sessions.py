@@ -39,6 +39,28 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+# A caller-supplied source label is free text, written to meta.json and
+# surfaced as a History badge. Keep it short and trimmed so a stray blob
+# can't bloat the row; an absent/blank value falls back to the generic
+# "api" tag (a consumer that didn't self-identify).
+_MAX_SOURCE_LEN = 40
+_DEFAULT_API_SOURCE = "api"
+
+
+def _clean_source(value: Any) -> Optional[str]:
+    """Normalise a caller-supplied ``source`` to a short trimmed string.
+
+    Returns ``None`` when the value is missing, not a string, or blank —
+    the caller decides the default in that case.
+    """
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    return trimmed[:_MAX_SOURCE_LEN]
+
+
 @router.post("/api/sessions")
 async def create_session(request: Request) -> Dict[str, Any]:
     body = await maybe_json(request)
@@ -46,16 +68,22 @@ async def create_session(request: Request) -> Dict[str, Any]:
     app_cfg = request.app.state.app_config
     language = body.get("language") or app_cfg.language
     incognito = bool(body.get("incognito", False))
+    # The webapp's own record flow self-identifies as "webapp"; an
+    # external consumer can pass its own label (e.g. "app-launcher").
+    # A create with no source is an API caller that didn't self-identify.
+    source = _clean_source(body.get("source")) or _DEFAULT_API_SOURCE
     session = archive.new_session(
         language=language,
         sample_rate=app_cfg.sample_rate,
         incognito=incognito,
+        source=source,
     )
     return {
         "session_id": session.session_id,
         "folder": str(session.folder),
         "created_at": session.meta.created_at,
         "incognito": incognito,
+        "source": source,
     }
 
 
@@ -316,7 +344,7 @@ async def polish_text(request: Request) -> Dict[str, Any]:
         language = None
 
     archive: SessionArchive = request.app.state.archive
-    session = archive.new_session(language=language)
+    session = archive.new_session(language=language, source="webapp")
     session.write_transcript(text)
     session.write_meta()
 
@@ -366,7 +394,7 @@ async def save_text(request: Request) -> Dict[str, Any]:
         language = None
 
     archive: SessionArchive = request.app.state.archive
-    session = archive.new_session(language=language)
+    session = archive.new_session(language=language, source="webapp")
     session.write_transcript(text)
     session.write_meta()
     return {
@@ -437,6 +465,7 @@ async def list_sessions(
                 "session_id": s.session_id,
                 "created_at": s.meta.created_at,
                 "language": s.meta.language,
+                "source": s.meta.source,
                 "transcript_chars": s.meta.transcript_chars,
                 "polish_model": s.meta.polish_model,
                 "polish_prompt_id": s.meta.polish_prompt_id,

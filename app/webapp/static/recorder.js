@@ -115,6 +115,7 @@ async function startRecording() {
     body: JSON.stringify({
       language: els.languageSelect.value,
       incognito,
+      source: 'webapp',
     }),
   });
   if (!sessionRes.ok) {

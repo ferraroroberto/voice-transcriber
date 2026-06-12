@@ -79,6 +79,7 @@ class SessionMeta:
     polish_succeeded: Optional[bool] = None
     error: Optional[str] = None
     incognito: bool = False  # filtered out of list_sessions when True
+    source: Optional[str] = None  # who created it: "webapp", "api", caller label
     extra: dict = field(default_factory=dict)
 
 
@@ -191,6 +192,7 @@ class SessionArchive:
         sample_rate: Optional[int] = None,
         now: Optional[datetime] = None,
         incognito: bool = False,
+        source: Optional[str] = None,
     ) -> Session:
         ts = now or datetime.now()
         session_id = ts.strftime("%H-%M-%S-") + uuid.uuid4().hex[:8]
@@ -209,6 +211,7 @@ class SessionArchive:
             language=language,
             sample_rate=sample_rate,
             incognito=incognito,
+            source=source,
         )
         session = Session(session_id=session_id, folder=folder, meta=meta)
         session.write_meta()
@@ -375,6 +378,7 @@ class SessionArchive:
                     polish_succeeded=raw.get("polish_succeeded"),
                     error=raw.get("error"),
                     incognito=bool(raw.get("incognito", False)),
+                    source=raw.get("source"),
                     extra=dict(raw.get("extra") or {}),
                 )
             except (OSError, json.JSONDecodeError, TypeError) as exc:
