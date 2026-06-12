@@ -1,0 +1,4 @@
+{
+  "_comment": "Copy this to speaker_blocklist.json (gitignored). Object keyed by names whisper recurrently hallucinates as a leading 'Name:' label WITHOUT a title (titled labels like 'Name, Ph.D.:' / 'Dr. X:' / 'Speaker N:' are stripped automatically and need no entry here). Values are free-text notes. Matched case-insensitively only at the very start of a transcript.",
+  "Claudio Couto": "seen 2026-06-12 prepended to real dictation"
+}
