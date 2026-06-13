@@ -123,7 +123,7 @@ All three hot-reload on mtime change — no restart needed after editing.
 Hotkey uses [`pynput.keyboard.GlobalHotKeys`](https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys)
 syntax: angle-bracketed modifiers + a key, `+`-separated.
 
-### `whisper_server/whisper_server.yaml` — server-level
+### `src/whisper_server/whisper_server.yaml` — server-level
 
 The key knob is **`mode`**:
 
@@ -132,7 +132,7 @@ The key knob is **`mode`**:
 | `local`    | **This project owns the server.** If `host:port` is already in use by something else, refuse to start and surface a clear error. Otherwise spawn the bundled `whisper-server`. Stop it on exit. |
 | `external` | **Reuse an already-running server if present** (e.g. one started by the sibling [`claude-local-calls`](https://github.com/ferraroroberto/claude-local-calls) hub). If nothing is listening, spawn our own binary. Never stops a server it didn't start. |
 
-Switch by editing the top of `whisper_server/whisper_server.yaml`:
+Switch by editing the top of `src/whisper_server/whisper_server.yaml`:
 
 ```yaml
 mode: external   # or: local
