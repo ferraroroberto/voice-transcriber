@@ -19,13 +19,19 @@ start of the transcript and never when stripping would empty the text:
 2. **Configurable blocklist** — names keyed in
    ``config/speaker_blocklist.json`` (gitignored) are stripped even
    without a title, for recurring bare hallucinations like
-   ``Claudio Couto:``. The file is an object keyed by name (values are
-   free-text notes; ``_``-prefixed keys are ignored), opt-in, and
-   hot-reloads on mtime change, mirroring ``src/snippets.py`` /
-   ``src/vocabulary.py``.
+   ``Claudio Couto:``. whisper glues the phantom name to the real words
+   with whatever separator it invents, so the blocklist matches the name
+   followed by a run of separator punctuation — colon **or** comma, dash,
+   or bare period (``Claudius, ``, ``Claudio Pagliauvao- ``,
+   ``Claudius C. ``) — not colon alone. The file is an object keyed by
+   name (values are free-text notes; ``_``-prefixed keys are ignored),
+   opt-in, and hot-reloads on mtime change, mirroring ``src/snippets.py``
+   / ``src/vocabulary.py``.
 
-A bare ``Roberto:`` or a real sentence that merely contains a colon
-(``Today: I woke up``) is left untouched.
+A bare ``Roberto:`` or a real sentence that merely opens with a comma'd
+word (``Today: I woke up``, ``Ok, let me think``) is left untouched —
+only names on the opt-in blocklist are ever stripped, and never when
+doing so would empty the take.
 """
 
 from __future__ import annotations
@@ -66,7 +72,7 @@ _TITLED_LABEL = re.compile(
 
 
 def _load_blocklist_pattern() -> Optional["re.Pattern[str]"]:
-    """Compile a ``^name:`` matcher from the gitignored blocklist file.
+    """Compile a ``^name<sep>`` matcher from the gitignored blocklist file.
 
     Returns ``None`` when the file is missing, empty, or invalid — the
     feature is opt-in and must never block transcription.
@@ -98,10 +104,16 @@ def _load_blocklist_pattern() -> Optional["re.Pattern[str]"]:
         ]
         if not names:
             return None
-        # Longest-first so "Claudio Couto" wins over a stray "Claudio".
+        # Longest-first so "Claudius S" wins over a bare "Claudius" (and
+        # "Claudio Couto" over a stray "Claudio") — the alternation is tried
+        # left-to-right, so the more specific name must come first.
         names.sort(key=len, reverse=True)
+        # Name + a run of separator punctuation (colon, comma, dash, period)
+        # + whitespace. whisper varies the separator it hallucinates, so the
+        # match can't be colon-only; requiring trailing whitespace keeps a
+        # real word glued to punctuation (e.g. an abbreviation) from matching.
         pattern = re.compile(
-            r"^\s*(?:" + "|".join(re.escape(n) for n in names) + r")\s*:\s+",
+            r"^\s*(?:" + "|".join(re.escape(n) for n in names) + r")\s*[.,:;\-–—]+\s+",
             re.IGNORECASE,
         )
         _CACHE = (mtime, pattern)

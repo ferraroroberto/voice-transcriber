@@ -109,3 +109,88 @@ class TestBlocklist:
     def test_non_dict_root_ignored(self, isolate_blocklist):
         _write(isolate_blocklist, ["Claudio Couto"])
         assert sl.strip_speaker_label("Claudio Couto: hi") == "Claudio Couto: hi"
+
+
+class TestSeparatorVariants:
+    """whisper glues the phantom name on with whatever separator it invents —
+    not just a colon. These are the real recorded leading hallucinations from
+    60 days of dictation (issue #67); each must strip to the underlying text."""
+
+    # The exact names shipped in config/speaker_blocklist.json.
+    _BLOCKLIST = {
+        "Claudio Pagliauvao": "dash",
+        "Claudio Coulson": "comma",
+        "Claude Coulson": "comma",
+        "Claudio Couto": "comma/titled",
+        "Claudius C": "period",
+        "Claudius S": "colon",
+        "Claudius": "comma",
+    }
+
+    @pytest.fixture(autouse=True)
+    def _seed(self, isolate_blocklist):
+        _write(isolate_blocklist, self._BLOCKLIST)
+        yield
+
+    def test_period_separator(self):
+        assert (
+            sl.strip_speaker_label("Claudius C. Okay. Now, I want you to elaborate")
+            == "Okay. Now, I want you to elaborate"
+        )
+
+    def test_colon_after_initial(self):
+        assert (
+            sl.strip_speaker_label("Claudius S.: No, I think this is not correct")
+            == "No, I think this is not correct"
+        )
+
+    def test_dash_separator(self):
+        assert (
+            sl.strip_speaker_label("Claudio Pagliauvao- I just tried the insights feature")
+            == "I just tried the insights feature"
+        )
+
+    def test_comma_separator_full_name(self):
+        assert (
+            sl.strip_speaker_label("Claudio Coulson, Oh yes, you are absolutely right")
+            == "Oh yes, you are absolutely right"
+        )
+        assert (
+            sl.strip_speaker_label("Claude Coulson, Yes, Generative Orchestration is on")
+            == "Yes, Generative Orchestration is on"
+        )
+
+    def test_comma_separator_bare_name(self):
+        assert (
+            sl.strip_speaker_label("Claudius, No, I don't like it yet")
+            == "No, I don't like it yet"
+        )
+
+    def test_longer_name_wins_over_bare(self):
+        # "Claudius C" / "Claudius S" must beat bare "Claudius": a partial
+        # strip would wrongly leave "C. ..." / "S.: ..." behind.
+        assert sl.strip_speaker_label("Claudius C. Okay") == "Okay"
+        assert sl.strip_speaker_label("Claudius S.: Okay") == "Okay"
+
+    def test_titled_form_still_auto_stripped(self):
+        # "Claudio Couto, Ph.D.:" is handled by the titled rule before the
+        # blocklist ever runs — no double-strip, clean result.
+        assert (
+            sl.strip_speaker_label("Claudio Couto, Ph.D.: Okay, let me understand")
+            == "Okay, let me understand"
+        )
+
+    def test_genuine_comma_opener_untouched(self):
+        # Real dictation that opens with a non-blocklisted word + comma must
+        # survive — these all occur verbatim in the corpus.
+        for text in (
+            "Ok, let me think about this",
+            "Hello, this is a test",
+            "Exactly, that is the point",
+            "Yes, I like it very much",
+        ):
+            assert sl.strip_speaker_label(text) == text
+
+    def test_label_only_take_not_emptied(self):
+        # Separator present but nothing real after it → leave untouched.
+        assert sl.strip_speaker_label("Claudius, ") == "Claudius, "
