@@ -63,6 +63,13 @@ _IPHONE_DEVICE = "iPhone 15 Pro Max"
 
 _AUTOBOOT_ENV = "VT_E2E_AUTOBOOT"
 
+# Bounded default Playwright timeout (issue #69).  A stuck auto-waiting
+# action (click / goto / wait_for_selector with no explicit timeout=) now
+# raises TimeoutError naming the locator at ~15 s instead of inheriting
+# Playwright's opaque 30 s default and stacking into a black-box CI hang.
+# Override at CI level: E2E_DEFAULT_TIMEOUT_MS=20000 for slower runners.
+_DEFAULT_TIMEOUT_MS = int(os.environ.get("E2E_DEFAULT_TIMEOUT_MS", "15000"))
+
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     parser.addoption(
@@ -203,6 +210,19 @@ def _autoboot_server() -> Iterator[str]:
             log.close()
         except Exception:  # pragma: no cover
             pass
+
+
+@pytest.fixture(autouse=True)
+def _bound_default_timeouts(context: BrowserContext) -> None:
+    """Cap the default action + navigation timeout (issue #69).
+
+    Sets the bounded default on the context so pages created via
+    context.new_page() (e.g. authed_page) inherit the cap automatically.
+    Explicit per-call timeout= overrides still take precedence; expect()
+    web-first assertions keep their own 5 s default.
+    """
+    context.set_default_timeout(_DEFAULT_TIMEOUT_MS)
+    context.set_default_navigation_timeout(_DEFAULT_TIMEOUT_MS)
 
 
 @pytest.fixture(autouse=True)
