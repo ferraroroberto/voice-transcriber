@@ -95,12 +95,7 @@ this section records *why* the split exists, not the current file list.
 vendored binaries (next to whisper-server).
 
 ### Polish model
-Default `gemma4-e4b-it` (smallest, fastest classifier-tier model in
-local-llm-hub). UI exposes a dropdown with `gemma4-26b-a4b-it` and
-`claude-haiku-4-5` as larger options. "Set as default" persists the
-choice to `config/webapp_config.json`. The polish prompt removes filler
-words, false starts, and word repetitions only — no summarizing,
-rephrasing, reordering, or adding/removing ideas.
+The available alias set and default are defined in `config/webapp_config.sample.json` — that file is the single source of truth, so this section cannot drift. "Set as default" persists the choice to `config/webapp_config.json`. The polish prompt removes filler words, false starts, and word repetitions only — no summarizing, rephrasing, reordering, or adding/removing ideas.
 
 ### Polish trigger
 Manual button, not auto-on-transcribe.
