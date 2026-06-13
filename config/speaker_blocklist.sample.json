@@ -1,4 +1,4 @@
 {
-  "_comment": "Copy this to speaker_blocklist.json (gitignored). Object keyed by names whisper recurrently hallucinates as a leading 'Name:' label WITHOUT a title (titled labels like 'Name, Ph.D.:' / 'Dr. X:' / 'Speaker N:' are stripped automatically and need no entry here). Values are free-text notes. Matched case-insensitively only at the very start of a transcript.",
+  "_comment": "Copy this to speaker_blocklist.json (gitignored). Object keyed by names whisper recurrently hallucinates as a leading speaker label WITHOUT a title (titled labels like 'Name, Ph.D.:' / 'Dr. X:' / 'Speaker N:' strip automatically and need no entry here). The name is stripped when it opens the transcript followed by a separator run — colon, comma, dash, or period — plus whitespace (e.g. 'Claudius, ', 'Claudio Pagliauvao- ', 'Claudius C. '). Values are free-text notes; '_'-prefixed keys are ignored. Matched case-insensitively, only at the very start, never when it would empty the take.",
   "Claudio Couto": "seen 2026-06-12 prepended to real dictation"
 }

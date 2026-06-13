@@ -112,10 +112,12 @@ Three optional companion files (all gitignored, sample-tracked):
   `"you@domain.com"`). Word-boundary, case-insensitive matching. See
   `config/snippets.sample.json`.
 - `config/speaker_blocklist.json` — names whisper recurrently hallucinates
-  as a leading `Name:` label glued to the front of real speech. Titled
+  as a leading speaker label glued to the front of real speech. Titled
   labels (`Name, Ph.D.:`, `Dr. X:`, `Speaker N:`) are stripped
   automatically with no config; this object-keyed file adds bare,
-  untitled names (e.g. `"Claudio Couto"`). See
+  untitled names (e.g. `"Claudio Couto"`), stripped whatever separator
+  whisper invents — colon, comma, dash, or period (`Claudius, `,
+  `Claudio Pagliauvao- `, `Claudius C. `). See
   `config/speaker_blocklist.sample.json`.
 
 All three hot-reload on mtime change — no restart needed after editing.
