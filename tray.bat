@@ -80,7 +80,7 @@ if defined WANT_RESTART (
     REM with claude-local-calls (whisper-server, translate-server). Reclaiming
     REM them would kill a running sibling hub.
     set "RECLAIM_VENV=%SCRIPT_DIR%.venv"
-    %PS% -NoProfile -NonInteractive -File "%TRAY_PS%" reclaim -VenvDir "%RECLAIM_VENV%" -Ports "8443"
+    %PS% -NoProfile -NonInteractive -File "%TRAY_PS%" reclaim -VenvDir "!RECLAIM_VENV!" -Ports "8443"
     REM Give Windows a moment to release :8443 before rebinding.
     ping 127.0.0.1 -n 3 >nul
 )
