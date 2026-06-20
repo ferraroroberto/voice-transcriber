@@ -268,6 +268,40 @@ async def retranscribe(
     return await _transcribe_session_payload(request, session, language, translate=translate)
 
 
+def _polish_and_persist(
+    session: Any,
+    text: str,
+    model: str,
+    prompt: PolishPrompt,
+    polish_client: PolishClient,
+) -> Dict[str, Any]:
+    try:
+        result = polish_client.polish(text, model=model, system=prompt.system)
+    except PolishError as exc:
+        session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
+        session.write_meta()
+        # 424 (Failed Dependency) instead of 502 so the Cloudflare
+        # tunnel passes the JSON body through to the browser. Cloudflare
+        # rewrites any 5xx from origin into its own HTML error page,
+        # which clobbers the rich "upstream <addr> unreachable: ..."
+        # message the hub returns.
+        raise HTTPException(status_code=424, detail=str(exc))
+    session.write_polished(
+        result.polished_text,
+        model=result.model,
+        request_payload=result.request_payload,
+        response_payload=result.response_payload,
+        prompt_id=prompt.id,
+    )
+    session.write_meta()
+    return {
+        "session_id": session.session_id,
+        "polished": result.polished_text,
+        "model": result.model,
+        "prompt_id": prompt.id,
+    }
+
+
 @router.post("/api/sessions/{session_id}/polish")
 async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
     body = await maybe_json(request)
@@ -295,34 +329,7 @@ async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
         )
 
     polish_client: PolishClient = request.app.state.polish_client
-    try:
-        result = polish_client.polish(
-            transcript, model=model, system=prompt.system,
-        )
-    except PolishError as exc:
-        session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
-        session.write_meta()
-        # 424 (Failed Dependency) instead of 502 so the Cloudflare
-        # tunnel passes the JSON body through to the browser. Cloudflare
-        # rewrites any 5xx from origin into its own HTML error page,
-        # which clobbers the rich "upstream <addr> unreachable: ..."
-        # message the hub returns.
-        raise HTTPException(status_code=424, detail=str(exc))
-
-    session.write_polished(
-        result.polished_text,
-        model=result.model,
-        request_payload=result.request_payload,
-        response_payload=result.response_payload,
-        prompt_id=prompt.id,
-    )
-    session.write_meta()
-    return {
-        "session_id": session.session_id,
-        "polished": result.polished_text,
-        "model": result.model,
-        "prompt_id": prompt.id,
-    }
+    return _polish_and_persist(session, transcript, model, prompt, polish_client)
 
 
 @router.post("/api/polish-text")
@@ -349,32 +356,7 @@ async def polish_text(request: Request) -> Dict[str, Any]:
     session.write_meta()
 
     polish_client: PolishClient = request.app.state.polish_client
-    try:
-        result = polish_client.polish(text, model=model, system=prompt.system)
-    except PolishError as exc:
-        session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
-        session.write_meta()
-        # 424 (Failed Dependency) instead of 502 so the Cloudflare
-        # tunnel passes the JSON body through to the browser. Cloudflare
-        # rewrites any 5xx from origin into its own HTML error page,
-        # which clobbers the rich "upstream <addr> unreachable: ..."
-        # message the hub returns.
-        raise HTTPException(status_code=424, detail=str(exc))
-
-    session.write_polished(
-        result.polished_text,
-        model=result.model,
-        request_payload=result.request_payload,
-        response_payload=result.response_payload,
-        prompt_id=prompt.id,
-    )
-    session.write_meta()
-    return {
-        "session_id": session.session_id,
-        "polished": result.polished_text,
-        "model": result.model,
-        "prompt_id": prompt.id,
-    }
+    return _polish_and_persist(session, text, model, prompt, polish_client)
 
 
 @router.post("/api/save-text")
