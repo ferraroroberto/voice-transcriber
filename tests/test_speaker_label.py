@@ -96,19 +96,22 @@ class TestBlocklist:
         assert sl.strip_speaker_label("Someone Else: keep me") == "Someone Else: keep me"
 
     def test_missing_file_only_titled_rule_applies(self):
-        # No blocklist file → titled rule still works, bare name kept.
+        # No blocklist file → titled rule still works, an ordinary bare name
+        # outside the built-in family is kept. (A family name like "Claudio
+        # Couto" now strips via the committed heuristic — see
+        # TestAssistantFamily — so a neutral name proves the blocklist path.)
         assert sl.strip_speaker_label("Speaker 3: hi") == "hi"
-        assert sl.strip_speaker_label("Claudio Couto: hi") == "Claudio Couto: hi"
+        assert sl.strip_speaker_label("Roberto Ferraro: hi") == "Roberto Ferraro: hi"
 
     def test_invalid_blocklist_fails_open(self, isolate_blocklist):
         isolate_blocklist.write_text("not json", encoding="utf-8")
-        # Titled rule still applies; bare name kept (blocklist ignored).
+        # Titled rule still applies; ordinary bare name kept (blocklist ignored).
         assert sl.strip_speaker_label("Dr. X: ok") == "ok"
-        assert sl.strip_speaker_label("Claudio Couto: hi") == "Claudio Couto: hi"
+        assert sl.strip_speaker_label("Roberto Ferraro: hi") == "Roberto Ferraro: hi"
 
     def test_non_dict_root_ignored(self, isolate_blocklist):
-        _write(isolate_blocklist, ["Claudio Couto"])
-        assert sl.strip_speaker_label("Claudio Couto: hi") == "Claudio Couto: hi"
+        _write(isolate_blocklist, ["Roberto Ferraro"])
+        assert sl.strip_speaker_label("Roberto Ferraro: hi") == "Roberto Ferraro: hi"
 
 
 class TestSeparatorVariants:
@@ -194,3 +197,88 @@ class TestSeparatorVariants:
     def test_label_only_take_not_emptied(self):
         # Separator present but nothing real after it → leave untouched.
         assert sl.strip_speaker_label("Claudius, ") == "Claudius, "
+
+
+class TestAssistantFamily:
+    """Built-in committed heuristic for the misheard-assistant-name family
+    (issue #79). These must strip with **no blocklist present** — the autouse
+    fixture points the loader at an absent temp file — proving the fix is
+    committed in code, not per-machine. The lineage: #63 (titled) → #67
+    (multi-separator blocklist) → #79 (durable built-in family)."""
+
+    def test_cloud_code_whitespace_only(self):
+        # The reported regression: "Cloud Code" glued by whitespace alone.
+        assert (
+            sl.strip_speaker_label("Cloud Code let me explain the architecture")
+            == "let me explain the architecture"
+        )
+
+    def test_cloud_code_with_separator(self):
+        assert (
+            sl.strip_speaker_label("Cloud Code, here is what I think")
+            == "here is what I think"
+        )
+        assert sl.strip_speaker_label("Cloud Code: okay then") == "okay then"
+
+    def test_bare_cloud_with_separator(self):
+        assert sl.strip_speaker_label("Cloud, computing the result") == "computing the result"
+
+    def test_claudio_family_without_blocklist(self):
+        # Previously needed a blocklist entry; now built-in.
+        assert sl.strip_speaker_label("Claudio Couto: hello world") == "hello world"
+        assert (
+            sl.strip_speaker_label("Claudio Pagliauvao- I just tried the insights feature")
+            == "I just tried the insights feature"
+        )
+
+    def test_claudius_family_without_blocklist(self):
+        assert (
+            sl.strip_speaker_label("Claudius, No, I don't like it yet")
+            == "No, I don't like it yet"
+        )
+        # Initial + period: the period reads as the separator, so the real
+        # Title-Case first word ("Okay") survives — no over-strip.
+        assert (
+            sl.strip_speaker_label("Claudius C. Okay. Now, I want you to elaborate")
+            == "Okay. Now, I want you to elaborate"
+        )
+        assert (
+            sl.strip_speaker_label("Claudius S.: No, I think this is not correct")
+            == "No, I think this is not correct"
+        )
+
+    def test_claude_wrong_surname_stripped(self):
+        # "Claude" + a misheard surname (not "Code") is a phantom → stripped.
+        assert (
+            sl.strip_speaker_label("Claude Coulson, Yes, that is right")
+            == "Yes, that is right"
+        )
+
+    def test_real_tool_name_preserved(self):
+        # Correctly-spelled "Claude Code" / "Claude" is the genuine tool name —
+        # an intentional opener must survive untouched.
+        for text in (
+            "Claude Code is the best tool for this",
+            "Claude Code, here is my plan",
+            "Claude, can you help me with this",
+        ):
+            assert sl.strip_speaker_label(text) == text
+
+    def test_sentence_case_cloud_opener_untouched(self):
+        # Real dictation opening with a Cl[ao]ud-word has a lowercase second
+        # word (no separator, not multi-Title-Case) → never matched.
+        for text in (
+            "Cloud computing is great these days",
+            "Clouds gathered over the hills",
+        ):
+            assert sl.strip_speaker_label(text) == text
+
+    def test_family_does_not_empty_take(self):
+        # Nothing real after the phantom → leave untouched.
+        assert sl.strip_speaker_label("Cloud Code, ") == "Cloud Code, "
+        assert sl.strip_speaker_label("Claudio Couto:") == "Claudio Couto:"
+
+    def test_lowercase_root_left_to_blocklist(self):
+        # whisper Title-Cases the phantom; a lowercase "claudio" is not a
+        # built-in match (the blocklist path, case-insensitive, covers it).
+        assert sl.strip_speaker_label("claudio couto: hi") == "claudio couto: hi"
