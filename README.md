@@ -233,7 +233,14 @@ voice-transcriber/
 │       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
 │       └── static/
 │           ├── index.html         # single-page UI, big-button mobile-first
-│           ├── app.js             # MediaRecorder + chunked upload + clipboard
+│           ├── app.js             # module wiring / boot sequence
+│           ├── recorder.js        # MediaRecorder + chunked upload logic
+│           ├── api.js             # fetch wrappers for server endpoints
+│           ├── state.js           # shared runtime state
+│           ├── ui.js              # DOM helpers and rendering
+│           ├── config.js          # client-side config constants
+│           ├── history.js         # session history display
+│           ├── polish.js          # polish-text UI flow
 │           └── styles.css         # touch targets ≥ 56 px
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
@@ -242,7 +249,6 @@ voice-transcriber/
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
 │   ├── webapp-architecture.md     # webapp design & architecture record
-│   ├── manual-test-plan.md        # end-to-end manual validation steps
 │   ├── iphone-debugging.md        # iOS PWA / cert troubleshooting
 │   └── market-scan/               # market research notes
 ├── scripts/
@@ -930,7 +936,7 @@ still covers the same logic via the parity port in
 | `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
 | `tests\test_webapp_api_polish.py` | `/api/polish-text`, `/api/save-text`, `_resolve_model`, `_preview` |
 | `tests\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
-| `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins on `app.js` |
+| `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins across the static/ JS module graph |
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
 | `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, settings panel toggles, login overlay DOM wired (marked `smoke`; requires live tray on :8443) |
 
