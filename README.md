@@ -112,12 +112,17 @@ Three optional companion files (all gitignored, sample-tracked):
   `"you@domain.com"`). Word-boundary, case-insensitive matching. See
   `config/snippets.sample.json`.
 - `config/speaker_blocklist.json` — names whisper recurrently hallucinates
-  as a leading speaker label glued to the front of real speech. Titled
-  labels (`Name, Ph.D.:`, `Dr. X:`, `Speaker N:`) are stripped
-  automatically with no config; this object-keyed file adds bare,
-  untitled names (e.g. `"Claudio Couto"`), stripped whatever separator
-  whisper invents — colon, comma, dash, or period (`Claudius, `,
-  `Claudio Pagliauvao- `, `Claudius C. `). See
+  as a leading speaker label glued to the front of real speech. Two layers
+  strip these automatically with **no config**: titled labels (`Name, Ph.D.:`,
+  `Dr. X:`, `Speaker N:`), and the **misheard-assistant-name family** —
+  whisper, primed by local-llm-hub's `Claude Code` boost term, re-emits a
+  mangled variant (`Cloud Code`, `Claudio Couto`, `Claudius C.`,
+  `Claude Coulson`, …) at the head of a quiet-lead-in take; the committed
+  `Cl[ao]ud…` heuristic in `src/speaker_label.py` removes it whether glued by
+  a separator or by whitespace alone, while leaving the correctly-spelled tool
+  name (`Claude` / `Claude Code`) intact. This object-keyed file is for any
+  *other* recurring bare hallucination outside that family, stripped whatever
+  separator whisper invents — colon, comma, dash, or period. See
   `config/speaker_blocklist.sample.json`.
 
 All three hot-reload on mtime change — no restart needed after editing.
@@ -930,7 +935,7 @@ still covers the same logic via the parity port in
 | `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
 | `tests\test_vocabulary.py` | Per-language vocab prompts + hot-reload on mtime |
 | `tests\test_snippets.py` | Word-boundary keyword expansion + hot-reload |
-| `tests\test_speaker_label.py` | Strip fabricated leading speaker labels (titled + blocklist) |
+| `tests\test_speaker_label.py` | Strip fabricated leading speaker labels (titled + assistant-name family + blocklist) |
 | `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
 | `tests\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` |
 | `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
