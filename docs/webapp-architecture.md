@@ -45,7 +45,7 @@ Two contexts, both supported via separate launchers:
 | Context | Tunnel | Reason |
 |---|---|---|
 | Home (PC + iPhone on tailnet) | Tailscale | Zero-latency, no public exposure. Same pattern as `grocery-shopping-automation`. |
-| Work (no Tailscale) | Cloudflare quick tunnel | Public HTTPS URL, no firewall changes. Same pattern as `facilitation-shuffle/launch_server.bat`. |
+| Work (no Tailscale) | Cloudflare named tunnel | Public HTTPS URL, no firewall changes. Same pattern as `facilitation-shuffle/launch_server.bat`. |
 
 **HTTPS is mandatory** because iOS Safari refuses `getUserMedia` over
 plain HTTP on LAN. Same self-signed-CA pattern that
