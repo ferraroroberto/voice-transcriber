@@ -122,7 +122,7 @@ Response:
 {
   "session_id": "14-32-07-a1b2c3d4",
   "folder": "E:\\automation\\voice-transcriber\\archive\\2026\\06\\11\\14-32-07-a1b2c3d4",
-  "created_at": "2026-06-11T14:32:07+00:00",
+  "created_at": "2026-06-11T14:32:07",
   "incognito": false,
   "source": "app-launcher"
 }

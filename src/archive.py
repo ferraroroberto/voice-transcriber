@@ -67,7 +67,7 @@ class SessionMeta:
     """Metadata recorded alongside each session."""
 
     session_id: str
-    created_at: str  # ISO 8601 in UTC
+    created_at: str  # ISO 8601, naive local time
     language: Optional[str] = None
     sample_rate: Optional[int] = None
     raw_format: str = "audio/webm;codecs=opus"
