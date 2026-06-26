@@ -804,9 +804,13 @@ class TranscriberApp:
             return
         text = text.strip()
         if text:
-            if self._is_append_mode() and self._last_transcription:
-                text = self._last_transcription.rstrip() + "\n\n" + text
-            self._last_transcription = text
+            last = self._current_last_transcription()
+            if self._is_append_mode() and last:
+                text = last.rstrip() + "\n\n" + text
+            if self.tray is not None:
+                self.tray.last_transcription = text
+            else:
+                self._last_transcription = text
         if self.config.auto_copy:
             try:
                 pyperclip.copy(text)

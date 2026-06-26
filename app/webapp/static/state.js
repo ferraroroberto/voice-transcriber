@@ -77,6 +77,7 @@ export const state = {
   levelTimer:  null,
   audioCtx:    null,
   analyser:    null,
+  wakeLock:    null,        // active screen WakeLockSentinel while recording
   mode:        'idle',
   config:      null,
   transcript:  '',

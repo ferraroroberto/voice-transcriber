@@ -161,6 +161,7 @@ async function startRecording() {
   state.backgroundFinalized = false;
 
   setupLevelMeter(stream);
+  acquireWakeLock();
   startTimer();
   openPartialStream(state.sessionId);
 
@@ -183,6 +184,7 @@ function stopRecording() {
   // visibilitychange/pagehide or when the mic selection changes.
   stopTimer();
   teardownLevelMeter();
+  releaseWakeLock();
   // The /finish call will broadcast a `final` SSE event then close
   // the worker; closing here too is harmless and frees the connection
   // a fraction earlier.
@@ -582,6 +584,31 @@ function teardownLevelMeter() {
     try { state.audioCtx.close(); } catch (err) {}
     state.audioCtx = null;
   }
+}
+
+// ----------------------------------------------------- screen wake lock
+
+// iOS auto-locks the screen during long records, which backgrounds the
+// page and revokes the mic. Hold a screen wake lock for the duration of
+// the take. The platform auto-releases the sentinel whenever the page is
+// hidden (and on low battery), so app.js re-acquires on
+// visibilitychange→visible while still recording; the `release` listener
+// clears our handle so that re-acquire isn't blocked by a stale sentinel.
+export async function acquireWakeLock() {
+  if (!('wakeLock' in navigator) || state.wakeLock) return;
+  try {
+    const sentinel = await navigator.wakeLock.request('screen');
+    sentinel.addEventListener('release', () => { state.wakeLock = null; });
+    state.wakeLock = sentinel;
+  } catch (_) {
+    state.wakeLock = null;
+  }
+}
+
+export function releaseWakeLock() {
+  if (!state.wakeLock) return;
+  try { state.wakeLock.release(); } catch (_) {}
+  state.wakeLock = null;
 }
 
 export async function cleanupIncognitoSession() {

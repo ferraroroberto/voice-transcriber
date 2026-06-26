@@ -19,6 +19,7 @@ import {
   refreshStatus,
 } from './config.js';
 import {
+  acquireWakeLock,
   closePartialStream,
   finalizeForBackground,
   onRecordToggle,
@@ -139,6 +140,10 @@ function bindEvents() {
         els.recordStatus.textContent =
           '⏸️ Paused while you were away — finalising…';
       }
+      // The platform auto-releases the screen wake lock whenever the page
+      // is hidden; re-acquire if we came back while still recording (the
+      // Android background-record case the original one-shot missed).
+      if (state.mode === 'recording') acquireWakeLock();
       if (!state.config) loadConfig().catch(() => {});
     }
   });
@@ -150,9 +155,4 @@ function bindEvents() {
     releaseCachedStream();
     closePartialStream();
   });
-
-  // iOS auto-locks the screen during long records — ask for wake lock if available
-  if ('wakeLock' in navigator) {
-    els.recordBtn.addEventListener('click', () => navigator.wakeLock.request('screen').catch(() => {}), { once: true });
-  }
 }
