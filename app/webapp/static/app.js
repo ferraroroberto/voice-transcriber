@@ -144,7 +144,11 @@ function bindEvents() {
       // is hidden; re-acquire if we came back while still recording (the
       // Android background-record case the original one-shot missed).
       if (state.mode === 'recording') acquireWakeLock();
-      if (!state.config) loadConfig().catch(() => {});
+      // Re-fetch config when it never loaded, or when we're running on the
+      // offline fallback (a cold-Tailscale first load) — so the real server
+      // flags, including rolling transcription, replace the guesses once the
+      // link is warm. See issue #87.
+      if (!state.config || state.configIsFallback) loadConfig().catch(() => {});
     }
   });
   window.addEventListener('pagehide', () => {

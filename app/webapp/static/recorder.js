@@ -518,7 +518,12 @@ function maybeFireAutoStop(loudness, threshold) {
 
 function openPartialStream(sessionId) {
   closePartialStream();
-  if (!state.config || !state.config.rolling_transcription_enabled) return;
+  // Subscribe unless the server *explicitly* reports rolling transcription
+  // disabled. A missing flag — e.g. a transient /api/config failure that
+  // fell back to client defaults, common on a cold-waking Tailscale link —
+  // must NOT silently kill live partials: chunk upload + /finish still
+  // deliver the final transcript, which masks the loss. See issue #87.
+  if (state.config && state.config.rolling_transcription_enabled === false) return;
   if (!('EventSource' in window)) return;
   const tok = getStoredToken();
   let url = `/api/sessions/${sessionId}/events`;
