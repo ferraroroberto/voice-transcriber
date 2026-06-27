@@ -80,6 +80,9 @@ export const state = {
   wakeLock:    null,        // active screen WakeLockSentinel while recording
   mode:        'idle',
   config:      null,
+  configIsFallback: false,  // true while running on applyConfigDefaults()'s
+                            // offline defaults — a later visit re-fetches
+                            // the real server config (issue #87)
   transcript:  '',
   polished:    '',
   mimeType:    null,

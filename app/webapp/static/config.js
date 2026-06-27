@@ -19,6 +19,7 @@ export async function loadConfig() {
   }
   if (!r.ok) throw new Error(`/api/config → ${r.status}`);
   state.config = await r.json();
+  state.configIsFallback = false;  // real server config — drop the fallback flag
   populateConfigUI();
 }
 
@@ -41,7 +42,19 @@ export function applyConfigDefaults() {
     force_builtin_mic_default: false,
     preferred_mic_id: null,
     history_retention_days: 30,
+    // Latency-collapse defaults must mirror the server's (see
+    // src/webapp_config.py DEFAULT_*). Omitting rolling_transcription_enabled
+    // here used to make openPartialStream() gate itself off whenever the
+    // first /api/config failed — live partials gone for the session while
+    // the final transcript still worked (issue #87).
+    partial_interval_seconds: 2.0,
+    rolling_transcription_enabled: true,
+    vad_auto_stop_enabled: false,
+    auto_stop_silence_ms: 1500,
   };
+  // Running on guessed defaults — a later visit re-fetches the real config
+  // so the server's actual flags (and any disabled rolling) take over.
+  state.configIsFallback = true;
   populateConfigUI();
 }
 
