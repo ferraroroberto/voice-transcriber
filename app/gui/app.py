@@ -731,19 +731,7 @@ class TranscriberApp:
             self.root.after(0, lambda m=msg: messagebox.showerror("Transcription failed", m))
             return
 
-        text = text.strip()
-        if text:
-            if self._is_append_mode() and self._last_transcription:
-                text = self._last_transcription.rstrip() + "\n\n" + text
-            self._last_transcription = text
-
-        if self.config.auto_copy:
-            try:
-                pyperclip.copy(text)
-            except Exception as exc:
-                logger.warning(f"⚠️  Clipboard copy failed: {exc}")
-
-        self.root.after(0, lambda: self._show_result(text))
+        self._post_transcription(text)
 
     def _show_result(self, text: str) -> None:
         win = tk.Toplevel(self.root)
@@ -765,6 +753,29 @@ class TranscriberApp:
         copy_btn = ttk.Button(btns, text="Copy", command=copy)
         copy_btn.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
         ttk.Button(btns, text="Close", command=win.destroy).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
+
+    def _post_transcription(self, text: str) -> None:
+        """Shared post-transcription tail used by both mic and file workers.
+
+        Strips the text, merges in append-mode, writes the tray-aware slot,
+        copies to clipboard when auto_copy is set, then schedules the result
+        window on the main thread.
+        """
+        text = text.strip()
+        if text:
+            last = self._current_last_transcription()
+            if self._is_append_mode() and last:
+                text = last.rstrip() + "\n\n" + text
+            if self.tray is not None:
+                self.tray.last_transcription = text
+            else:
+                self._last_transcription = text
+        if self.config.auto_copy:
+            try:
+                pyperclip.copy(text)
+            except Exception as exc:
+                logger.warning(f"⚠️  Clipboard copy failed: {exc}")
+        self.root.after(0, lambda: self._show_result(text))
 
     # ---------------------------------------------------------- file flow
 
@@ -800,23 +811,10 @@ class TranscriberApp:
             )
         except TranscriptionError as e:
             msg = str(e)
+            logger.error(f"❌ {msg}")
             self.root.after(0, lambda m=msg: messagebox.showerror("Transcription failed", m))
             return
-        text = text.strip()
-        if text:
-            last = self._current_last_transcription()
-            if self._is_append_mode() and last:
-                text = last.rstrip() + "\n\n" + text
-            if self.tray is not None:
-                self.tray.last_transcription = text
-            else:
-                self._last_transcription = text
-        if self.config.auto_copy:
-            try:
-                pyperclip.copy(text)
-            except Exception:
-                pass
-        self.root.after(0, lambda: self._show_result(text))
+        self._post_transcription(text)
 
     # ------------------------------------------------------------ lifecycle
 
