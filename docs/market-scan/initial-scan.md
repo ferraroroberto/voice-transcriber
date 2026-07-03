@@ -1,12 +1,20 @@
-# Voice dictation market scan — 2026-05-09
+# Voice dictation competitive reference
 
-Initial baseline. Compares this repo's feature set against the three reference paid apps:
+A durable comparison of this repo's feature set against three reference paid
+apps. Not a roadmap or build plan — open ideas surfaced by this comparison are
+tracked as GitHub issues (linked below), not as TODOs in this file. Update this
+file's content in place as features ship or the competitive landscape moves;
+don't append dated snapshots.
+
+*Last verified: 2026-07-03.* The `/voice-market-scan` command refreshes this
+file in place and files a GitHub issue for each newly-identified gap — it does
+not write a new dated file.
 
 - **Wispr Flow** — cloud, $15/mo, Mac/Windows/iOS/Android, the polish/popularity leader
 - **Superwhisper** — Mac-only, $249.99 lifetime option, fully on-device, Privacy Award winner
 - **Aqua Voice** — cloud, $8/mo, killer feature is real-time streaming preview + screen-context awareness
 
-Sources used for this scan are listed at the bottom.
+Sources used for the initial comparison are listed at the bottom.
 
 ---
 
@@ -16,17 +24,22 @@ Sources used for this scan are listed at the bottom.
 - Local whisper.cpp with bundled `ggml-large-v3-turbo.bin`, CUDA + CPU fallback
 - Configurable model swap via `whisper_server.yaml`
 - Tray-resident process owns server lifecycle (spawn/stop/status/logs)
+- Live rolling partial transcription while recording (text fills in as you speak)
 
 **Dictation flow**
-- Tray + global hotkey (`Ctrl+Alt+Space` default, configurable) — toggle-style
-- Auto-copy to clipboard
-- Languages: English, Spanish, Italian (3 of Whisper's 99)
-- Silence-skip dBFS gate (anti-hallucination)
+- Tray + global hotkey (default `F8`) — tap to toggle, hold to push-to-talk
+- Type-at-caret injection (auto-paste into the focused window), plus auto-copy to clipboard
+- All 99 Whisper-supported languages available; a per-user `enabled_languages` filter narrows the picker
+- Translation mode (speak in another language, get English text back) via a second, translate-capable whisper-server instance
+- Custom vocabulary / dictionary passed to whisper.cpp as a per-language `--prompt` (`config/vocabulary.json`)
+- Auto-snippets / text replacements applied post-transcribe (`config/snippets.json`)
+- Auto-stop on silence (RMS/dBFS-based) during recording
+- Silence-skip dBFS gate (anti-hallucination) — distinct from the gain-boost idea below
 - VU meter, recording popup
 - Per-machine mic preferences
 
 **Polish (LLM cleanup)**
-- Local-LLM-hub integration (Gemma variants, Claude Haiku via subscription)
+- Local-LLM-hub integration (Gemini/Claude aliases via subscription CLIs)
 - JSON-configurable polish style library (`config/polish_prompts.json`)
 - Prompt preview, model picker, style picker
 - Editable transcript and polished text before/after polishing
@@ -47,66 +60,56 @@ Sources used for this scan are listed at the bottom.
 **Storage / privacy**
 - Local archive `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with raw + transcoded + transcript + polished + meta
 - 30-day auto-cleanup
+- Incognito mode (no-storage toggle) — skips history/archive writes for a session
 - History UI with re-transcribe, copy-selected, bulk clean
 
 ---
 
 ## Feature comparison
 
-Effort key: **S** = a weekend or less, **M** = 1–2 weeks, **L** = multi-week.
+| Feature | This repo | Wispr Flow | Superwhisper | Aqua Voice |
+|---|---|---|---|---|
+| Local-only inference | Yes | No (cloud) | Yes | No (cloud) |
+| Polish / filler removal | Yes, configurable | Yes | Yes | Yes |
+| Type-at-caret injection | Yes | Yes | Yes | Yes |
+| Custom vocabulary / dictionary | Yes | Yes | Yes | Yes |
+| Voice command mode on the previous take | No — [tracked in #93](https://github.com/ferraroroberto/voice-transcriber/issues/93) | Yes | Yes | Yes |
+| Auto-snippets / text replacements | Yes | Yes | Yes | No |
+| App-aware polish style (per foreground app) | No — [tracked in #94](https://github.com/ferraroroberto/voice-transcriber/issues/94) | Yes | Partial | Yes |
+| All 99 Whisper languages in picker | Yes | Yes | Yes | Yes |
+| Translation mode | Yes | Yes | Yes | No |
+| Live streaming preview (text appears as you speak) | Yes | Partial | No | Yes (killer feature) |
+| Push-to-talk alongside toggle | Yes | Yes | Yes | Yes |
+| Auto-stop on silence | Yes | Yes | Yes | Yes |
+| Quiet-environment gain boost (distinct from anti-hallucination silence gate) | No — [tracked in #97](https://github.com/ferraroroberto/voice-transcriber/issues/97) | Yes | Yes | — |
+| Usage analytics (words/min, daily count, time saved) | No — [tracked in #95](https://github.com/ferraroroberto/voice-transcriber/issues/95), low priority | Yes | Yes | Yes |
+| Cross-device sync of dictionary/snippets | No — [tracked in #96](https://github.com/ferraroroberto/voice-transcriber/issues/96) | Yes (cloud) | Yes (iCloud) | Yes |
+| Privacy mode / no-storage toggle | Yes (incognito mode) | Yes | Always private | — |
+| Cloudflare-tunnel public URL with iOS PWA | Yes | No | No | No |
+| Multi-surface (webapp + tk + tray + CLI) | Yes | Desktop + mobile | Desktop only | Desktop + iOS |
+| Subscription cost | $0 | $15/mo | $249 lifetime | $8/mo |
 
-| Feature | This repo | Wispr Flow | Superwhisper | Aqua Voice | Effort | Verdict |
-|---|---|---|---|---|---|---|
-| Local-only inference | ✅ | ❌ cloud | ✅ | ❌ cloud | — | **Already win** |
-| Polish / filler removal | ✅ configurable | ✅ | ✅ | ✅ | — | Parity |
-| **Type-at-caret injection** (paste into focused app, not just clipboard) | ❌ | ✅ killer | ✅ | ✅ | **S** | **Build — biggest single unlock** |
-| **Custom vocabulary / dictionary** (names, brands, jargon) | ❌ | ✅ | ✅ | ✅ | **S** | **Build** — pass to whisper.cpp `--prompt` |
-| **Voice command mode** ("make it concise", "as bullets") on the previous take | partial via polish styles | ✅ | ✅ | ✅ | **M** | **Build** — leverages existing polish stack |
-| **Auto-snippets / text replacements** ("ttyl" → full phrase) | ❌ | ✅ | ✅ | ❌ | **S** | **Build** |
-| **App-aware polish style** (Slack vs Outlook vs VSCode) | ❌ | ✅ | partial | ✅ | **M** | **Build** — read foreground window title, route style |
-| **All 99 Whisper languages** in picker | ❌ (3 only) | ✅ | ✅ | ✅ | **S** | **Build** |
-| **Translation mode** (speak ES → EN out) | ❌ | ✅ | ✅ | ❌ | **S** | **Build** — whisper.cpp `--translate` flag |
-| **Live streaming preview** (text appears as you speak) | ❌ | partial | ❌ | ✅ killer | **L** | **Skip** — turbo model already ~20× realtime, gain too small for the engineering cost |
-| **Push-to-talk** (hold key) alongside toggle | ❌ toggle only | both | both | both | **S** | **Build** |
-| **Auto-stop on silence** (VAD end-of-speech) | ❌ | ✅ | ✅ | ✅ | **M** | **Build** — `webrtcvad` or `silero-vad` |
-| **Whisper-mode / quiet-environment gain boost** | partial (config dBFS) | ✅ | ✅ | — | **S** | Surface in UI |
-| **Usage analytics** (words/min, daily count, time saved) | ❌ | ✅ | ✅ | ✅ | **M** | **Skip for now** — low ROI |
-| **Cross-device sync of dict/snippets** | partial via shared config | ✅ cloud | ✅ iCloud | ✅ | **M** | **Build** — extend existing `webapp_config.json` sync |
-| **Privacy mode / no-storage toggle** | ❌ (always archives) | ✅ | always private | — | **S** | **Build** — flip flag, skip archive write |
-| Cloudflare-tunnel public URL with iOS PWA | ✅ | ❌ | ❌ | ❌ | — | **Already win** |
-| Multi-surface (webapp + tk + tray + CLI) | ✅ | desktop+mobile | desktop only | desktop+iOS | — | **Already win** |
-| Subscription cost | $0 | $15/mo | $249 lifetime | $8/mo | — | **Already win** |
+## Open ideas
 
----
+Everything marked "No" above with a tracked issue is a candidate for future
+work, not a commitment — pick them up like any other issue when priority
+allows. Nothing here should be treated as a build order; each issue stands on
+its own and is independently shippable.
 
-## Recommended build order
+- [#93 — Voice command mode](https://github.com/ferraroroberto/voice-transcriber/issues/93)
+- [#94 — App-aware polish style](https://github.com/ferraroroberto/voice-transcriber/issues/94)
+- [#95 — Usage analytics](https://github.com/ferraroroberto/voice-transcriber/issues/95) (low priority)
+- [#96 — Cross-device sync of vocabulary/snippets](https://github.com/ferraroroberto/voice-transcriber/issues/96)
+- [#97 — Quiet-environment gain boost](https://github.com/ferraroroberto/voice-transcriber/issues/97)
 
-### Phase 1 — high ROI, low effort (a weekend each)
+## Where this repo already wins
 
-1. **Type-at-caret injection.** Tray/config toggle: simulate paste (`Ctrl+V`) into the focused window via `pynput`/`SendInput` after auto-copy. Without this we're a great clipboard tool; with it we are Wispr-at-home. *Lands in:* `app/gui/tray.py` post-transcription hook, plus a new `src/inject.py` for the OS keystroke layer.
-2. **Custom vocabulary.** New top-level `prompts` field in `config/config.json` → joined and passed to whisper.cpp as `--prompt "Roberto, Ferraro, Anthropic, Claude, ..."`. Whisper biases token probabilities toward those names. *Lands in:* `src/transcription_client.py` request builder + `config.sample.json` doc entry.
-3. **All 99 languages in picker** + **translation mode** toggle. UI work + one yaml flag (`--translate`). *Lands in:* `src/app_config.py` (language enum → free string), webapp settings panel, tk language dropdown.
-4. **Push-to-talk hotkey.** Second hotkey (e.g. `<F11>` hold) wired in parallel to the existing toggle. *Lands in:* `app/gui/tray.py` hotkey registration.
-5. **Auto-snippets.** New `config/snippets.json` → applied post-transcribe, pre-clipboard. Trivial dict lookup. *Lands in:* `src/snippets.py`, called from the same point that decides clipboard payload.
-
-### Phase 2 — medium effort, high daily payoff
-
-6. **Voice command mode.** Detect a wake prefix in the transcript (e.g. `"flow:"` or `"edit:"`) → route to the LLM hub against the *previous* take instead of as new dictation. Polish pipeline already exists; this is a different system prompt + last-transcript memory. *Lands in:* `src/polish.py` + new `src/voice_command.py` for prefix parsing + a "last take" buffer in webapp/tk state.
-7. **App-aware polish style.** On Windows, `pygetwindow.getActiveWindow().title` (or `pywin32`) → match against rules in a new `config/app_styles.json` → auto-select polish style. (Slack → casual, Outlook → formal, VSCode → raw.) *Lands in:* `src/app_context.py` + polish-style resolver.
-8. **Auto-stop on silence (VAD).** `webrtcvad` or `silero-vad` running on the live audio buffer; stop recording N seconds after speech ends. *Lands in:* `src/recorder.py` (extend the capture loop) + a `vad_silence_ms` config knob.
-
-### Phase 3 — defer or skip
-
-9. **Live streaming preview.** Real engineering cost (chunked VAD + partial decoding window). Turbo model finishes in ~3s for a 60s take — gain is small, complexity is high. **Skip until 1–8 are done.**
-10. **Usage analytics dashboard.** Cute, not load-bearing for the dictation flow. **Skip unless explicitly wanted.**
-
----
-
-## Worth-investment verdict
-
-**Yes, easily.** Phase 1 alone (5 features × ~weekend each) closes roughly 70% of the gap to the $15/mo apps, while keeping every advantage they cannot match: local inference, the Cloudflare-tunnel iOS PWA, multi-surface parity, configurable polish styles, no subscription.
-
-The single biggest strategic unlock is **caret injection**. It is the difference between "great clipboard tool" and "Wispr-at-home, but mine."
+- **Local-only inference** with no subscription, unlike Wispr Flow and Aqua Voice.
+- **Cloudflare-tunnel iOS PWA** — none of the three competitors offer a
+  self-hosted persistent public URL with home-screen install.
+- **Multi-surface parity** — webapp, tk window, tray, and CLI all reach the
+  same feature set, versus competitors' desktop-only or desktop+mobile split.
+- **$0 subscription cost** against $8–15/mo (or a $249 lifetime buy-in).
 
 ---
 
