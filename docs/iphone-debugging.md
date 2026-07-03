@@ -14,7 +14,8 @@ This is reference material. There is no application code involved.
 ## When you need this
 
 Reach for a real iPhone only when the pre-ship gate
-(`pwsh -File scripts/verify-before-ship.ps1`) is **green** but the phone still
+(`C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1`)
+is **green** but the phone still
 misbehaves. That combination means the bug is in the iOS *shell*, not the app
 logic — exactly what Playwright's bundled WebKit on Windows cannot reproduce:
 
@@ -83,8 +84,8 @@ Safari tab is almost always a PWA-shell issue.
 When a phone-only bug turns up — reported or self-spotted — work the loop:
 
 1. **Confirm the gate is green** on the failing change:
-   `pwsh -File scripts/verify-before-ship.ps1`. A green gate is what tells you
-   this is a shell issue and not app logic.
+   `C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1`.
+   A green gate is what tells you this is a shell issue and not app logic.
 2. **Attach DevTools** to the live phone per Section A.
 3. **Reproduce and capture:**
    - Console errors.

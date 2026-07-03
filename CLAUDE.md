@@ -7,7 +7,9 @@ Tray-resident local voice-to-text app powered by a bundled whisper.cpp server, w
 See `README.md` for setup, layout, and usage.
 
 Before declaring any webapp-touching change done, run the pre-ship gate:
-`pwsh -File scripts/verify-before-ship.ps1`.
+`C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1`
+(never bare `pwsh` — it's a 0-byte WindowsApps reparse stub on this machine that
+fails non-interactively).
 
 **Restart and verify before hand-off:** the canonical restart is **`tray.bat --restart`** — the orphan-proof reclaim-then-start that kills the tray subtree, then reclaims the webapp port `:8443` by PID scoped to this repo's `.venv` (CommandLine-matched), then starts fresh. It deliberately does **not** touch `:8090`/`:8091` (whisper-server / translate-server, mutex-shared with `claude-local-calls`). Run that, don't hand-roll the kill (a by-hand kill misses an orphaned port holder). As a by-hand fallback only, kill the process listening on `:8443` (`Get-NetTCPConnection -LocalPort 8443`) — never a blanket `pythonw`/`python` kill, sister apps and the shared whisper/translate servers must survive — then relaunch via `tray.bat`. **Confirm the new build is live** via `GET http://127.0.0.1:8443/api/version` (`git_sha` should match `HEAD`) or `GET /healthz` for liveness; don't leave a stale process serving.
 
