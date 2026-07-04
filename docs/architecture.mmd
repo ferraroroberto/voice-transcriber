@@ -1,0 +1,127 @@
+%% docs/architecture.mmd — voice-transcriber's own internal structure.
+%% Hand-authored, not generated — unlike a fleet-wide map (see
+%% ferraroroberto/fleet-config's mechanically-aggregated system-map.mmd), this
+%% repo's own internal shape is semantic and can't be crawled the same way.
+%% Update this diagram in the same PR as any material structural change (a
+%% new UI surface, a router added or moved, a src/ module relocated) — same
+%% anti-staleness contract as a repo's own `.fleet.toml` `description` field.
+%% See fleet-config's global-CLAUDE.md "Every repo carries a `.fleet.toml`"
+%% section for the general convention.
+
+flowchart TB
+  subgraph entry["Entry points"]
+    LAUNCHER["launcher.py\nputs repo root on sys.path, dispatches to app.cli.main"]
+    TRAYBAT["tray.bat"]
+    WEBAPPBAT["webapp.bat / webapp_tunnel_named.bat"]
+    SERVERBAT["server.bat"]
+  end
+  TRAYBAT --> LAUNCHER
+  WEBAPPBAT --> LAUNCHER
+  SERVERBAT --> LAUNCHER
+
+  subgraph cli["app/cli/ — argparse dispatcher"]
+    CLIMAIN["main.py"] --> CLICMDS["commands/\nrecord · transcribe · gui · tray · server"]
+  end
+  LAUNCHER --> CLIMAIN
+
+  subgraph gui["app/gui/ — desktop UI + tray"]
+    TKAPP["app.py\ntkinter main window + polish row"]
+    RECPOPUP["recording_popup.py\ncompact VU popup"]
+    DIAGWIN["diagnostics_window.py"]
+    TRAYPY["tray.py\npystray icon + pynput global hotkey (F8)"]
+  end
+  CLICMDS -->|gui, record| gui
+  CLICMDS -->|tray| TRAYPY
+
+  subgraph tray["app/tray/ — tray plumbing"]
+    SINGLEINST["single_instance.py\nWindows mutex — one tray at a time"]
+    LIFECYCLE["tray_lifecycle.ps1\nsubtree kill + port reclaim (tray.bat --restart)"]
+  end
+  TRAYPY --> SINGLEINST
+  TRAYPY -->|boots + owns lifecycle of| WHISPERMGR
+  TRAYPY -->|boots + owns lifecycle of| WEBAPPMGR
+  TRAYPY -->|spawns if cloudflared.yml present| CLOUDFLARED["cloudflared tunnel"]
+
+  subgraph webapp["app/webapp/ — FastAPI mobile PWA"]
+    WEBSERVER["server.py\nroutes + lifespan (archive cleanup on boot)"]
+    WEBAPPMGR["manager.py\nadopt-or-spawn uvicorn on :8443"]
+    ROUTERS["routers/\nsessions · auth · config · misc"]
+    MIDDLEWARE["middleware.py\nbearer-token auth, loopback bypass"]
+    AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
+    PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
+    STATIC["static/\nindex.html · app.js · recorder.js · api.js ·\nstate.js · ui.js · history.js · polish.js · styles.css"]
+  end
+  WEBSERVER --> ROUTERS
+  WEBSERVER --> MIDDLEWARE
+  ROUTERS --> AUDIOPY
+  ROUTERS --> PARTIALW
+  WEBSERVER --> STATIC
+
+  subgraph logic["src/ — logic layer, no UI imports"]
+    APPCONFIG["app_config.py\nAppConfig loader, config/config.json"]
+    RECORDER["recorder.py\nsounddevice capture"]
+    TRANSCLIENT["transcription_client.py\nHTTP -> whisper-server"]
+    DIAGNOSTICS["diagnostics.py\nlog ring + port-owner introspection"]
+    POLISH["polish.py\nlocal-llm-hub client"]
+    POLISHPROMPTS["polish_prompts.py\nstyle-library loader"]
+    ARCHIVE["archive.py\ndated session folders + 30-day cleanup"]
+    WEBAPPCFG["webapp_config.py\ntyped loader, config/webapp_config.json"]
+    VOCAB["vocabulary.py"]
+    SNIPPETS["snippets.py"]
+    SILENCE["silence.py\nRMS dBFS gate"]
+    SPEAKERLABEL["speaker_label.py\nstrip fabricated leading speaker labels"]
+    INJECT["inject.py\nclipboard + caret paste"]
+    STATICVER["static_versioning.py\ncontent-hash asset URLs"]
+    WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
+    WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
+  end
+  WHISPERMGR --> WHISPERYAML
+
+  CLICMDS --> RECORDER
+  CLICMDS --> TRANSCLIENT
+  TKAPP --> RECORDER
+  TKAPP --> POLISH
+  TKAPP --> INJECT
+  ROUTERS --> ARCHIVE
+  ROUTERS --> WEBAPPCFG
+  ROUTERS --> POLISH
+  ROUTERS --> VOCAB
+  ROUTERS --> SNIPPETS
+  ROUTERS --> SILENCE
+  ROUTERS --> SPEAKERLABEL
+  TRANSCLIENT --> VOCAB
+  STATIC --> STATICVER
+  RECORDER --> APPCONFIG
+  TRAYPY --> APPCONFIG
+  TRAYPY --> INJECT
+
+  subgraph vendor["vendor/whisper.cpp (gitignored, fetched by setup.bat)"]
+    WHISPERBIN["whisper-server(.exe) + ggml-large-v3-turbo.bin"]
+  end
+  WHISPERMGR -->|spawns / adopts| WHISPERBIN
+  TRANSCLIENT -->|POST /v1/audio/transcriptions :8090| WHISPERBIN
+
+  subgraph ext["External dependencies"]
+    LLMHUB["claude-local-calls\nlocal-llm-hub :8000 — polish models\n+ translate whisper :8091"]
+    CLOUDFLAREACCESS["Cloudflare Access + named tunnel"]
+  end
+  POLISH -->|POST /v1/messages| LLMHUB
+  TRANSCLIENT -->|translate_base_url, task=translate| LLMHUB
+  CLOUDFLARED --> CLOUDFLAREACCESS
+
+  subgraph data["archive/ (gitignored runtime data)"]
+    SESSIONS["YYYY/MM/DD/HH-MM-SS-<id>/\nraw.webm · audio.wav · transcript.txt · polished.txt · meta.json"]
+  end
+  ARCHIVE --> SESSIONS
+  ROUTERS -->|session API: /api/sessions, /chunk, /events, /finish| SESSIONS
+
+  subgraph tests["tests/ — pytest + Playwright e2e"]
+    UNITTESTS["test_*.py — src/ + webapp routes + auth"]
+    E2E["e2e/ — pytest-playwright SPA smoke\n(Chromium + WebKit/iPhone)"]
+    VERIFYSHIP["scripts/verify-before-ship.ps1\npy_compile -> pytest (no smoke) -> e2e on a disposable port"]
+  end
+  VERIFYSHIP --> UNITTESTS
+  VERIFYSHIP --> E2E
+  UNITTESTS -.->|exercise| logic
+  UNITTESTS -.->|exercise| webapp
+  E2E -.->|drives live tray on :8443| WEBAPPMGR
