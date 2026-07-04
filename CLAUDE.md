@@ -6,6 +6,9 @@ Canonical instructions for AI coding agents working in this repository. Claude C
 Tray-resident local voice-to-text app powered by a bundled whisper.cpp server, with a global hotkey workflow.
 See `README.md` for setup, layout, and usage.
 
+## Internal architecture
+`docs/architecture.mmd` is a hand-authored Mermaid diagram of this repo's own internal structure — key modules/scripts (launcher, CLI, tray, GUI, webapp, `src/` logic layer), data flow, and external dependencies (whisper.cpp, claude-local-calls, Cloudflare). Companion to the fleet-wide convention in `ferraroroberto/fleet-config#256` — this repo's own shape isn't crawlable, so it's kept correct by discipline: **update the diagram in the same PR as any material structural change** (a new UI surface, a router added or moved, a `src/` module relocated).
+
 Before declaring any webapp-touching change done, run the pre-ship gate:
 `C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1`
 (never bare `pwsh` — it's a 0-byte WindowsApps reparse stub on this machine that
