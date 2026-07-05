@@ -1,16 +1,23 @@
 """Generate Home Screen / PWA icons for the Whisper webapp.
 
-Draws a clean microphone glyph (white on #0a0a0a) and writes three PNGs
-into ``app/webapp/static/``:
+Draws a solid microphone silhouette (near-white on #0a0a0a) and writes three
+PNGs into ``app/webapp/static/``:
 
 - ``icon-180.png``           — 180x180, iOS apple-touch-icon (full bleed,
                                 no transparency; iOS applies its own mask).
 - ``icon-512.png``           — 512x512, manifest ``purpose: any``.
 - ``icon-512-maskable.png``  — 512x512, manifest ``purpose: maskable``;
-                                glyph shrunk to ~60% so adaptive icon
-                                masks (circle, squircle, rounded square)
-                                don't crop it.
+                                glyph shrunk so adaptive icon masks (circle,
+                                squircle, rounded square) don't crop it.
 - ``favicon.ico``            — multi-size (16/32/48) browser tab icon.
+
+The glyph's proportions are lifted directly from Lucide's ``mic`` icon
+(24x24 viewBox: capsule ``rect x=9 y=2 w=6 h=13 rx=3``, cradle arc centred
+on ``(12,12) r=7``, stem ``x=12 y=19..22``) — same fleet convention
+``home-automation/scripts/gen_icons.py`` used for its house glyph, so the
+PWA icon reads as the solid-silhouette sibling of the in-app icon family
+rather than an independently eyeballed shape (issue #24 / fleet-wide
+app-launcher#65).
 
 Run from the repo root:
 
@@ -33,74 +40,50 @@ OUT_DIR = REPO_ROOT / "app" / "webapp" / "static"
 BG = (10, 10, 10, 255)        # #0a0a0a — matches theme_color
 FG = (245, 245, 245, 255)     # near-white glyph
 
+# Lucide `mic` glyph, 24x24 viewBox: bounding box of capsule+cradle+stem.
+_GLYPH_TOP = 2       # capsule top (rect y=2)
+_GLYPH_BOTTOM = 22   # stem bottom (line y2=22)
+_GLYPH_CX = 12       # horizontal center (capsule/stem/cradle all centred here)
+_GLYPH_H = _GLYPH_BOTTOM - _GLYPH_TOP  # 20 units
 
-def draw_mic(canvas_size: int, glyph_scale: float) -> Image.Image:
-    """Render a mic glyph centered on a BG canvas.
 
-    ``glyph_scale`` is the fraction of the canvas the glyph occupies
-    (height of the whole mic — capsule + stand + base).
+def draw_mic(canvas_size: int, pad_ratio: float) -> Image.Image:
+    """Render the Lucide-proportioned mic glyph centered on a BG canvas.
+
+    ``pad_ratio`` is the fraction of the canvas reserved as padding on each
+    side; the glyph fills the remaining safe area, scaled uniformly from
+    Lucide's 24x24 coordinate space.
     """
     img = Image.new("RGBA", (canvas_size, canvas_size), BG)
     draw = ImageDraw.Draw(img)
 
-    glyph_h = canvas_size * glyph_scale
+    safe = canvas_size * (1 - 2 * pad_ratio)
+    scale = safe / _GLYPH_H
+    top = canvas_size * pad_ratio
     cx = canvas_size / 2
-    cy = canvas_size / 2
 
-    # Proportions tuned by eye; total height = capsule + gap + arc + base.
-    capsule_h = glyph_h * 0.55
-    capsule_w = capsule_h * 0.55
-    arc_w = capsule_w * 1.85
-    arc_h = arc_w * 0.55
-    stem_h = glyph_h * 0.10
-    base_w = capsule_w * 1.20
-    base_h = glyph_h * 0.045
+    def x(lucide_x: float) -> float:
+        return cx + (lucide_x - _GLYPH_CX) * scale
 
-    glyph_top = cy - glyph_h / 2
+    def y(lucide_y: float) -> float:
+        return top + (lucide_y - _GLYPH_TOP) * scale
 
-    # Capsule (mic body) — rounded rect.
-    cap_x0 = cx - capsule_w / 2
-    cap_y0 = glyph_top
-    cap_x1 = cx + capsule_w / 2
-    cap_y1 = cap_y0 + capsule_h
+    # Capsule (mic body) — Lucide `rect x=9 y=2 width=6 height=13 rx=3`.
     draw.rounded_rectangle(
-        (cap_x0, cap_y0, cap_x1, cap_y1),
-        radius=capsule_w / 2,
+        (x(9), y(2), x(15), y(15)),
+        radius=3 * scale,
         fill=FG,
     )
 
-    # Arc (stand cradle) — drawn as a thick open arc below the capsule.
-    arc_thickness = max(4, int(canvas_size * 0.025))
-    arc_y_center = cap_y1 + arc_h * 0.15
-    arc_x0 = cx - arc_w / 2
-    arc_y0 = arc_y_center - arc_h / 2
-    arc_x1 = cx + arc_w / 2
-    arc_y1 = arc_y_center + arc_h / 2
-    draw.arc(
-        (arc_x0, arc_y0, arc_x1, arc_y1),
-        start=20,
-        end=160,
-        fill=FG,
-        width=arc_thickness,
-    )
+    # Cradle — Lucide draws this as a 2px stroke; thicken it into a solid
+    # band so it stays legible at favicon sizes. Lucide's short `v2` ticks
+    # above the arc's ends are dropped — at silhouette scale they read as
+    # disconnected floating squares rather than hugging the capsule.
+    thickness = max(2, round(2.2 * scale))
+    draw.arc((x(5), y(5), x(19), y(19)), start=0, end=180, fill=FG, width=thickness)
 
-    # Vertical stem from arc bottom down to the base.
-    stem_top = arc_y1 - arc_thickness / 2
-    stem_bottom = stem_top + stem_h
-    stem_w = arc_thickness
-    draw.rectangle(
-        (cx - stem_w / 2, stem_top, cx + stem_w / 2, stem_bottom),
-        fill=FG,
-    )
-
-    # Base bar.
-    base_y0 = stem_bottom
-    base_y1 = base_y0 + base_h
-    draw.rounded_rectangle(
-        (cx - base_w / 2, base_y0, cx + base_w / 2, base_y1),
-        radius=base_h / 2,
-        fill=FG,
-    )
+    # Stem — Lucide `M12 19v3`.
+    draw.line([(x(12), y(19)), (x(12), y(22))], fill=FG, width=thickness)
 
     return img
 
@@ -109,21 +92,20 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     targets = [
-        # (filename, canvas_size, glyph_scale)
-        ("icon-180.png", 180, 0.70),
-        ("icon-512.png", 512, 0.70),
-        ("icon-512-maskable.png", 512, 0.60),  # safe zone for adaptive masks
+        # (filename, canvas_size, pad_ratio)
+        ("icon-180.png", 180, 0.15),
+        ("icon-512.png", 512, 0.15),
+        ("icon-512-maskable.png", 512, 0.20),  # safe zone for adaptive masks
     ]
 
-    for name, size, scale in targets:
-        img = draw_mic(size, scale)
+    for name, size, pad_ratio in targets:
+        img = draw_mic(size, pad_ratio)
         # Strip alpha for apple-touch-icon (iOS dislikes transparent pixels)
         # and to keep file sizes small. BG already opaque, so flatten to RGB.
         img.convert("RGB").save(OUT_DIR / name, format="PNG", optimize=True)
-        log = logging.getLogger("gen_app_icons")
         log.info("✅ wrote %s (%dx%d)", OUT_DIR / name, size, size)
 
-    favicon = draw_mic(256, 0.70).convert("RGB")
+    favicon = draw_mic(256, 0.15).convert("RGB")
     favicon.save(
         OUT_DIR / "favicon.ico",
         format="ICO",
