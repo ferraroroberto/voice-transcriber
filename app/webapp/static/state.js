@@ -28,6 +28,7 @@ export const els = {
   polished:           document.getElementById('polished'),
 
   historyCount:     document.getElementById('historyCount'),
+  analyticsSummary: document.getElementById('analyticsSummary'),
   historyList:      document.getElementById('historyList'),
   refreshHistory:   document.getElementById('refreshHistory'),
   copySelection:    document.getElementById('copySelection'),

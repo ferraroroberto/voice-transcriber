@@ -85,6 +85,14 @@ def webapp_client(tmp_path: Path, monkeypatch):
         archive_mod, "DEFAULT_ARCHIVE_DIR", tmp_path / "archive"
     )
 
+    # Same isolation for the persistent activity log — otherwise every
+    # session-mutating test would write into the real, gitignored
+    # webapp/activity.sqlite3 on the developer's machine.
+    from src import activity_log as activity_log_mod
+    monkeypatch.setattr(
+        activity_log_mod, "DEFAULT_DB_PATH", tmp_path / "activity.sqlite3"
+    )
+
     # Isolate the webapp config from the developer's real, gitignored
     # config/webapp_config.json. Without this, local overrides (e.g. a
     # different polish_model_default) leak into create_app() and make
