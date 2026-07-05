@@ -94,6 +94,14 @@
         <span>Force built-in mic (skip Bluetooth)</span>
         <input id="forceBuiltinMic" type="checkbox">
       </label>
+      <label class="row toggle" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
+        <span>🔊 Quiet-environment gain boost</span>
+        <input id="gainBoostToggle" type="checkbox">
+      </label>
+      <label class="row">
+        <span>Boost amount (dB)</span>
+        <input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native">
+      </label>
       <label class="row toggle" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
         <span>🤖 Auto-stop on silence</span>
         <input id="vadAutoStopToggle" type="checkbox">
