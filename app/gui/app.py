@@ -29,6 +29,7 @@ from src import (
     TranscriptionClient,
     TranscriptionError,
 )
+from src.gain import apply_gain_db, MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
 from src.polish import PolishClient, PolishError
 from src.silence import is_silent_samples
 from src.polish_prompts import (
@@ -132,6 +133,10 @@ class TranscriberApp:
         self.force_builtin_var = tk.BooleanVar(
             value=self.webapp_config.force_builtin_mic_default,
         )
+        # Quiet-environment gain boost — persisted to webapp_config.json
+        # immediately on change (shared with the webapp's Settings toggle).
+        self.gain_boost_var = tk.BooleanVar(value=self.webapp_config.gain_boost_enabled)
+        self.gain_boost_db_var = tk.StringVar(value=str(self.webapp_config.gain_boost_db))
 
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
@@ -157,6 +162,8 @@ class TranscriberApp:
         self.mic_var = tk.StringVar(value=_initial_mic)
         self.mic_var.trace_add("write", self._apply_mic_selection)
         self.force_builtin_var.trace_add("write", self._apply_mic_selection)
+        self.gain_boost_var.trace_add("write", self._save_gain_boost_settings)
+        self.gain_boost_db_var.trace_add("write", self._save_gain_boost_settings)
 
         self._build_widgets()
         self.root.protocol("WM_DELETE_WINDOW", self._on_close)
@@ -185,6 +192,22 @@ class TranscriberApp:
             self.config.preferred_mics = ["realtek", "built-in", "internal"]
         else:
             self.config.preferred_mics = None
+
+    def _save_gain_boost_settings(self, *_: object) -> None:
+        """Persist the gain-boost toggle/value to webapp_config.json as
+        soon as either changes — mirrors the webapp's immediate-toggle
+        settings, no explicit Save button needed for this one pair."""
+        try:
+            db = float(self.gain_boost_db_var.get())
+        except ValueError:
+            return
+        try:
+            self.webapp_config = update_webapp_config(
+                gain_boost_enabled=self.gain_boost_var.get(),
+                gain_boost_db=db,
+            )
+        except (ValueError, OSError) as exc:
+            logger.warning(f"⚠️  Could not save gain boost settings: {exc}")
 
     def _build_widgets(self) -> None:
         pad = {"padx": 16, "pady": 6}
@@ -248,6 +271,22 @@ class TranscriberApp:
             text="Force built-in mic (skip Bluetooth)",
             variable=self.force_builtin_var,
         ).pack(side=tk.LEFT)
+
+        # Quiet-environment gain boost — amplifies captured audio before
+        # whisper, distinct from the silence-skip anti-hallucination gate.
+        gain_boost_frame = ttk.Frame(self.root)
+        gain_boost_frame.pack(fill=tk.X, padx=16, pady=(0, 6))
+        ttk.Checkbutton(
+            gain_boost_frame,
+            text="🔊 Quiet-environment gain boost",
+            variable=self.gain_boost_var,
+        ).pack(side=tk.LEFT)
+        ttk.Spinbox(
+            gain_boost_frame,
+            from_=MIN_GAIN_BOOST_DB, to=MAX_GAIN_BOOST_DB, increment=1,
+            textvariable=self.gain_boost_db_var, width=4,
+        ).pack(side=tk.LEFT, padx=(8, 4))
+        ttk.Label(gain_boost_frame, text="dB").pack(side=tk.LEFT)
 
         # Primary actions
         record_btn = ttk.Button(self.root, text="🎤 Record / Stop", command=self._toggle_record)
@@ -711,6 +750,11 @@ class TranscriberApp:
                 ),
             )
             return
+
+        if self.webapp_config.gain_boost_enabled:
+            recording.samples = apply_gain_db(
+                recording.samples, self.webapp_config.gain_boost_db,
+            )
 
         status = self.server.status()
         client = TranscriptionClient(

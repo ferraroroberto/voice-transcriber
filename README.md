@@ -466,6 +466,20 @@ the connection drops mid-record, the partial recording is still on the
 PC — the **📜 History** view's *🔁 Redo* button replays whisper
 on any saved take.
 
+#### Quiet-environment gain boost
+
+A distinct control from silence skip above: **🔊 Quiet-environment gain
+boost** in **⚙️ Settings** amplifies captured audio by a configurable
+amount (default `12` dB, range `0`–`24`) before it reaches whisper —
+helping a quiet mic or a quiet room transcribe more reliably. It runs
+*after* the silence gate, so a genuinely silent take still gets skipped
+on its original (un-boosted) loudness — the two settings are orthogonal
+and both persist in `config/webapp_config.json` (`gain_boost_enabled`,
+`gain_boost_db`). The tk main window mirrors the same toggle + dB
+spinbox, saving to the same shared file; the tray's hotkey-driven
+recordings pick up whichever value is currently saved, with no
+dedicated tray menu entry (same pattern as the silence threshold).
+
 #### Rolling transcription
 
 Whisper runs every ~2 s on the audio you've already streamed, so the
@@ -932,6 +946,7 @@ still covers the same logic via the parity port in
 | `tests\test_polish_prompts.py` | Library load, dedupe, built-in fallback |
 | `tests\test_app_config.py` | 100-language Whisper map, ISO normalisation, validation |
 | `tests\test_silence.py` | RMS dBFS gate (int16, float, 8-bit, stereo WAV) |
+| `tests\test_gain.py` | Quiet-environment gain boost — amplitude math, int16 clipping, in-place WAV boost, fail-open on unsupported sample width |
 | `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
 | `tests\test_vocabulary.py` | Per-language vocab prompts + hot-reload on mtime |
 | `tests\test_snippets.py` | Word-boundary keyword expansion + hot-reload |

@@ -69,6 +69,7 @@ flowchart TB
     VOCAB["vocabulary.py"]
     SNIPPETS["snippets.py"]
     SILENCE["silence.py\nRMS dBFS gate"]
+    GAIN["gain.py\nquiet-env gain boost — post-silence-gate"]
     SPEAKERLABEL["speaker_label.py\nstrip fabricated leading speaker labels"]
     INJECT["inject.py\nclipboard + caret paste"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
@@ -89,7 +90,10 @@ flowchart TB
   ROUTERS --> VOCAB
   ROUTERS --> SNIPPETS
   ROUTERS --> SILENCE
+  ROUTERS --> GAIN
   ROUTERS --> SPEAKERLABEL
+  TKAPP --> GAIN
+  TRAYPY --> GAIN
   TRANSCLIENT --> VOCAB
   STATIC --> STATICVER
   RECORDER --> APPCONFIG

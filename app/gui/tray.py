@@ -46,6 +46,7 @@ from src import (
     TranscriptionClient,
     TranscriptionError,
 )
+from src.gain import apply_gain_db
 from src.inject import parse_simple_hotkey, paste_at_caret
 from src.mic_glyph import draw_mic
 from src.recorder import Recording
@@ -737,9 +738,10 @@ class TrayApp:
         # Silence gate — skip whisper if the take is below the dBFS
         # threshold so it can't hallucinate on empty audio.
         try:
-            threshold = load_webapp_config().silence_dbfs_threshold
+            webapp_cfg = load_webapp_config()
         except Exception:
-            threshold = -50.0
+            webapp_cfg = None
+        threshold = webapp_cfg.silence_dbfs_threshold if webapp_cfg else -50.0
         silent, dbfs = is_silent_samples(recording.samples, threshold)
         if silent:
             logger.info(
@@ -747,6 +749,11 @@ class TrayApp:
             )
             self._notify("🤫 Empty audio", f"Silent take ({dbfs:.1f} dBFS) — skipped")
             return
+
+        # Quiet-environment gain boost — applied after the silence gate so
+        # the gate's calibration is unaffected.
+        if webapp_cfg is not None and webapp_cfg.gain_boost_enabled:
+            recording.samples = apply_gain_db(recording.samples, webapp_cfg.gain_boost_db)
 
         status = self.server.status()
         if self._transcription_client is None:

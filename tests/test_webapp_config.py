@@ -17,6 +17,8 @@ import pytest
 
 # Local imports
 from src.webapp_config import (
+    DEFAULT_GAIN_BOOST_DB,
+    DEFAULT_GAIN_BOOST_ENABLED,
     DEFAULT_HOST,
     DEFAULT_LLM_HUB_URL,
     DEFAULT_PORT,
@@ -127,6 +129,8 @@ class TestDefaultWebappConfig:
         assert cfg.port == DEFAULT_PORT
         assert cfg.history_retention_days == DEFAULT_RETENTION_DAYS
         assert cfg.silence_dbfs_threshold == DEFAULT_SILENCE_DBFS_THRESHOLD
+        assert cfg.gain_boost_enabled == DEFAULT_GAIN_BOOST_ENABLED
+        assert cfg.gain_boost_db == DEFAULT_GAIN_BOOST_DB
         assert cfg.auth_token == ""
         assert cfg.auth_password == ""
 
@@ -175,6 +179,8 @@ class TestLoadWebappConfig:
             "auth_token": "deadbeef",
             "auth_password": "shibboleth",
             "silence_dbfs_threshold": -42.0,
+            "gain_boost_enabled": True,
+            "gain_boost_db": 18.0,
         }
         target.write_text(json.dumps(payload), encoding="utf-8")
         cfg = load_webapp_config(target)
@@ -189,6 +195,8 @@ class TestLoadWebappConfig:
         assert cfg.auth_token == "deadbeef"
         assert cfg.auth_password == "shibboleth"
         assert cfg.silence_dbfs_threshold == pytest.approx(-42.0)
+        assert cfg.gain_boost_enabled is True
+        assert cfg.gain_boost_db == pytest.approx(18.0)
 
     def test_missing_keys_fall_back_to_sample(
         self, tmp_path, sample_polish_payload
@@ -323,6 +331,16 @@ class TestValidate:
                 port=bad_port,
             )
             with pytest.raises(ValueError, match="port"):
+                _validate(cfg)
+
+    def test_gain_boost_db_must_be_in_range(self, sample_polish_payload):
+        for bad_db in (-1.0, 25.0):
+            cfg = WebappConfig(
+                polish_model_default=sample_polish_payload["polish_model_default"],
+                polish_models_available=list(sample_polish_payload["polish_models_available"]),
+                gain_boost_db=bad_db,
+            )
+            with pytest.raises(ValueError, match="gain_boost_db"):
                 _validate(cfg)
 
 

@@ -51,6 +51,8 @@ export function applyConfigDefaults() {
     rolling_transcription_enabled: true,
     vad_auto_stop_enabled: false,
     auto_stop_silence_ms: 1500,
+    gain_boost_enabled: false,
+    gain_boost_db: 12,
   };
   // Running on guessed defaults — a later visit re-fetches the real config
   // so the server's actual flags (and any disabled rolling) take over.
@@ -109,6 +111,12 @@ export function populateConfigUI() {
   if (els.autoStopSilenceMs) {
     els.autoStopSilenceMs.value = state.config.auto_stop_silence_ms || 1500;
   }
+  if (els.gainBoostToggle) {
+    els.gainBoostToggle.checked = !!state.config.gain_boost_enabled;
+  }
+  if (els.gainBoostDb) {
+    els.gainBoostDb.value = state.config.gain_boost_db ?? 12;
+  }
 }
 
 export function refreshPromptPreview() {
@@ -141,6 +149,8 @@ export async function onSaveSettings() {
     history_retention_days: parseInt(els.retentionDays.value, 10) || 30,
     vad_auto_stop_enabled: !!(els.vadAutoStopToggle && els.vadAutoStopToggle.checked),
     auto_stop_silence_ms: parseInt((els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10),
+    gain_boost_enabled: !!(els.gainBoostToggle && els.gainBoostToggle.checked),
+    gain_boost_db: parseFloat((els.gainBoostDb && els.gainBoostDb.value) || '12'),
   };
   try {
     const r = await authFetch('/api/config', {

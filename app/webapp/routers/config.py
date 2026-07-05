@@ -52,6 +52,8 @@ async def get_config(request: Request) -> Dict[str, Any]:
         "rolling_transcription_enabled": cfg.partial_interval_seconds > 0,
         "vad_auto_stop_enabled": cfg.vad_auto_stop_enabled,
         "auto_stop_silence_ms": cfg.auto_stop_silence_ms,
+        "gain_boost_enabled": cfg.gain_boost_enabled,
+        "gain_boost_db": cfg.gain_boost_db,
         # Languages exposed in the picker — narrowed by
         # AppConfig.enabled_languages when set, otherwise the full
         # 99-language Whisper list. Sorted alphabetically by label so
@@ -77,6 +79,8 @@ async def patch_config(request: Request) -> Dict[str, Any]:
         "history_retention_days",
         "vad_auto_stop_enabled",
         "auto_stop_silence_ms",
+        "gain_boost_enabled",
+        "gain_boost_db",
     }
     patch = {k: v for k, v in body.items() if k in allowed}
     try:

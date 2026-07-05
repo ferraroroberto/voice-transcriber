@@ -37,6 +37,11 @@ DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8443
 DEFAULT_RETENTION_DAYS = 30
 DEFAULT_SILENCE_DBFS_THRESHOLD = -50.0
+# Quiet-environment gain boost — amplifies captured audio before whisper,
+# orthogonal to the silence gate above (see src/gain.py). Off by default;
+# mirrors the vad_auto_stop_enabled + auto_stop_silence_ms enable/value pair.
+DEFAULT_GAIN_BOOST_ENABLED = False
+DEFAULT_GAIN_BOOST_DB = 12.0
 # Pillar 1 (rolling transcription): how often to re-run whisper on the
 # accumulated take while the user is still recording. 0 disables the
 # rolling worker entirely; the webapp falls back to the legacy "one
@@ -101,6 +106,10 @@ class WebappConfig:
     # RMS gate before whisper. Clips quieter than this (dBFS) skip the
     # transcription step entirely so whisper can't hallucinate on silence.
     silence_dbfs_threshold: float = DEFAULT_SILENCE_DBFS_THRESHOLD
+    # Quiet-environment gain boost — applied to audio after the silence
+    # gate passes, before it reaches whisper. See src/gain.py.
+    gain_boost_enabled: bool = DEFAULT_GAIN_BOOST_ENABLED
+    gain_boost_db: float = DEFAULT_GAIN_BOOST_DB
     # Latency-collapse knobs — see DEFAULT_* constants above for the
     # rationale and the per-pillar on/off defaults.
     partial_interval_seconds: float = DEFAULT_PARTIAL_INTERVAL_SECONDS
@@ -156,6 +165,10 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         silence_dbfs_threshold=float(
             raw.get("silence_dbfs_threshold", DEFAULT_SILENCE_DBFS_THRESHOLD)
         ),
+        gain_boost_enabled=bool(
+            raw.get("gain_boost_enabled", DEFAULT_GAIN_BOOST_ENABLED)
+        ),
+        gain_boost_db=float(raw.get("gain_boost_db", DEFAULT_GAIN_BOOST_DB)),
         partial_interval_seconds=float(
             raw.get("partial_interval_seconds", DEFAULT_PARTIAL_INTERVAL_SECONDS)
         ),
@@ -188,6 +201,8 @@ def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
         "auth_token": cfg.auth_token,
         "auth_password": cfg.auth_password,
         "silence_dbfs_threshold": cfg.silence_dbfs_threshold,
+        "gain_boost_enabled": cfg.gain_boost_enabled,
+        "gain_boost_db": cfg.gain_boost_db,
         "partial_interval_seconds": cfg.partial_interval_seconds,
         "vad_auto_stop_enabled": cfg.vad_auto_stop_enabled,
         "auto_stop_silence_ms": cfg.auto_stop_silence_ms,
@@ -240,3 +255,5 @@ def _validate(cfg: WebappConfig) -> None:
         raise ValueError("partial_interval_seconds must be >= 0 (0 disables)")
     if cfg.auto_stop_silence_ms < 200:
         raise ValueError("auto_stop_silence_ms must be >= 200")
+    if not (0.0 <= cfg.gain_boost_db <= 24.0):
+        raise ValueError("gain_boost_db must be between 0 and 24")

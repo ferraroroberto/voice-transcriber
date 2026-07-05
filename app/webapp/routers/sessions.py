@@ -21,6 +21,7 @@ from fastapi.responses import StreamingResponse
 from src.app_config import resolve_iso
 from src import TranscriptionClient, TranscriptionError
 from src.archive import SessionArchive, parse_created_at
+from src.gain import apply_gain_to_wav
 from src.polish import PolishClient, PolishError
 from src.polish_prompts import PolishPrompt, get_prompt
 from src.silence import is_silent_wav
@@ -578,6 +579,11 @@ async def _transcribe_session_payload(
             "dbfs": round(dbfs, 1),
         }
 
+    # Quiet-environment gain boost — amplifies the take before whisper sees
+    # it. Runs after the silence gate so the gate's calibration is unaffected.
+    if cfg.gain_boost_enabled:
+        apply_gain_to_wav(wav_path, cfg.gain_boost_db)
+
     client: TranscriptionClient = request.app.state.transcription_client
     try:
         text = client.transcribe_file(wav_path, language=iso, translate=translate)
@@ -659,6 +665,11 @@ def _ensure_partial_worker(app: FastAPI, session) -> PartialWorker:
         return resolve_iso(chosen)
 
     async def _transcribe(wav_path: Path) -> str:
+        # Partial passes have no silence gate to stay orthogonal to — apply
+        # the boost unconditionally so partial and final transcripts share
+        # the same audio quality.
+        if cfg.gain_boost_enabled:
+            await asyncio.to_thread(apply_gain_to_wav, wav_path, cfg.gain_boost_db)
         iso = _resolve_iso_for_session()
         return await asyncio.to_thread(
             transcription_client.transcribe_file, wav_path, iso, False,

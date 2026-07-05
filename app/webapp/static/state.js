@@ -48,6 +48,8 @@ export const els = {
   translateToggle:  document.getElementById('translateToggle'),
   micSelect:        document.getElementById('micSelect'),
   forceBuiltinMic:  document.getElementById('forceBuiltinMic'),
+  gainBoostToggle:  document.getElementById('gainBoostToggle'),
+  gainBoostDb:      document.getElementById('gainBoostDb'),
   vadAutoStopToggle:       document.getElementById('vadAutoStopToggle'),
   autoStopSilenceMs:       document.getElementById('autoStopSilenceMs'),
   retentionDays:    document.getElementById('retentionDays'),
