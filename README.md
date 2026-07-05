@@ -663,6 +663,26 @@ single attributable source of truth for transcription across the
 fleet — externally triggered takes are captured *and* identifiable,
 not just recoverable on disk.
 
+A small `📊 Today: N takes · X wpm · ~Y min saved` line sits above the
+action row — today's take count, an estimated dictation speed, and how
+long that would have taken to type by hand (assuming a ~40 wpm typing
+baseline; both figures are estimates, not precise measurements). It
+reads `📊 No takes yet today` until the first completed take of the
+day. See issue #95.
+
+#### Persistent activity log
+
+Unlike `archive/` (pruned after 30 days), every session-lifecycle event
+— created, transcribed, transcribe/polish failures, polished, deleted —
+is also written to a separate, much longer-lived SQLite log at
+`webapp/activity.sqlite3` (gitignored), retained for 365 days and
+pruned on boot. This is what backs the analytics line above, and it's
+also where to look for *why* something failed after its archive folder
+is long gone: `GET /api/activity` (optional `event_type` / `since`
+epoch-seconds / `limit` query params, newest first) returns the raw
+event trail. No dedicated UI page for it yet — it's an API, curl or
+open it in a browser.
+
 Three buttons live above the list, all in a single right-aligned row:
 
 | Button | What it does |

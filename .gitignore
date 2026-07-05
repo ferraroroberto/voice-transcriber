@@ -43,5 +43,8 @@ archive/
 webapp/last_tunnel_url.txt
 webapp/certificates/
 webapp/cloudflared.yml
+webapp/activity.sqlite3
+webapp/activity.sqlite3-wal
+webapp/activity.sqlite3-shm
 app/webapp/static/voice-transcriber-ca.mobileconfig
 app/webapp/static/ca.crt

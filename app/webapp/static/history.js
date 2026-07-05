@@ -20,6 +20,30 @@ export async function refreshHistory() {
   // user can extend the selection up the list to grab more takes.
   const firstCheckbox = els.historyList.querySelector('input.select-checkbox');
   if (firstCheckbox) firstCheckbox.checked = true;
+  refreshAnalytics();
+}
+
+// Today's take count / words-per-minute / estimated time saved — a compact
+// line above the History actions row. Refreshed alongside History itself
+// since both change together (a new take affects both). See issue #95.
+async function refreshAnalytics() {
+  if (!els.analyticsSummary) return;
+  try {
+    const r = await authFetch('/api/analytics/summary');
+    if (!r.ok) throw new Error(String(r.status));
+    const s = await r.json();
+    els.analyticsSummary.textContent = formatAnalyticsSummary(s);
+  } catch (err) {
+    els.analyticsSummary.textContent = '';
+  }
+}
+
+function formatAnalyticsSummary(s) {
+  if (!s || !s.take_count) return '📊 No takes yet today';
+  const parts = [`${s.take_count} take${s.take_count === 1 ? '' : 's'}`];
+  if (typeof s.words_per_minute === 'number') parts.push(`${s.words_per_minute} wpm`);
+  if (typeof s.time_saved_minutes === 'number') parts.push(`~${s.time_saved_minutes} min saved`);
+  return `📊 Today: ${parts.join(' · ')}`;
 }
 
 export async function loadMoreHistory() {

@@ -20,6 +20,7 @@ from fastapi.responses import StreamingResponse
 
 from src.app_config import resolve_iso
 from src import TranscriptionClient, TranscriptionError
+from src import activity_log
 from src.archive import SessionArchive, parse_created_at
 from src.gain import apply_gain_to_wav
 from src.polish import PolishClient, PolishError
@@ -79,6 +80,10 @@ async def create_session(request: Request) -> Dict[str, Any]:
         incognito=incognito,
         source=source,
     )
+    if not incognito:
+        activity_log.record_event(
+            "session_created", session_id=session.session_id, source=source,
+        )
     return {
         "session_id": session.session_id,
         "folder": str(session.folder),
@@ -230,6 +235,12 @@ async def finish_session(
         session.write_transcript(text)
         session.meta.language = language or session.meta.language
         session.write_meta()
+        activity_log.record_event(
+            "transcribed", session_id=session.session_id, source=session.meta.source,
+            duration_seconds=session.meta.duration_seconds,
+            word_count=len(text.split()) if text else 0,
+            payload={"language": session.meta.language, "from_partial": True},
+        )
         await worker.finalise(text)
         await _shutdown_partial_worker(request.app, session_id)
         return {
@@ -281,6 +292,10 @@ def _polish_and_persist(
     except PolishError as exc:
         session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
         session.write_meta()
+        activity_log.record_event(
+            "polish_failed", session_id=session.session_id, outcome="error",
+            error=str(exc), payload={"model": model},
+        )
         # 424 (Failed Dependency) instead of 502 so the Cloudflare
         # tunnel passes the JSON body through to the browser. Cloudflare
         # rewrites any 5xx from origin into its own HTML error page,
@@ -295,6 +310,11 @@ def _polish_and_persist(
         prompt_id=prompt.id,
     )
     session.write_meta()
+    activity_log.record_event(
+        "polished", session_id=session.session_id,
+        word_count=len(result.polished_text.split()) if result.polished_text else 0,
+        payload={"model": result.model},
+    )
     return {
         "session_id": session.session_id,
         "polished": result.polished_text,
@@ -353,6 +373,9 @@ async def polish_text(request: Request) -> Dict[str, Any]:
 
     archive: SessionArchive = request.app.state.archive
     session = archive.new_session(language=language, source="webapp")
+    activity_log.record_event(
+        "session_created", session_id=session.session_id, source="webapp",
+    )
     session.write_transcript(text)
     session.write_meta()
 
@@ -378,6 +401,9 @@ async def save_text(request: Request) -> Dict[str, Any]:
 
     archive: SessionArchive = request.app.state.archive
     session = archive.new_session(language=language, source="webapp")
+    activity_log.record_event(
+        "session_created", session_id=session.session_id, source="webapp",
+    )
     session.write_transcript(text)
     session.write_meta()
     return {
@@ -504,6 +530,7 @@ async def list_session_transcripts(
 async def delete_all_sessions(request: Request) -> Dict[str, Any]:
     archive: SessionArchive = request.app.state.archive
     removed = archive.cleanup_all()
+    activity_log.record_event("sessions_cleared", payload={"removed": removed})
     # Stop every active worker — sessions they were tied to are gone.
     for sid in list(request.app.state.partial_workers.keys()):
         await _shutdown_partial_worker(request.app, sid)
@@ -517,6 +544,7 @@ async def delete_one_session(
     archive: SessionArchive = request.app.state.archive
     if not archive.delete_session(session_id):
         raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
+    activity_log.record_event("session_deleted", session_id=session_id)
     await _shutdown_partial_worker(request.app, session_id)
     return {"removed": session_id}
 
@@ -529,6 +557,10 @@ async def delete_old_sessions(
         raise HTTPException(status_code=400, detail="days must be >= 1")
     archive: SessionArchive = request.app.state.archive
     removed = archive.cleanup_older_than(days)
+    if removed:
+        activity_log.record_event(
+            "sessions_cleared", payload={"removed": removed, "older_than_days": days},
+        )
     return {"removed": removed}
 
 
@@ -549,10 +581,18 @@ async def _transcribe_session_payload(
     try:
         transcode_to_wav(raw_path, wav_path, sample_rate=app_cfg.sample_rate)
     except AudioToolMissing as exc:
+        activity_log.record_event(
+            "transcribe_failed", session_id=session.session_id, outcome="error",
+            source=session.meta.source, error=str(exc),
+        )
         raise HTTPException(status_code=503, detail=str(exc))
     except AudioTranscodeError as exc:
         session.meta.error = str(exc)
         session.write_meta()
+        activity_log.record_event(
+            "transcribe_failed", session_id=session.session_id, outcome="error",
+            source=session.meta.source, error=str(exc),
+        )
         raise HTTPException(status_code=500, detail=f"transcode failed: {exc}")
 
     chosen_lang = language or session.meta.language or app_cfg.language
@@ -570,6 +610,10 @@ async def _transcribe_session_payload(
         logger.info(
             f"🤫 Skipped whisper for {session.session_id}: "
             f"{dbfs:.1f} dBFS < {cfg.silence_dbfs_threshold} dBFS threshold"
+        )
+        activity_log.record_event(
+            "silence_skipped", session_id=session.session_id,
+            source=session.meta.source, payload={"dbfs": round(dbfs, 1)},
         )
         return {
             "session_id": session.session_id,
@@ -590,12 +634,22 @@ async def _transcribe_session_payload(
     except TranscriptionError as exc:
         session.meta.error = str(exc)
         session.write_meta()
+        activity_log.record_event(
+            "transcribe_failed", session_id=session.session_id, outcome="error",
+            source=session.meta.source, error=str(exc),
+        )
         raise HTTPException(status_code=502, detail=str(exc))
 
     text = (text or "").strip()
     session.write_transcript(text)
     session.meta.language = chosen_lang
     session.write_meta()
+    activity_log.record_event(
+        "transcribed", session_id=session.session_id, source=session.meta.source,
+        duration_seconds=session.meta.duration_seconds,
+        word_count=len(text.split()) if text else 0,
+        payload={"language": chosen_lang},
+    )
 
     return {
         "session_id": session.session_id,

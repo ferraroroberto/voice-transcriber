@@ -45,7 +45,7 @@ flowchart TB
   subgraph webapp["app/webapp/ — FastAPI mobile PWA"]
     WEBSERVER["server.py\nroutes + lifespan (archive cleanup on boot)"]
     WEBAPPMGR["manager.py\nadopt-or-spawn uvicorn on :8443"]
-    ROUTERS["routers/\nsessions · auth · config · misc"]
+    ROUTERS["routers/\nsessions · auth · config · misc · activity · analytics"]
     MIDDLEWARE["middleware.py\nbearer-token auth, loopback bypass"]
     AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
@@ -65,6 +65,8 @@ flowchart TB
     POLISH["polish.py\nlocal-llm-hub client"]
     POLISHPROMPTS["polish_prompts.py\nstyle-library loader"]
     ARCHIVE["archive.py\ndated session folders + 30-day cleanup"]
+    ACTIVITYLOG["activity_log.py\nSQLite events log, 365-day retention —\nsurvives the archive's 30-day prune"]
+    ANALYTICS["analytics.py\ntoday's take count / wpm / time-saved,\nread from activity_log"]
     WEBAPPCFG["webapp_config.py\ntyped loader, config/webapp_config.json"]
     VOCAB["vocabulary.py"]
     SNIPPETS["snippets.py"]
@@ -85,6 +87,9 @@ flowchart TB
   TKAPP --> POLISH
   TKAPP --> INJECT
   ROUTERS --> ARCHIVE
+  ROUTERS --> ACTIVITYLOG
+  ROUTERS --> ANALYTICS
+  ANALYTICS --> ACTIVITYLOG
   ROUTERS --> WEBAPPCFG
   ROUTERS --> POLISH
   ROUTERS --> VOCAB
@@ -115,10 +120,12 @@ flowchart TB
   TRANSCLIENT -->|translate_base_url, task=translate| LLMHUB
   CLOUDFLARED --> CLOUDFLAREACCESS
 
-  subgraph data["archive/ (gitignored runtime data)"]
-    SESSIONS["YYYY/MM/DD/HH-MM-SS-<id>/\nraw.webm · audio.wav · transcript.txt · polished.txt · meta.json"]
+  subgraph data["archive/ + webapp/ (gitignored runtime data)"]
+    SESSIONS["archive/YYYY/MM/DD/HH-MM-SS-<id>/\nraw.webm · audio.wav · transcript.txt · polished.txt · meta.json"]
+    ACTIVITYDB["webapp/activity.sqlite3\nevents table — outlives SESSIONS' 30-day prune"]
   end
   ARCHIVE --> SESSIONS
+  ACTIVITYLOG --> ACTIVITYDB
   ROUTERS -->|session API: /api/sessions, /chunk, /events, /finish| SESSIONS
 
   subgraph tests["tests/ — pytest + Playwright e2e"]

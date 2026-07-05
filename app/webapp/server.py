@@ -18,13 +18,17 @@ Routes are split across ``app/webapp/routers/`` — one module per concern:
     POST   /api/polish-text         → polish pasted text         (sessions)
     POST   /api/save-text           → save pasted text           (sessions)
 
+    GET  /api/activity               → persistent event log       (activity)
+    GET  /api/analytics/summary      → today's take/wpm/time-saved (analytics)
+
 This module keeps only the wiring: ``create_app()``, the lifespan hook,
 the static mount, and the module-level ``app`` for
 ``uvicorn app.webapp.server:app``.
 
 The lifespan hook prunes sessions older than the configured retention
 window on every boot, matching the user's expectation that startup is
-when "the app cleans the history".
+when "the app cleans the history". It also initializes and prunes the
+separate, much-longer-retention persistent activity log (issue #95).
 """
 
 from __future__ import annotations
@@ -41,6 +45,7 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from src import TranscriptionClient, load_app_config
+from src import activity_log
 from src.archive import SessionArchive
 from src.polish import PolishClient
 from src.static_versioning import BuildInfo
@@ -50,7 +55,7 @@ from src.whisper_server import WhisperServerManager
 from app.webapp.audio import find_ffmpeg
 from app.webapp.middleware import BearerTokenMiddleware
 from app.webapp.partial_worker import PartialWorker
-from app.webapp.routers import auth, config, misc, sessions
+from app.webapp.routers import activity, analytics, auth, config, misc, sessions
 from app.webapp.routers._helpers import PROJECT_ROOT, STATIC_DIR
 
 logger = logging.getLogger(__name__)
@@ -126,6 +131,12 @@ async def _lifespan(app: FastAPI):
     except Exception as exc:  # noqa: BLE001 — never block startup
         logger.warning(f"⚠️  Archive prune failed: {exc}")
 
+    try:
+        activity_log.init_db()
+        activity_log.prune_older_than(activity_log.DEFAULT_RETENTION_DAYS)
+    except Exception as exc:  # noqa: BLE001 — never block startup
+        logger.warning(f"⚠️  Activity log init/prune failed: {exc}")
+
     if find_ffmpeg(PROJECT_ROOT) is None:
         logger.warning(
             "⚠️  ffmpeg not found on PATH or in vendor/ffmpeg/. "
@@ -198,6 +209,8 @@ def create_app() -> FastAPI:
     app.include_router(config.router)
     app.include_router(auth.router)
     app.include_router(sessions.router)
+    app.include_router(activity.router)
+    app.include_router(analytics.router)
 
     logger.info(
         f"ℹ️  webapp build {BUILD_INFO.git_sha} "
