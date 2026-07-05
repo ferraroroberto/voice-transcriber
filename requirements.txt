@@ -28,6 +28,11 @@ pynput>=1.7
 # Tray icon
 pystray>=0.19
 Pillow>=10.0
+# src/mic_glyph.py renders the Lucide mic glyph via resvg-py at runtime (the
+# live tray re-renders it on every recording-state change), not just at
+# dev-time icon generation — so unlike project-scaffolding's brand_gen.py
+# callers, this is a real runtime dependency, not dev-only.
+resvg-py>=0.3.0
 
 # Windows toast notifications — modern WinRT toasts stack properly in
 # Action Center; pystray's built-in balloon tips drop subsequent

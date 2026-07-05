@@ -2,26 +2,37 @@
 (``scripts/gen_app_icons.py``) and the runtime tray icon (``app/gui/tray.py``)
 so every surface renders the same shape.
 
-Proportions are lifted directly from Lucide's ``mic`` icon (24x24 viewBox):
-capsule ``rect x=9 y=2 w=6 h=13 rx=3``, cradle arc centred on ``(12,12) r=7``,
-stem ``x=12 y=19..22`` — the same fleet convention ``home-automation``'s icon
-generator used for its house glyph (issue #24 / fleet-wide app-launcher#65).
-Lucide's short `v2` ticks above the arc's ends are dropped: at silhouette
-scale they read as disconnected floating squares rather than hugging the
-capsule.
+Renders Lucide's ``mic`` glyph (24x24 viewBox) directly via ``resvg-py`` —
+the path data below is vendored verbatim from ``project-scaffolding``'s
+``brand/mic.svg`` (app-launcher#65's shared fleet icon-brand generator),
+embedded here rather than read from that repo at runtime: this module is
+called on every tray recording-state change, and a live cross-repo file read
+on that hot path is more fragile than a one-shot dev-time generator import.
+Re-copy the path data from ``project-scaffolding/brand/mic.svg`` if it ever
+changes there.
 """
 
 from __future__ import annotations
 
-from PIL import Image, ImageDraw
+import io
+
+import resvg_py
+from PIL import Image
 
 RGBA = tuple[int, int, int, int]
 
-# Lucide `mic` glyph, 24x24 viewBox: bounding box of capsule+cradle+stem.
-_GLYPH_TOP = 2       # capsule top (rect y=2)
-_GLYPH_BOTTOM = 22   # stem bottom (line y2=22)
-_GLYPH_CX = 12       # horizontal center (capsule/stem/cradle all centred here)
-_GLYPH_H = _GLYPH_BOTTOM - _GLYPH_TOP  # 20 units
+# Lucide `mic` glyph paths, 24x24 viewBox — vendored verbatim from
+# project-scaffolding/brand/mic.svg.
+_GLYPH_PATHS = """
+    <path d="M12 19v3" />
+    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+    <rect x="9" y="2" width="6" height="13" rx="3" />
+"""
+
+
+def _rgba_css(color: RGBA) -> str:
+    r, g, b, a = color
+    return f"rgba({r},{g},{b},{a / 255:.3f})"
 
 
 def draw_mic(
@@ -30,7 +41,7 @@ def draw_mic(
     fg: RGBA,
     bg: RGBA | None = None,
 ) -> Image.Image:
-    """Render the Lucide-proportioned mic glyph centered on a canvas.
+    """Render the Lucide mic glyph centered on a canvas.
 
     ``pad_ratio`` is the fraction of the canvas reserved as padding on each
     side; the glyph fills the remaining safe area, scaled uniformly from
@@ -39,33 +50,27 @@ def draw_mic(
     opaque full-bleed tile (PWA/favicon/Stream Deck — required for iOS, which
     composites alpha against black and applies its own corner mask).
     """
-    img = Image.new("RGBA", (canvas_size, canvas_size), bg if bg is not None else (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
+    glyph_size = canvas_size * (1 - 2 * pad_ratio)
+    offset = canvas_size * pad_ratio
+    scale = glyph_size / 24
+    # Fixed in the pre-scale (24-unit) coordinate space, same as
+    # project-scaffolding's brand_gen.py — the transform scale below then
+    # makes the rendered stroke proportionally bolder at larger canvas sizes,
+    # matching the rest of the fleet's icon family.
+    stroke_width = 2.6
 
-    safe = canvas_size * (1 - 2 * pad_ratio)
-    scale = safe / _GLYPH_H
-    top = canvas_size * pad_ratio
-    cx = canvas_size / 2
-
-    def x(lucide_x: float) -> float:
-        return cx + (lucide_x - _GLYPH_CX) * scale
-
-    def y(lucide_y: float) -> float:
-        return top + (lucide_y - _GLYPH_TOP) * scale
-
-    # Capsule (mic body) — Lucide `rect x=9 y=2 width=6 height=13 rx=3`.
-    draw.rounded_rectangle(
-        (x(9), y(2), x(15), y(15)),
-        radius=3 * scale,
-        fill=fg,
+    bg_rect = (
+        f'<rect width="{canvas_size}" height="{canvas_size}" fill="{_rgba_css(bg)}"/>'
+        if bg is not None
+        else ""
     )
-
-    # Cradle — Lucide draws this as a 2px stroke; thicken it into a solid
-    # band so it stays legible at favicon/tray sizes.
-    thickness = max(2, round(2.2 * scale))
-    draw.arc((x(5), y(5), x(19), y(19)), start=0, end=180, fill=fg, width=thickness)
-
-    # Stem — Lucide `M12 19v3`.
-    draw.line([(x(12), y(19)), (x(12), y(22))], fill=fg, width=thickness)
-
-    return img
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{canvas_size}" height="{canvas_size}" viewBox="0 0 {canvas_size} {canvas_size}">
+  {bg_rect}
+  <g transform="translate({offset},{offset}) scale({scale})"
+     fill="none" stroke="{_rgba_css(fg)}" stroke-width="{stroke_width}"
+     stroke-linecap="round" stroke-linejoin="round">
+    {_GLYPH_PATHS}
+  </g>
+</svg>"""
+    png_bytes = bytes(resvg_py.svg_to_bytes(svg_string=svg, width=canvas_size, height=canvas_size))
+    return Image.open(io.BytesIO(png_bytes)).convert("RGBA")
