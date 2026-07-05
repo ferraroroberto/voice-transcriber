@@ -31,7 +31,7 @@ from typing import Optional
 # Third-party imports
 import pyperclip
 import yaml
-from PIL import Image, ImageDraw
+from PIL import Image
 import pystray
 from pynput import keyboard
 
@@ -47,6 +47,7 @@ from src import (
     TranscriptionError,
 )
 from src.inject import parse_simple_hotkey, paste_at_caret
+from src.mic_glyph import draw_mic
 from src.recorder import Recording
 from src.silence import is_silent_samples
 from src.webapp_config import append_auth_token, load_webapp_config
@@ -846,19 +847,13 @@ class TrayApp:
 # --------------------------------------------------------------------- icon
 
 def _make_icon_image(color=(70, 180, 120)) -> Image.Image:
-    """Draw a simple microphone glyph as the tray icon."""
-    size = 64
-    img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(img)
-    # Body
-    draw.rounded_rectangle((22, 10, 42, 40), radius=10, fill=color)
-    # Stand
-    draw.rectangle((30, 44, 34, 54), fill=color)
-    draw.rectangle((20, 52, 44, 56), fill=color)
-    # Mic grill
-    for y in (18, 24, 30):
-        draw.line((26, y, 38, y), fill=(255, 255, 255, 180), width=1)
-    return img
+    """Draw the shared mic glyph (src/mic_glyph.py) as the tray icon.
+
+    Same silhouette as the PWA/favicon/Stream Deck icons (gen_app_icons.py),
+    just transparent-background and tinted by recording state instead of
+    fixed near-white-on-black.
+    """
+    return draw_mic(64, pad_ratio=0.15, fg=(*color, 255))
 
 
 # In-process single-instance guard (project-scaffolding#39): a named mutex held
