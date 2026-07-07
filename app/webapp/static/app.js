@@ -147,6 +147,15 @@ function bindEvents() {
     });
   }
 
+  // Theme toggle (app-launcher #355 pattern): the pre-paint snippet in
+  // index.html already stamped html[data-theme]; the button just flips it.
+  // The sun/moon glyph swap is pure CSS keyed on the attribute.
+  els.themeToggle.addEventListener('click', () => {
+    const dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    try { localStorage.setItem('voice-transcriber.theme', dark ? 'dark' : 'light'); } catch (_) {}
+  });
+
   els.micSelect.addEventListener('change', releaseCachedStream);
 
   // Release the mic when the page goes away so the iOS recording

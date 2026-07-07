@@ -215,6 +215,13 @@ html, body {
   transition: background 0.15s;
 }
 .header-icon-btn:active { background: var(--card-off); }
+.header-icon-btn .icon { width: var(--icon-title); height: var(--icon-title); }
+
+/* Theme toggle — shows the glyph for the ACTION: moon in light (tap → dark),
+   sun in dark (tap → light). Pure CSS swap keyed on html[data-theme]; the
+   first-paint snippet in <head> stamps the attribute before render. */
+:root[data-theme="dark"] .theme-icon-moon { display: none; }
+:root:not([data-theme="dark"]) .theme-icon-sun { display: none; }
 
 /* Append + incognito header chips — compact role="switch" buttons (same
    aria-checked state contract as the fleet switch, own chip look). Opacity +

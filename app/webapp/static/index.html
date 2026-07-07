@@ -122,6 +122,20 @@
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <path d="m7 10 5 5 5-5" />
     </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none">
+      <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </symbol>
   </svg>
 
   <!-- Fleet nav contract: direct <body> child, sibling to <main class="app"> —
@@ -159,6 +173,13 @@
           <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
                   title="Incognito — don't save this recording to history"
                   aria-label="Incognito — don't save this recording to history"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg></button>
+          <!-- Sprite moon + sun; CSS shows the glyph for the ACTION keyed on
+               html[data-theme] (the app-launcher #355 pattern). -->
+          <button id="themeToggle" type="button" class="header-icon-btn theme-toggle"
+                  title="Toggle theme" aria-label="Toggle dark mode">
+            <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
+            <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
+          </button>
         </div>
       </header>
 
