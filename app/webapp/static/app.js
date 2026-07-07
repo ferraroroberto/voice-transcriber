@@ -8,6 +8,7 @@
 
 'use strict';
 
+import { initNavTabs } from './_vendored/nav/nav-tabs.js';
 import { els, state, captureTokenFromURL } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, showToast } from './ui.js';
@@ -105,8 +106,15 @@ function bindEvents() {
   els.saveTranscript.addEventListener('click', onSaveTranscript);
   els.polishStyle.addEventListener('change', refreshPromptPreview);
 
-  els.settingsPanel.addEventListener('toggle', () => {
-    if (els.settingsPanel.open) refreshStatus();
+  // Fleet bottom-tab nav (vendored component — _vendored/nav/). Refresh the
+  // status readout whenever the Settings tab is activated, replacing the old
+  // <details> toggle listener from the single-scroll layout.
+  initNavTabs({
+    storageKey: 'voice-transcriber.tab',
+    scrollResetSelector: '.app',
+    onChange: (tab) => {
+      if (tab === 'settings') refreshStatus();
+    },
   });
   els.saveSettings.addEventListener('click', onSaveSettings);
 

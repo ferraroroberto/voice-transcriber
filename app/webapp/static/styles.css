@@ -142,6 +142,22 @@
   }
 }
 
+/* Lucide icons (vendored icons component contract): every app icon is
+   <svg class="icon"><use href="#i-NAME"></use></svg>, drawn from the inline
+   sprite at the top of index.html. stroke: currentColor recolors them for
+   free in both themes; size at the call site from the icon-size tokens. */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  flex: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: -0.15em;
+}
+
 html, body {
   margin: 0;
   padding: 0;
@@ -362,6 +378,8 @@ html, body {
   font-size: var(--font-body);
   font-weight: 700;
 }
+.card-header h2 .icon { width: var(--icon-title); height: var(--icon-title); }
+.card-count { color: var(--muted); font-size: var(--font-caption); font-weight: 600; }
 
 .text-out {
   background: var(--input-bg);
@@ -506,18 +524,6 @@ textarea.text-out.editable::placeholder {
 }
 
 /* ---------- history ---------- */
-.history-card { padding: 6px 14px; }
-.history-card summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 10px 0;
-  font-weight: 700;
-  color: var(--muted);
-  font-size: var(--font-label);
-}
-.history-card summary::-webkit-details-marker { display: none; }
-.history-card[open] summary { color: var(--ink); }
-
 .history-actions {
   display: flex;
   gap: var(--space-sm);
@@ -662,18 +668,7 @@ textarea.text-out.editable::placeholder {
 }
 .history-list li .actions button { font-size: var(--font-caption); min-height: var(--control-h); padding: 6px 10px; }
 
-/* ---------- settings panel (collapsible card, twin of history) ---------- */
-.settings-card { padding: 6px 14px; }
-.settings-card summary {
-  list-style: none;
-  cursor: pointer;
-  padding: 10px 0;
-  font-weight: 700;
-  color: var(--muted);
-  font-size: var(--font-label);
-}
-.settings-card summary::-webkit-details-marker { display: none; }
-.settings-card[open] summary { color: var(--ink); }
+/* ---------- settings panel ---------- */
 .settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
