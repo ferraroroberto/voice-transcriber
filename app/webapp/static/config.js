@@ -132,11 +132,15 @@ export async function refreshStatus() {
     const r = await authFetch('/api/status');
     if (!r.ok) return;
     const s = await r.json();
-    const bits = [];
-    bits.push(s.whisper.running ? '🟢 whisper' : '🔴 whisper');
-    bits.push(s.llm_hub.reachable ? '🟢 hub' : '🔴 hub');
-    bits.push(s.ffmpeg_present ? '🟢 ffmpeg' : '🔴 ffmpeg');
-    els.statusReadout.textContent = bits.join('   ');
+    // Tokenized status dots (success/danger), not emoji — labels are the
+    // fixed strings below, so innerHTML is safe.
+    const dot = (ok, label) =>
+      `<span class="status-dot ${ok ? 'on' : 'off'}"></span> ${label}`;
+    els.statusReadout.innerHTML = [
+      dot(s.whisper.running, 'whisper'),
+      dot(s.llm_hub.reachable, 'hub'),
+      dot(s.ffmpeg_present, 'ffmpeg'),
+    ].join('&ensp;');
     els.polishBtn.disabled = !s.llm_hub.reachable || !state.transcript;
   } catch (err) { /* swallow */ }
 }

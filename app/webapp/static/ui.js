@@ -51,12 +51,14 @@ export async function tryAutoCopy(text, btn) {
 
 function flashCopied(btn) {
   if (!btn || btn.dataset.flashing === '1') return;
-  const original = btn.textContent;
+  // Save/restore innerHTML, not textContent — the idle label carries a
+  // Lucide sprite icon that a textContent restore would strip.
+  const original = btn.innerHTML;
   btn.dataset.flashing = '1';
   btn.textContent = '✓ Copied';
   btn.classList.add('copied');
   setTimeout(() => {
-    btn.textContent = original;
+    btn.innerHTML = original;
     btn.classList.remove('copied');
     delete btn.dataset.flashing;
   }, 1400);
@@ -83,11 +85,12 @@ async function writePlainText(text) {
 
 export function flashDanger(btn) {
   if (!btn) return;
-  const original = btn.textContent;
+  // innerHTML for the same icon-preserving reason as flashCopied above.
+  const original = btn.innerHTML;
   btn.classList.add('danger-flash');
   btn.textContent = '✓ Cleared';
   setTimeout(() => {
-    btn.textContent = original;
+    btn.innerHTML = original;
     btn.classList.remove('danger-flash');
   }, 1400);
 }

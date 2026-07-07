@@ -183,7 +183,15 @@ html, body {
   justify-content: space-between;
   padding: var(--gap) 0 var(--space-xs);
 }
-.header h1 { margin: 0; font-size: var(--font-body); font-weight: 700; }
+.header h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 700;
+}
+.header h1 .icon { width: var(--icon-title); height: var(--icon-title); }
 
 .header-actions {
   display: flex;
@@ -231,7 +239,8 @@ html, body {
   opacity: 0.55;
   transition: opacity 0.15s, border-color 0.15s, background 0.15s;
 }
-.incognito-btn { font-size: var(--icon-title); }
+.append-toggle .icon,
+.incognito-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 .append-toggle:active,
 .incognito-btn:active { background: var(--card-off); }
 .append-toggle[aria-checked="true"],
@@ -384,6 +393,10 @@ textarea.text-out.editable::placeholder {
 .copy-btn,
 .ghost-btn,
 .danger-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: 0;
   border-radius: var(--radius-md);
   font-family: var(--font);
@@ -394,6 +407,10 @@ textarea.text-out.editable::placeholder {
   cursor: pointer;
   touch-action: manipulation;
 }
+.big-btn .icon,
+.copy-btn .icon,
+.ghost-btn .icon,
+.danger-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* button-primary: accent fill, accent-fg text, 48px */
 .big-btn { background: var(--accent); border: 1px solid var(--accent-border-strong); color: var(--accent-fg); flex: 1; }
 .big-btn:active { background: color-mix(in srgb, var(--accent) 85%, #000); }
@@ -485,7 +502,7 @@ textarea.text-out.editable::placeholder {
 }
 
 .load-more-btn {
-  display: block;
+  display: flex;
   width: 100%;
   margin-top: var(--space-sm);
 }
@@ -545,16 +562,18 @@ textarea.text-out.editable::placeholder {
   margin: 0;
   padding: 0;
 }
+/* Flat separator rows (the app-launcher#365 canon, GitHub-issue-list style):
+   no per-row box — a hairline divider is the row boundary; the outer History
+   card keeps the boxed look, only the repeated rows inside it flatten. */
 .history-list li {
-  background: var(--card-off);
-  border: 1px solid var(--line-muted);
-  border-radius: var(--radius-md);
-  padding: 10px var(--gap);
-  margin: 6px 0;
+  padding: 10px 0;
+  margin: 0;
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  border-bottom: 1px solid var(--line-muted);
 }
+.history-list li:last-child { border-bottom: none; }
 .history-list li .select {
   display: flex;
   align-items: center;
@@ -576,7 +595,7 @@ textarea.text-out.editable::placeholder {
   border-radius: var(--radius-pill);
   font-size: var(--font-caption);
   line-height: 1.5;
-  background: var(--card);
+  background: var(--card-off);
   color: var(--muted);
   border: 1px solid var(--line-muted);
   vertical-align: middle;
@@ -602,6 +621,17 @@ textarea.text-out.editable::placeholder {
 .settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
+
+/* Status readout dots — status colors signal state only. */
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  vertical-align: baseline;
+}
+.status-dot.on { background: var(--on); }
+.status-dot.off { background: var(--danger); }
 
 /* ---------- toast ---------- */
 /* Glass pill above the floating nav — with the toast and the nav the only
