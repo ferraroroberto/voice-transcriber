@@ -8,9 +8,11 @@
 
 'use strict';
 
+import { initNavTabs } from './_vendored/nav/nav-tabs.js';
+import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state, captureTokenFromURL } from './state.js';
 import { authFetch } from './api.js';
-import { copyText, showToast } from './ui.js';
+import { copyText, isOn, showToast } from './ui.js';
 import {
   applyConfigDefaults,
   loadConfig,
@@ -105,8 +107,15 @@ function bindEvents() {
   els.saveTranscript.addEventListener('click', onSaveTranscript);
   els.polishStyle.addEventListener('change', refreshPromptPreview);
 
-  els.settingsPanel.addEventListener('toggle', () => {
-    if (els.settingsPanel.open) refreshStatus();
+  // Fleet bottom-tab nav (vendored component — _vendored/nav/). Refresh the
+  // status readout whenever the Settings tab is activated, replacing the
+  // disclosure-toggle listener from the old single-scroll layout.
+  initNavTabs({
+    storageKey: 'voice-transcriber.tab',
+    scrollResetSelector: '.app',
+    onChange: (tab) => {
+      if (tab === 'settings') refreshStatus();
+    },
   });
   els.saveSettings.addEventListener('click', onSaveSettings);
 
@@ -115,11 +124,39 @@ function bindEvents() {
   els.cleanAll.addEventListener('click', onCleanAll);
   els.loadMoreHistory.addEventListener('click', loadMoreHistory);
 
-  // Switching mic / forcing built-in invalidates the cached stream so
-  // the next record() picks up the new constraints (and re-prompts only
-  // if iOS deems the new device a different permission scope).
+  // Fleet switches (vendored component): a tap flips the state through the
+  // one setSwitch() write path; reads everywhere go through isOn(). Forcing
+  // built-in also invalidates the cached stream so the next record() picks
+  // up the new constraints (and re-prompts only if iOS deems the new device
+  // a different permission scope) — same reason micSelect stays on 'change'.
+  const flipOnTap = (el, after) => el.addEventListener('click', () => {
+    setSwitch(el, !isOn(el));
+    if (after) after();
+  });
+  flipOnTap(els.translateToggle);
+  flipOnTap(els.gainBoostToggle);
+  flipOnTap(els.vadAutoStopToggle);
+  flipOnTap(els.forceBuiltinMic, releaseCachedStream);
+
+  // Header chips (append / incognito) are compact role="switch" buttons —
+  // same aria-checked state contract, own look (not the track switch), so
+  // they flip aria-checked directly rather than through setSwitch().
+  for (const chip of [els.appendToggle, els.incognitoToggle]) {
+    chip.addEventListener('click', () => {
+      chip.setAttribute('aria-checked', isOn(chip) ? 'false' : 'true');
+    });
+  }
+
+  // Theme toggle (app-launcher #355 pattern): the pre-paint snippet in
+  // index.html already stamped html[data-theme]; the button just flips it.
+  // The sun/moon glyph swap is pure CSS keyed on the attribute.
+  els.themeToggle.addEventListener('click', () => {
+    const dark = document.documentElement.dataset.theme !== 'dark';
+    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    try { localStorage.setItem('voice-transcriber.theme', dark ? 'dark' : 'light'); } catch (_) {}
+  });
+
   els.micSelect.addEventListener('change', releaseCachedStream);
-  els.forceBuiltinMic.addEventListener('change', releaseCachedStream);
 
   // Release the mic when the page goes away so the iOS recording
   // indicator turns off — iOS keeps the permission grant for the

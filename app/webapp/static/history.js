@@ -4,6 +4,8 @@
 
 'use strict';
 
+import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
+import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, flashDanger, showToast } from './ui.js';
@@ -32,18 +34,21 @@ async function refreshAnalytics() {
     const r = await authFetch('/api/analytics/summary');
     if (!r.ok) throw new Error(String(r.status));
     const s = await r.json();
-    els.analyticsSummary.textContent = formatAnalyticsSummary(s);
+    // The numbers come from our own API (counts/wpm), so innerHTML with the
+    // sprite icon prefix is safe here.
+    els.analyticsSummary.innerHTML =
+      icon('activity') + ' ' + formatAnalyticsSummary(s);
   } catch (err) {
     els.analyticsSummary.textContent = '';
   }
 }
 
 function formatAnalyticsSummary(s) {
-  if (!s || !s.take_count) return '📊 No takes yet today';
+  if (!s || !s.take_count) return 'No takes yet today';
   const parts = [`${s.take_count} take${s.take_count === 1 ? '' : 's'}`];
   if (typeof s.words_per_minute === 'number') parts.push(`${s.words_per_minute} wpm`);
   if (typeof s.time_saved_minutes === 'number') parts.push(`~${s.time_saved_minutes} min saved`);
-  return `📊 Today: ${parts.join(' · ')}`;
+  return `Today: ${parts.join(' · ')}`;
 }
 
 export async function loadMoreHistory() {
@@ -65,9 +70,20 @@ async function fetchHistoryPage(offset) {
     const shown = els.historyList.children.length;
     els.historyCount.textContent = total > shown ? `${shown}/${total}` : `${shown}`;
     els.loadMoreHistory.hidden = shown >= total;
+    renderEmptyState(shown);
   } catch (err) { /* swallow */ }
   finally {
     els.loadMoreHistory.disabled = false;
+  }
+}
+
+// The canonical fleet empty-state (vendored component) whenever the list can
+// legitimately render zero takes — never a silent blank area.
+function renderEmptyState(shown) {
+  const existing = els.historyList.parentElement.querySelector('.empty-state');
+  if (existing) existing.remove();
+  if (shown === 0) {
+    els.historyList.after(emptyStateEl('history', 'No takes yet — record something'));
   }
 }
 
@@ -106,7 +122,7 @@ function renderHistoryItem(s) {
 
   const copyBtn = document.createElement('button');
   copyBtn.className = 'copy-btn';
-  copyBtn.textContent = '📋 Copy';
+  copyBtn.innerHTML = icon('clipboard') + ' Copy';
   copyBtn.addEventListener('click', async () => {
     // The list payload only carries 200-char previews; fetch the full
     // text on demand so what the user pastes matches what's on disk.
@@ -123,12 +139,12 @@ function renderHistoryItem(s) {
 
   const reBtn = document.createElement('button');
   reBtn.className = 'ghost-btn';
-  reBtn.textContent = '🔁 Redo';
+  reBtn.innerHTML = icon('rotate-cw') + ' Redo';
   reBtn.addEventListener('click', () => retranscribe(s.session_id));
 
   const delBtn = document.createElement('button');
   delBtn.className = 'ghost-btn';
-  delBtn.textContent = '🗑️ Delete';
+  delBtn.innerHTML = icon('trash-2') + ' Delete';
   delBtn.addEventListener('click', async () => {
     try {
       const r = await authFetch(`/api/sessions/${s.session_id}`, {
@@ -192,7 +208,8 @@ export async function onCleanAll() {
 // next begins.
 export async function onCopySelection() {
   const btn = els.copySelection;
-  const restoreLabel = '📋 Copy selected';
+  // Captured up front (icon + text) so the "…" busy state can restore it.
+  const restoreLabel = btn.innerHTML;
   const checked = Array.from(
     els.historyList.querySelectorAll('input.select-checkbox:checked')
   );
@@ -221,14 +238,14 @@ export async function onCopySelection() {
     }
     const combined = parts.join('\n\n');
     // Restore the label before the green flash so flashCopied captures
-    // "📋 Copy selection" as the original, not "…".
-    btn.textContent = restoreLabel;
+    // the idle icon+text as the original, not "…".
+    btn.innerHTML = restoreLabel;
     await copyText(combined, btn);
     copyDone = true;
   } catch (err) {
     showToast('Copy selected failed: ' + (err.message || err), 'error');
   } finally {
     btn.disabled = false;
-    if (!copyDone) btn.textContent = restoreLabel;
+    if (!copyDone) btn.innerHTML = restoreLabel;
   }
 }

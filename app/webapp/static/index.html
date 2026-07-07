@@ -2,148 +2,317 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Whisper">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0d1117" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="/static/manifest.webmanifest">
   <link rel="apple-touch-icon" href="/static/icon-180.png">
   <link rel="icon" href="/static/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/static/icon-512.png">
+  <link rel="stylesheet" href="/static/_vendored/nav/nav-tabs.css?v=__VENDORED_NAV_NAV_TABS_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/card/card.css?v=__VENDORED_CARD_CARD_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/switch/switch.css?v=__VENDORED_SWITCH_SWITCH_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/modal/modal.css?v=__VENDORED_MODAL_MODAL_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/empty-state/empty-state.css?v=__VENDORED_EMPTY_STATE_EMPTY_STATE_CSS__">
   <link rel="stylesheet" href="/static/styles.css?v=__STYLES_CSS__">
   <title>🎙️ Whisper</title>
+  <script>
+    (function(){
+      var t = localStorage.getItem('voice-transcriber.theme');
+      var dark = t ? t === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches;
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+    })();
+  </script>
 </head>
 <body>
+  <!-- Lucide icon sprite — trimmed to this app's glyphs, per the vendored icons
+       README (_vendored/icons/). Inline (not an external icons.svg) because iOS
+       Safari silently fails to resolve external <use> references; hidden via the
+       0-size/absolute idiom, NOT display:none (which suppresses <use> rendering
+       in some engines). fill="none" lives on each <symbol>; stroke styling comes
+       from the `.icon` / `.tab-icon` CSS classes. -->
+  <svg width="0" height="0" aria-hidden="true" focusable="false"
+       style="position:absolute;width:0;height:0;overflow:hidden">
+    <symbol id="i-mic" viewBox="0 0 24 24" fill="none">
+      <path d="M12 19v3" />
+      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+      <rect x="9" y="2" width="6" height="13" rx="3" />
+    </symbol>
+    <symbol id="i-history" viewBox="0 0 24 24" fill="none">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
+    </symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24" fill="none">
+      <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+      <circle cx="12" cy="12" r="3" />
+    </symbol>
+    <symbol id="i-sparkle" viewBox="0 0 24 24" fill="none">
+      <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z" />
+    </symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24" fill="none">
+      <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+    </symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none">
+      <path d="M5 12h14" />
+      <path d="M12 5v14" />
+    </symbol>
+    <symbol id="i-clipboard" viewBox="0 0 24 24" fill="none">
+      <rect width="8" height="4" x="8" y="2" rx="1" ry="1" />
+      <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
+    </symbol>
+    <symbol id="i-save" viewBox="0 0 24 24" fill="none">
+      <path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+      <path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" />
+      <path d="M7 3v4a1 1 0 0 0 1 1h7" />
+    </symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+      <path d="M2 12h20" />
+    </symbol>
+    <symbol id="i-volume-2" viewBox="0 0 24 24" fill="none">
+      <path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" />
+      <path d="M16 9a5 5 0 0 1 0 6" />
+      <path d="M19.364 18.364a9 9 0 0 0 0-12.728" />
+    </symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24" fill="none">
+      <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2" />
+    </symbol>
+    <symbol id="i-rotate-cw" viewBox="0 0 24 24" fill="none">
+      <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+    </symbol>
+    <symbol id="i-refresh-cw" viewBox="0 0 24 24" fill="none">
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </symbol>
+    <symbol id="i-trash-2" viewBox="0 0 24 24" fill="none">
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </symbol>
+    <symbol id="i-venetian-mask" viewBox="0 0 24 24" fill="none">
+      <path d="M18 11c-1.5 0-2.5.5-3 2" />
+      <path d="M4 6a2 2 0 0 0-2 2v4a5 5 0 0 0 5 5 8 8 0 0 1 5 2 8 8 0 0 1 5-2 5 5 0 0 0 5-5V8a2 2 0 0 0-2-2h-3a8 8 0 0 0-5 2 8 8 0 0 0-5-2z" />
+      <path d="M6 11c1.5 0 2.5.5 3 2" />
+    </symbol>
+    <symbol id="i-eraser" viewBox="0 0 24 24" fill="none">
+      <path d="M21 21H8a2 2 0 0 1-1.42-.587l-3.994-3.999a2 2 0 0 1 0-2.828l10-10a2 2 0 0 1 2.829 0l5.999 6a2 2 0 0 1 0 2.828L12.834 21" />
+      <path d="m5.082 11.09 8.828 8.828" />
+    </symbol>
+    <symbol id="i-bot" viewBox="0 0 24 24" fill="none">
+      <path d="M12 8V4H8" />
+      <rect width="16" height="12" x="4" y="8" rx="2" />
+      <path d="M2 14h2" />
+      <path d="M20 14h2" />
+      <path d="M15 13v2" />
+      <path d="M9 13v2" />
+    </symbol>
+    <symbol id="i-download" viewBox="0 0 24 24" fill="none">
+      <path d="M12 15V3" />
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="m7 10 5 5 5-5" />
+    </symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24" fill="none">
+      <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
+    </symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2" />
+      <path d="M12 20v2" />
+      <path d="m4.93 4.93 1.41 1.41" />
+      <path d="m17.66 17.66 1.41 1.41" />
+      <path d="M2 12h2" />
+      <path d="M20 12h2" />
+      <path d="m6.34 17.66-1.41 1.41" />
+      <path d="m19.07 4.93-1.41 1.41" />
+    </symbol>
+  </svg>
+
+  <!-- Fleet nav contract: direct <body> child, sibling to <main class="app"> —
+       never nested inside the content scroller (iOS PWA fixed-position capture;
+       see _vendored/nav/README.md). -->
+  <nav class="tabs" role="tablist" aria-label="Sections" data-active-tab="record">
+    <button id="tabRecord" type="button" class="tab active" data-tab="record"
+            role="tab" aria-selected="true" aria-controls="paneRecord">
+      <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-mic" /></svg>
+      <span class="tab-emoji" aria-hidden="true">🎙️</span>
+      <span class="tab-label">Record</span>
+    </button>
+    <button id="tabHistory" type="button" class="tab" data-tab="history"
+            role="tab" aria-selected="false" aria-controls="paneHistory" tabindex="-1">
+      <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-history" /></svg>
+      <span class="tab-emoji" aria-hidden="true">📜</span>
+      <span class="tab-label">History</span>
+    </button>
+    <button id="tabSettings" type="button" class="tab" data-tab="settings"
+            role="tab" aria-selected="false" aria-controls="paneSettings" tabindex="-1">
+      <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-settings" /></svg>
+      <span class="tab-emoji" aria-hidden="true">⚙️</span>
+      <span class="tab-label">Settings</span>
+    </button>
+  </nav>
+
   <main class="app">
-    <header class="header">
-      <h1>🎙️ Whisper</h1>
-      <div class="header-actions">
-        <label class="append-toggle" title="Append the next take to the current transcript instead of replacing it">
-          <input id="appendToggle" type="checkbox" hidden>
-          <span>➕ Append</span>
-        </label>
-        <button id="resetBtn" type="button" class="header-icon-btn" title="Reset — clear both boxes and the current session" aria-label="Reset">🧽</button>
-        <label class="incognito-btn" title="Incognito — don't save this recording to history">
-          <input id="incognitoToggle" type="checkbox" hidden>
-          <span class="icon">🕵️</span>
-        </label>
-      </div>
-    </header>
-
-    <section id="recordZone" class="record-zone">
-      <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
-        <span id="recordLabel" class="record-label">⬤ RECORD</span>
-        <span id="recordTimer" class="record-timer" hidden>00:00</span>
-      </button>
-      <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden>▶</button>
-      <div id="recordStatus" class="record-status">Tap to start</div>
-      <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
-    </section>
-
-    <section class="card transcript-card">
-      <div class="card-header">
-        <h2>🎙️ Transcript</h2>
-        <div class="row card-header-actions">
-          <button id="saveTranscript" class="copy-btn" type="button" title="Save the pasted text to history without polishing" disabled>💾 Save</button>
-          <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
+    <section id="paneRecord" class="pane" role="tabpanel" aria-labelledby="tabRecord" aria-label="Record">
+      <header class="header">
+        <h1><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Whisper</h1>
+        <div class="header-actions">
+          <button id="appendToggle" type="button" class="append-toggle" role="switch" aria-checked="false"
+                  title="Append the next take to the current transcript instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
+          <button id="resetBtn" type="button" class="header-icon-btn" title="Reset — clear both boxes and the current session" aria-label="Reset"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg></button>
+          <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
+                  title="Incognito — don't save this recording to history"
+                  aria-label="Incognito — don't save this recording to history"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg></button>
+          <!-- Sprite moon + sun; CSS shows the glyph for the ACTION keyed on
+               html[data-theme] (the app-launcher #355 pattern). -->
+          <button id="themeToggle" type="button" class="header-icon-btn theme-toggle"
+                  title="Toggle theme" aria-label="Toggle dark mode">
+            <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
+            <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
+          </button>
         </div>
-      </div>
-      <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Save / Go" rows="4"></textarea>
-    </section>
+      </header>
 
-    <section class="card polish-card">
-      <div class="card-header">
-        <h2>✨ Polish</h2>
-        <div class="row card-header-actions">
-          <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>Go</button>
-          <button id="copyPolished" class="copy-btn" type="button" disabled>📋 Copy</button>
+      <section id="recordZone" class="record-zone">
+        <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
+          <span id="recordLabel" class="record-label">⬤ RECORD</span>
+          <span id="recordTimer" class="record-timer" hidden>00:00</span>
+        </button>
+        <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden>▶</button>
+        <div id="recordStatus" class="record-status">Tap to start</div>
+        <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+      </section>
+
+      <section class="card transcript-card">
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Transcript</h2>
+          <div class="row card-header-actions">
+            <button id="saveTranscript" class="copy-btn" type="button" title="Save the pasted text to history without polishing" disabled><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
+            <button id="copyTranscript" class="copy-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          </div>
         </div>
-      </div>
-      <textarea id="polished" class="text-out editable" placeholder="Polished text will appear here — you can edit before copying" rows="3"></textarea>
+        <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Save / Go" rows="4"></textarea>
+      </section>
+
+      <section class="card polish-card">
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> Polish</h2>
+          <div class="row card-header-actions">
+            <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>Go</button>
+            <button id="copyPolished" class="copy-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          </div>
+        </div>
+        <textarea id="polished" class="text-out editable" placeholder="Polished text will appear here — you can edit before copying" rows="3"></textarea>
+      </section>
     </section>
 
-    <details id="settingsPanel" class="card settings-card">
-      <summary>⚙️ Settings</summary>
-      <label class="row">
-        <span>Polish model</span>
-        <select id="polishModel" class="select-native"></select>
-      </label>
-      <label class="row">
-        <span>Polish style</span>
-        <select id="polishStyle" class="select-native"></select>
-      </label>
-      <label class="stacked">
-        <span class="muted small">Prompt sent to the LLM (read-only preview)</span>
-        <textarea id="polishPromptPreview" class="text-out prompt-preview" rows="6" readonly></textarea>
-      </label>
-      <hr>
-      <label class="row">
-        <span>Language</span>
-        <select id="languageSelect" class="select-native"></select>
-      </label>
-      <label class="row toggle" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
-        <span>🌐 Translate to English</span>
-        <input id="translateToggle" type="checkbox">
-      </label>
-      <label class="row">
-        <span>Microphone</span>
-        <select id="micSelect" class="select-native"></select>
-      </label>
-      <label class="row toggle">
-        <span>Force built-in mic (skip Bluetooth)</span>
-        <input id="forceBuiltinMic" type="checkbox">
-      </label>
-      <label class="row toggle" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
-        <span>🔊 Quiet-environment gain boost</span>
-        <input id="gainBoostToggle" type="checkbox">
-      </label>
-      <label class="row">
-        <span>Boost amount (dB)</span>
-        <input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native">
-      </label>
-      <label class="row toggle" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
-        <span>🤖 Auto-stop on silence</span>
-        <input id="vadAutoStopToggle" type="checkbox">
-      </label>
-      <label class="row">
-        <span>Silence duration (ms)</span>
-        <input id="autoStopSilenceMs" type="number" min="200" max="10000" step="100" class="input-native">
-      </label>
-      <label class="row">
-        <span>Auto-clean older than (days)</span>
-        <input id="retentionDays" type="number" min="1" max="365" class="input-native">
-      </label>
-      <div class="row">
-        <button id="saveSettings" type="button" class="big-btn">💾 Save</button>
-      </div>
-      <hr>
-      <p class="muted small">
-        First time on iPhone? Install the trust profile:
-        <a href="/install-ca">/install-ca</a>
-      </p>
-      <p id="statusReadout" class="muted small"></p>
-      <p id="buildInfo" class="muted small" title="Which build of the webapp this device loaded — see issue #13">Build: …</p>
-    </details>
+    <section id="paneHistory" class="pane" role="tabpanel" aria-labelledby="tabHistory" aria-label="History" hidden>
+      <section class="card history-card">
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</h2>
+          <span class="card-head-meta">(<span id="historyCount">0</span>)</span>
+        </div>
+        <p id="analyticsSummary" class="muted small"></p>
+        <div class="history-actions">
+          <button id="refreshHistory" type="button" class="ghost-btn"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw" /></svg> Refresh</button>
+          <button id="copySelection" type="button" class="ghost-btn"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy selected</button>
+          <button id="cleanAll" type="button" class="ghost-btn"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Clean</button>
+        </div>
+        <ul id="historyList" class="history-list"></ul>
+        <button id="loadMoreHistory" type="button" class="ghost-btn load-more-btn" hidden><svg class="icon" aria-hidden="true"><use href="#i-download" /></svg> Load more</button>
+      </section>
+    </section>
 
-    <details class="card history-card" open>
-      <summary>📜 History (<span id="historyCount">0</span>)</summary>
-      <p id="analyticsSummary" class="muted small"></p>
-      <div class="history-actions">
-        <button id="refreshHistory" type="button" class="ghost-btn">🔄 Refresh</button>
-        <button id="copySelection" type="button" class="ghost-btn">📋 Copy selected</button>
-        <button id="cleanAll" type="button" class="ghost-btn">🗑️ Clean</button>
-      </div>
-      <ul id="historyList" class="history-list"></ul>
-      <button id="loadMoreHistory" type="button" class="ghost-btn load-more-btn" hidden>📥 Load more</button>
-    </details>
-
-    <div id="toast" class="toast" hidden></div>
+    <section id="paneSettings" class="pane" role="tabpanel" aria-labelledby="tabSettings" aria-label="Settings" hidden>
+      <section id="settingsPanel" class="card settings-card">
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</h2>
+        </div>
+        <label class="row">
+          <span>Polish model</span>
+          <select id="polishModel" class="select-native"></select>
+        </label>
+        <label class="row">
+          <span>Polish style</span>
+          <select id="polishStyle" class="select-native"></select>
+        </label>
+        <label class="stacked">
+          <span class="muted small">Prompt sent to the LLM (read-only preview)</span>
+          <textarea id="polishPromptPreview" class="text-out prompt-preview" rows="6" readonly></textarea>
+        </label>
+        <hr>
+        <label class="row">
+          <span>Language</span>
+          <select id="languageSelect" class="select-native"></select>
+        </label>
+        <div class="row" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
+          <span><svg class="icon" aria-hidden="true"><use href="#i-globe" /></svg> Translate to English</span>
+          <button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Translate to English"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
+        <label class="row">
+          <span>Microphone</span>
+          <select id="micSelect" class="select-native"></select>
+        </label>
+        <div class="row">
+          <span>Force built-in mic (skip Bluetooth)</span>
+          <button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Force built-in mic (skip Bluetooth)"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
+        <div class="row" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
+          <span><svg class="icon" aria-hidden="true"><use href="#i-volume-2" /></svg> Quiet-environment gain boost</span>
+          <button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Quiet-environment gain boost"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
+        <label class="row">
+          <span>Boost amount (dB)</span>
+          <input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native">
+        </label>
+        <div class="row" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
+          <span><svg class="icon" aria-hidden="true"><use href="#i-bot" /></svg> Auto-stop on silence</span>
+          <button id="vadAutoStopToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Auto-stop on silence"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
+        <label class="row">
+          <span>Silence duration (ms)</span>
+          <input id="autoStopSilenceMs" type="number" min="200" max="10000" step="100" class="input-native">
+        </label>
+        <label class="row">
+          <span>Auto-clean older than (days)</span>
+          <input id="retentionDays" type="number" min="1" max="365" class="input-native">
+        </label>
+        <div class="row">
+          <button id="saveSettings" type="button" class="big-btn"><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
+        </div>
+        <hr>
+        <p class="muted small">
+          First time on iPhone? Install the trust profile:
+          <a href="/install-ca">/install-ca</a>
+        </p>
+        <p id="statusReadout" class="muted small"></p>
+        <p id="buildInfo" class="muted small" title="Which build of the webapp this device loaded — see issue #13">Build: …</p>
+      </section>
+    </section>
   </main>
 
-  <div id="loginOverlay" class="login-overlay" hidden>
-    <form id="loginForm" class="login-card" autocomplete="off">
-      <h2>🔐 Sign in</h2>
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- Auth gate as a native <dialog> (fleet modal contract) — the vendored nav
+       hides itself while it is open via body:has(dialog[open]). Esc-dismissal
+       is suppressed in api.js: a closed gate is not an unlocked app. -->
+  <dialog id="loginOverlay" class="detail-dialog login-dialog">
+    <form id="loginForm" class="detail-card login-card" autocomplete="off">
+      <h2><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg> Sign in</h2>
       <p class="muted small">Enter the password to use this voice transcriber.</p>
       <input
         id="loginPassword"
@@ -156,7 +325,7 @@
       <button type="submit" class="big-btn">Unlock</button>
       <div id="loginError" class="login-error" hidden></div>
     </form>
-  </div>
+  </dialog>
 
   <script type="module" src="/static/app.js?v=__APP_JS__"></script>
 </body>

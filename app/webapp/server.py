@@ -100,13 +100,23 @@ class CachingStaticFiles(StaticFiles):
         if suffix == ".js":
             # Rewrite the module graph's `import './x.js'` URLs with a
             # content hash, then long-cache — the hashed URL is the
-            # cache key, so an edit invalidates it for free.
+            # cache key, so an edit invalidates it for free. The importer's
+            # static-relative directory keys nested modules correctly
+            # (a vendored `../icons/icons.js` import must resolve against
+            # its own folder, not the static root).
             try:
                 body = path.read_text(encoding="utf-8")
+                base = path.parent.resolve().relative_to(
+                    Path(self.directory).resolve()
+                ).as_posix()
             except OSError:
                 return super().file_response(full_path, *args, **kwargs)
+            except ValueError:
+                base = ""
             return Response(
-                content=self._build_info.rewrite_js_imports(body),
+                content=self._build_info.rewrite_js_imports(
+                    body, base="" if base == "." else base
+                ),
                 media_type="text/javascript",
                 headers={"Cache-Control": _IMMUTABLE_CACHE},
             )

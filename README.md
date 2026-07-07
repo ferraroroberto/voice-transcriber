@@ -237,7 +237,7 @@ voice-transcriber/
 │       ├── server.py              # routes + lifespan (cleanup on boot)
 │       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
 │       └── static/
-│           ├── index.html         # single-page UI, big-button mobile-first
+│           ├── index.html         # tabbed SPA (Record · History · Settings), big-button mobile-first
 │           ├── app.js             # module wiring / boot sequence
 │           ├── recorder.js        # MediaRecorder + chunked upload logic
 │           ├── api.js             # fetch wrappers for server endpoints
@@ -246,7 +246,9 @@ voice-transcriber/
 │           ├── config.js          # client-side config constants
 │           ├── history.js         # session history display
 │           ├── polish.js          # polish-text UI flow
-│           └── styles.css         # touch targets ≥ 56 px
+│           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
+│           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
+│                                  #   (nav · icons · card · switch · modal · empty-state)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -647,12 +649,12 @@ and `meta.json`. The directory is gitignored. Sessions older than 30
 days are auto-deleted on app start (configurable in
 `webapp_config.json`).
 
-The webapp's History panel is **open by default** so the action row
-is always reachable in one tap. It loads the **10 newest** entries
-and shows a **📥 Load more** button at the bottom for the next 10.
-The summary line reads `📜 History (10/N)` while more pages exist
-and collapses to `(N)` once everything is loaded — keeps the page
-light even after weeks of daily use.
+History lives on its **own tab** in the bottom navigation (fleet nav
+contract), so the action row is always one tap away. It loads the
+**10 newest** entries and shows a **📥 Load more** button at the
+bottom for the next 10. The header count reads `(10/N)` while more
+pages exist and collapses to `(N)` once everything is loaded — keeps
+the page light even after weeks of daily use.
 
 Each row carries a small **source badge** next to its timestamp so
 you can tell where a take came from: `webapp` for ones dictated in
@@ -978,7 +980,7 @@ still covers the same logic via the parity port in
 | `tests\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
 | `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins across the static/ JS module graph |
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
-| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, settings panel toggles, login overlay DOM wired (marked `smoke`; requires live tray on :8443) |
+| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; requires live tray on :8443) |
 
 ## 🔗 See also
 

@@ -38,6 +38,7 @@ export const els = {
   resetBtn:         document.getElementById('resetBtn'),
   appendToggle:     document.getElementById('appendToggle'),
   incognitoToggle:  document.getElementById('incognitoToggle'),
+  themeToggle:      document.getElementById('themeToggle'),
 
   loginOverlay:     document.getElementById('loginOverlay'),
   loginForm:        document.getElementById('loginForm'),
