@@ -1,72 +1,196 @@
-/* Mobile-first single-page voice transcriber.
- * Touch targets ≥ 56 px, dark theme tuned for one-thumb use.
- */
+/* Voice Transcriber — mobile-first PWA, one-thumb use.
+ * Touch targets ≥ 44 px per the fleet contract. */
 
+/* ============================================================ design tokens
+   Fleet design system (~/.claude/design.md + design.dark.md, canonical spec
+   ferraroroberto/fleet-config#178; this app migrated in issue #107). Token
+   *names* are this app's; their *values* are the spec's. Light = :root,
+   dark = [data-theme="dark"]. P3 wide-gamut (oklch) twins override the
+   saturated tokens behind @media (color-gamut: p3) below. */
 :root {
-  --bg: #0a0a0a;
-  --bg-elev: #161616;
-  --bg-elev-2: #202020;
-  --fg: #f3f3f3;
-  --muted: #9a9a9a;
-  --accent: #e64a3c;
-  --accent-hover: #f15a4d;
-  --polish: #4a8af3;
-  --good: #4caf50;
-  --warn: #f0a100;
-  --danger: #cc3344;
-  --radius: 14px;
-  --pad: 16px;
+  /* colors — neutrals */
+  --bg: #ffffff;            /* canvas (page background) */
+  --card: #ffffff;          /* elevated card surface */
+  --card-off: #f6f8fa;      /* canvas-subtle (inset / off-card surfaces) */
+  --ink: #1f2328;           /* fg (primary text) */
+  --muted: #656d76;         /* fg-muted (secondary text) */
+  --line: #d1d9e0;          /* border (default hairline) */
+  --line-muted: #d8dee4;    /* border-muted (divider inside a card) */
+  /* colors — accent + status (status colors signal state only, never decoration) */
+  --accent: #0969da;
+  --accent-fg: #ffffff;     /* text/icon on an accent fill */
+  --on: #1a7f37;            /* success */
+  --danger: #cf222e;        /* danger — the record button's "recording" state */
+  --attention: #9a6700;     /* attention — the resume affordance */
+  /* derived surface roles (mapped onto the neutral tokens above) */
+  --input-bg: var(--card-off);
+  --toggle-track: var(--line);
+  --toggle-knob: #ffffff;
+  --close-bg: var(--card-off);
+  /* the modal/login scrim is theme-invariant by design — it dims content */
+  --scrim: rgba(0, 0, 0, 0.5);
+  --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
+  --accent-border-soft: color-mix(in srgb, var(--accent) 24%, transparent);
+  --accent-border-strong: color-mix(in srgb, var(--accent) 28%, transparent);
+  /* radii (rounded scale) — adopted steps: {md, lg, pill, nav, 50%-circles} */
+  --radius-md: 12px;
+  --radius: 16px;           /* rounded.lg — cards */
+  --radius-pill: 9999px;
+  --radius-nav: 30px;       /* the floating bottom-tab bar */
+  /* spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  /* uniform gutter between cards/tiles and from the page edges */
+  --gap: 12px;
+  /* shared height for inline controls (toggle / select / input) */
+  --control-h: 36px;
+  /* typography roles — system stack, weight (not case) for hierarchy */
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-heading-xl: 2rem;
+  --font-heading-lg: 1.5rem;
+  --font-body: 1rem;
+  --font-label: 0.92rem;
+  --font-caption: 0.78rem;
+  /* icon-size steps (icons.size — the canonical 16/18/24 + nav 20) */
+  --icon-inline: 16px;
+  --icon-title: 18px;
+  --icon-feature: 24px;
+  /* elevation — cards lean on surface + hairline border; the floating nav and
+     toasts are the only elements with a real shadow. */
+  --shadow: 0 8px 24px rgba(31, 35, 40, 0.12);
+  /* Mobile floating bottom tab bar — phone-validated geometry
+     (home-automation#118, promoted to the vendored nav component). */
+  --bottom-tabs-height: 61px;
+  --bottom-tabs-margin: 21px;
+  --bottom-tabs-pill-height: 53px;
+  --bottom-tabs-padding: 4px;
+  --bottom-tabs-gap: 4px;
+  --bottom-tabs-icon: 20px;
+  --bottom-tabs-label: 11px;
+  --tabbar-bg: rgba(255, 255, 255, 0.85);
+  --tabbar-border: rgba(31, 35, 40, 0.12);
+  color-scheme: light dark;
+}
+
+[data-theme="dark"] {
+  --bg: #0d1117;            /* canvas (GitHub dark canvas) */
+  --card: #161b22;          /* elevated card surface */
+  --card-off: #010409;      /* canvas-subtle (true black inset) */
+  --ink: #e6edf3;           /* fg */
+  --muted: #7d8590;         /* fg-muted */
+  --line: #30363d;          /* border */
+  --line-muted: #21262d;    /* border-muted */
+  --accent: #2f81f7;
+  --accent-fg: #ffffff;
+  --on: #3fb950;            /* success */
+  --danger: #f85149;
+  --attention: #d29922;
+  --input-bg: var(--bg);
+  --toggle-track: var(--line);
+  --toggle-knob: var(--ink);
+  --close-bg: var(--line);
+  /* Depth on a near-black canvas comes from surface lightness, not shadow. */
+  --shadow: 0 8px 24px rgba(1, 4, 9, 0.6);
+  --tabbar-bg: rgba(22, 27, 34, 0.86);
+  --tabbar-border: rgba(255, 255, 255, 0.13);
+}
+
+/* P3 wide-gamut twins — saturated tokens only; neutrals are sRGB by design.
+   Values are the fleet spec's exact oklch (design.md / design.dark.md). */
+@media (color-gamut: p3) {
+  :root {
+    --accent: oklch(0.52 0.18 256);
+    --on: oklch(0.55 0.14 150);
+    --danger: oklch(0.55 0.20 25);
+    --attention: oklch(0.55 0.11 80);
+  }
+  [data-theme="dark"] {
+    --accent: oklch(0.64 0.18 256);
+    --on: oklch(0.72 0.18 150);
+    --danger: oklch(0.68 0.20 25);
+    --attention: oklch(0.77 0.13 85);
+  }
 }
 
 * { box-sizing: border-box; }
+
+/* The `hidden` attribute must always win, even over a class that sets
+   `display` (e.g. .login-overlay / .row use flex). Without this the UA
+   `[hidden]{display:none}` rule loses to author styles and "hidden"
+   elements stay laid out — intercepting clicks. */
+[hidden] { display: none !important; }
+
+/* Canonical focus-visible ring (design.md v2 focus contract): one tokenized
+   rule covers every interactive element app-wide. A control overrides this
+   only where it draws its own custom ring. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Motion is functional, not decorative (design.md v2 Motion): collapse every
+   authored transition/animation to near-instant — 0.01ms, not 0, so code
+   waiting on transitionend/animationend never hangs. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
 
 html, body {
   margin: 0;
   padding: 0;
   background: var(--bg);
-  color: var(--fg);
-  font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--ink);
+  font: var(--font-body)/1.5 var(--font);
   -webkit-tap-highlight-color: transparent;
   -webkit-text-size-adjust: 100%;
-  overscroll-behavior-y: contain;
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 .app {
-  max-width: 720px;
+  max-width: 772px;
   margin: 0 auto;
-  padding: env(safe-area-inset-top, 0) var(--pad) calc(env(safe-area-inset-bottom, 0) + 24px);
+  padding: calc(env(safe-area-inset-top, 0px) + var(--gap)) var(--gap)
+    calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0 4px;
+  padding: var(--gap) 0 var(--space-xs);
 }
-.header h1 { margin: 0; font-size: 18px; font-weight: 600; }
+.header h1 { margin: 0; font-size: var(--font-body); font-weight: 700; }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-sm);
 }
 
 .header-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  padding: 4px 10px;
-  min-height: 36px;
+  font-size: var(--icon-title);
+  padding: var(--space-xs) 10px;
+  min-height: var(--control-h);
   background: transparent;
-  border: 1px solid #333;
-  border-radius: 10px;
-  color: var(--fg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink);
   cursor: pointer;
   user-select: none;
   transition: background 0.15s;
 }
-.header-icon-btn:active { background: var(--bg-elev-2); }
+.header-icon-btn:active { background: var(--card-off); }
 
 /* Append toggle — modelled on the sibling .incognito-btn below. The
    checkbox is hidden; the <label> itself is the button. Opacity +
@@ -77,42 +201,42 @@ html, body {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-size: 13px;
-  padding: 4px 10px;
-  min-height: 36px;
-  border: 1px solid #333;
-  border-radius: 10px;
+  font-size: var(--font-caption);
+  padding: var(--space-xs) 10px;
+  min-height: var(--control-h);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   cursor: pointer;
   user-select: none;
   opacity: 0.55;
   transition: opacity 0.15s, border-color 0.15s, background 0.15s;
 }
-.append-toggle:active { background: var(--bg-elev-2); }
+.append-toggle:active { background: var(--card-off); }
 .append-toggle:has(input:checked) {
   opacity: 1;
-  border-color: var(--polish);
-  background: rgba(74, 138, 243, 0.18);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 .incognito-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  padding: 4px 10px;
-  min-height: 36px;
-  border: 1px solid #333;
-  border-radius: 10px;
+  font-size: var(--icon-title);
+  padding: var(--space-xs) 10px;
+  min-height: var(--control-h);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   cursor: pointer;
   user-select: none;
   opacity: 0.55;
   transition: opacity 0.15s, border-color 0.15s, background 0.15s;
 }
-.incognito-btn:active { background: var(--bg-elev-2); }
+.incognito-btn:active { background: var(--card-off); }
 .incognito-btn:has(input:checked) {
   opacity: 1;
-  border-color: var(--polish);
-  background: rgba(74, 138, 243, 0.18);
+  border-color: var(--accent);
+  background: var(--accent-soft);
 }
 
 /* ---------- record zone (above the fold) ---------- */
@@ -120,22 +244,24 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-top: 12px;
+  margin-top: var(--gap);
   margin-bottom: 18px;
   position: relative;
 }
 
+/* Recording is a *state*, so the big control wears the status color
+   (danger), not the accent — status colors signal state only. */
 .record-btn {
   width: min(32vw, 125px);
   height: min(32vw, 125px);
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  background: var(--danger);
+  color: var(--accent-fg);
   border: 0;
-  font-size: 18px;
+  font-size: var(--font-body);
   font-weight: 700;
   letter-spacing: 0.04em;
-  box-shadow: 0 8px 20px rgba(230, 74, 60, 0.35);
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -148,14 +274,14 @@ html, body {
 }
 .record-btn:active { transform: scale(.97); }
 .record-btn[aria-pressed="true"] {
-  background: #b03124;
+  background: color-mix(in srgb, var(--danger) 82%, #000);
   animation: pulse 1.2s ease-in-out infinite;
 }
 @keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 0, .35); }
-  50%      { box-shadow: 0 0 0 18px rgba(255, 0, 0, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 35%, transparent); }
+  50%      { box-shadow: 0 0 0 18px color-mix(in srgb, var(--danger) 0%, transparent); }
 }
-.record-btn[disabled] { background: #333; box-shadow: none; cursor: not-allowed; }
+.record-btn[disabled] { background: var(--card-off); color: var(--muted); box-shadow: none; cursor: not-allowed; }
 
 /* Appears beside the record circle only after a take was finalised by
    backgrounding the app — one tap continues the same transcript (#14). */
@@ -170,12 +296,12 @@ html, body {
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  background: var(--warn);
-  color: #0a0a0a;
+  background: var(--attention);
+  color: var(--accent-fg);
   border: 0;
-  font-size: 20px;
+  font-size: var(--font-heading-lg);
   font-weight: 700;
-  box-shadow: 0 6px 16px rgba(240, 161, 0, 0.4);
+  box-shadow: var(--shadow);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,15 +310,14 @@ html, body {
 .resume-btn:active {
   transform: translate(calc(min(16vw, 62.5px) + 22px), -50%) scale(.94);
 }
-.resume-btn[hidden] { display: none; }
 
-.record-label { font-size: 16px; }
-.record-timer { font-size: 22px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.record-label { font-size: var(--font-body); }
+.record-timer { font-size: var(--font-heading-lg); margin-top: var(--space-xs); font-variant-numeric: tabular-nums; }
 
 .record-status {
-  margin-top: 12px;
+  margin-top: var(--gap);
   color: var(--muted);
-  font-size: 14px;
+  font-size: var(--font-label);
   min-height: 18px;
   text-align: center;
 }
@@ -200,42 +325,53 @@ html, body {
 .level-bar {
   width: min(72vw, 280px);
   height: 6px;
-  background: var(--bg-elev-2);
-  border-radius: 999px;
+  background: var(--card-off);
+  border: 1px solid var(--line-muted);
+  border-radius: var(--radius-pill);
   margin-top: 10px;
   overflow: hidden;
 }
 .level-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--good), var(--warn), var(--accent));
+  background: linear-gradient(90deg, var(--on), var(--attention), var(--danger));
   width: 0%;
   transition: width .08s;
 }
 
 /* ---------- cards ---------- */
 .card {
-  background: var(--bg-elev);
+  background: var(--card);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 14px;
-  margin: 12px 0;
+  color: var(--ink);
+  padding: var(--space-md);
+  margin: var(--gap) 0;
 }
 .card-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
 }
-.card-header h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.card-header h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 700;
+}
 
 .text-out {
-  background: var(--bg-elev-2);
-  border-radius: 10px;
-  padding: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--line-muted);
+  border-radius: var(--radius-md);
+  padding: var(--gap);
   min-height: 120px;
   white-space: pre-wrap;
   word-wrap: break-word;
-  font-size: 16px;
+  font-size: var(--font-body);
   line-height: 1.45;
 }
 .text-out:empty::before {
@@ -245,12 +381,11 @@ html, body {
 textarea.text-out.editable {
   display: block;
   width: 100%;
-  border: 0;
   outline: 0;
   resize: vertical;
   color: inherit;
   font: inherit;
-  font-size: 16px;
+  font-size: var(--font-body);
   line-height: 1.45;
   font-family: inherit;
   -webkit-appearance: none;
@@ -267,59 +402,63 @@ textarea.text-out.editable::placeholder {
 .ghost-btn,
 .danger-btn {
   border: 0;
-  border-radius: 10px;
-  font-size: 15px;
+  border-radius: var(--radius-md);
+  font-family: var(--font);
+  font-size: var(--font-label);
   font-weight: 600;
-  padding: 14px 16px;
+  padding: 14px var(--space-md);
   min-height: 48px;
   cursor: pointer;
   touch-action: manipulation;
 }
-.big-btn { background: var(--polish); color: #fff; flex: 1; }
-.big-btn:active { background: #3970d4; }
-.big-btn[disabled] { background: #333; color: var(--muted); cursor: not-allowed; }
+/* button-primary: accent fill, accent-fg text, 48px */
+.big-btn { background: var(--accent); border: 1px solid var(--accent-border-strong); color: var(--accent-fg); flex: 1; }
+.big-btn:active { background: color-mix(in srgb, var(--accent) 85%, #000); }
+/* AA-safe disabled recipe (never opacity on a solid accent fill) */
+.big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 
-.polish-btn { background: var(--polish); }
+.polish-btn { background: var(--accent); }
 
 .copy-btn {
-  background: var(--bg-elev-2);
-  color: var(--fg);
+  background: var(--card-off);
+  border: 1px solid var(--line);
+  color: var(--ink);
   min-width: 110px;
 }
-.copy-btn:active { background: #2a2a2a; }
-.copy-btn[disabled] { color: #555; cursor: not-allowed; }
-.copy-btn.copied { background: var(--good); color: #fff; }
+.copy-btn:active { background: var(--line-muted); }
+.copy-btn[disabled] { color: var(--muted); cursor: not-allowed; }
+.copy-btn.copied { background: var(--on); border-color: var(--on); color: var(--accent-fg); }
 
 .ghost-btn {
   background: transparent;
   color: var(--muted);
-  border: 1px solid #333;
-  padding: 10px 12px;
+  border: 1px solid var(--line);
+  padding: 10px var(--gap);
   min-height: 40px;
 }
-.ghost-btn:active { background: var(--bg-elev-2); }
+.ghost-btn:active { background: var(--card-off); }
 .ghost-btn.copied {
-  background: var(--good);
-  color: #fff;
-  border-color: var(--good);
+  background: var(--on);
+  color: var(--accent-fg);
+  border-color: var(--on);
 }
 .ghost-btn.danger-flash {
   background: var(--danger);
-  color: #fff;
+  color: var(--accent-fg);
   border-color: var(--danger);
 }
 
 .danger-btn {
   background: var(--danger);
-  color: #fff;
+  color: var(--accent-fg);
 }
-.danger-btn:active { background: #a82637; }
+.danger-btn:active { background: color-mix(in srgb, var(--danger) 82%, #000); }
 
 .row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 8px 0;
+  gap: var(--space-sm);
+  margin: var(--space-sm) 0;
 }
 .row > span:first-child { flex: 1; }
 
@@ -332,36 +471,38 @@ textarea.text-out.editable::placeholder {
 .stacked {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin: 8px 0;
+  gap: var(--space-xs);
+  margin: var(--space-sm) 0;
 }
 
 .prompt-preview {
   width: 100%;
-  background: var(--bg-elev-2);
+  background: var(--input-bg);
   color: var(--muted);
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 10px 12px;
+  border: 1px solid var(--line-muted);
+  border-radius: var(--radius-md);
+  padding: 10px var(--gap);
   font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
-  font-size: 13px;
+  font-size: var(--font-caption);
   line-height: 1.4;
   resize: vertical;
 }
 
 .select-native, .input-native {
-  background: var(--bg-elev-2);
-  color: var(--fg);
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 16px; /* iOS keeps 16px input from auto-zooming */
-  min-height: 44px;
+  background: var(--input-bg);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 0 10px;
+  font-family: var(--font);
+  font-size: var(--font-label);
+  height: var(--control-h);
 }
 .select-native { appearance: none; -webkit-appearance: none; padding-right: 32px; }
 
 .toggle input[type="checkbox"] {
   width: 22px; height: 22px;
+  accent-color: var(--on);
 }
 
 /* ---------- history ---------- */
@@ -370,19 +511,17 @@ textarea.text-out.editable::placeholder {
   list-style: none;
   cursor: pointer;
   padding: 10px 0;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  font-size: 14px;
+  font-size: var(--font-label);
 }
 .history-card summary::-webkit-details-marker { display: none; }
-.history-card[open] summary { color: var(--fg); }
+.history-card[open] summary { color: var(--ink); }
 
 .history-actions {
   display: flex;
-  gap: 8px;
-  padding: 4px 0 8px;
+  gap: var(--space-sm);
+  padding: var(--space-xs) 0 var(--space-sm);
   justify-content: flex-end;
   flex-wrap: wrap;
 }
@@ -390,21 +529,17 @@ textarea.text-out.editable::placeholder {
 .load-more-btn {
   display: block;
   width: 100%;
-  margin-top: 8px;
+  margin-top: var(--space-sm);
 }
 
 /* ---------- login overlay (shown on 401) ---------- */
-.login-overlay[hidden] { display: none; }
 .login-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
   margin: 0;
-  background: rgba(0, 0, 0, 0.85);
+  background: var(--scrim);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   display: flex;
@@ -415,10 +550,10 @@ textarea.text-out.editable::placeholder {
   box-sizing: border-box;
 }
 .login-card {
-  background: var(--bg-elev);
-  border: 1px solid #2a2a2a;
+  background: var(--card);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 28px 24px;
+  padding: 28px var(--space-lg);
   max-width: 360px;
   width: 100%;
   margin: 0 auto;
@@ -426,12 +561,12 @@ textarea.text-out.editable::placeholder {
   flex-direction: column;
   gap: 14px;
   box-sizing: border-box;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(74, 138, 243, 0.15);
+  box-shadow: var(--shadow);
 }
 .login-card h2 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
+  font-size: var(--font-body);
+  font-weight: 700;
   text-align: center;
 }
 .login-card p {
@@ -439,11 +574,11 @@ textarea.text-out.editable::placeholder {
   text-align: center;
 }
 .login-card input[type="password"] {
-  background: var(--bg-elev-2);
-  border: 1px solid #333;
-  border-radius: 10px;
-  color: var(--fg);
-  font-size: 18px;
+  background: var(--input-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  color: var(--ink);
+  font-size: var(--icon-title);
   padding: 14px;
   min-height: 48px;
   width: 100%;
@@ -454,9 +589,9 @@ textarea.text-out.editable::placeholder {
   letter-spacing: 0.1em;
 }
 .login-card input[type="password"]:focus {
-  outline: 2px solid var(--polish);
+  outline: 2px solid var(--accent);
   outline-offset: 1px;
-  border-color: var(--polish);
+  border-color: var(--accent);
 }
 .login-card .big-btn {
   flex: 0 0 auto;
@@ -464,7 +599,7 @@ textarea.text-out.editable::placeholder {
 }
 .login-error {
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--font-caption);
   text-align: center;
   min-height: 18px;
 }
@@ -475,9 +610,10 @@ textarea.text-out.editable::placeholder {
   padding: 0;
 }
 .history-list li {
-  background: var(--bg-elev-2);
-  border-radius: 10px;
-  padding: 10px 12px;
+  background: var(--card-off);
+  border: 1px solid var(--line-muted);
+  border-radius: var(--radius-md);
+  padding: 10px var(--gap);
   margin: 6px 0;
   display: flex;
   align-items: flex-start;
@@ -493,38 +629,38 @@ textarea.text-out.editable::placeholder {
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: var(--polish);
+  accent-color: var(--accent);
   cursor: pointer;
 }
 .history-list li .content { flex: 1; min-width: 0; }
-.history-list li .when { color: var(--muted); font-size: 12px; }
+.history-list li .when { color: var(--muted); font-size: var(--font-caption); }
 .history-list li .source-badge {
   display: inline-block;
   padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 11px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-caption);
   line-height: 1.5;
-  background: var(--bg-elev);
+  background: var(--card);
   color: var(--muted);
-  border: 1px solid var(--bg-elev-2);
+  border: 1px solid var(--line-muted);
   vertical-align: middle;
 }
 /* Externally-sourced takes (anything but the webapp itself) pop in the
  * accent colour so the History list reads as a cross-fleet audit trail. */
 .history-list li .source-badge.external {
-  background: rgba(74, 138, 243, 0.16);
-  color: var(--polish);
-  border-color: rgba(74, 138, 243, 0.35);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-border-soft);
 }
-.history-list li .preview { margin-top: 4px; font-size: 14px; color: var(--fg); }
+.history-list li .preview { margin-top: var(--space-xs); font-size: var(--font-label); color: var(--ink); }
 .history-list li .actions {
   display: flex;
   gap: 6px;
-  margin-top: 8px;
+  margin-top: var(--space-sm);
   justify-content: flex-end;
   flex-wrap: wrap;
 }
-.history-list li .actions button { font-size: 13px; min-height: 36px; padding: 6px 10px; }
+.history-list li .actions button { font-size: var(--font-caption); min-height: var(--control-h); padding: 6px 10px; }
 
 /* ---------- settings panel (collapsible card, twin of history) ---------- */
 .settings-card { padding: 6px 14px; }
@@ -532,35 +668,49 @@ textarea.text-out.editable::placeholder {
   list-style: none;
   cursor: pointer;
   padding: 10px 0;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  font-size: 14px;
+  font-size: var(--font-label);
 }
 .settings-card summary::-webkit-details-marker { display: none; }
-.settings-card[open] summary { color: var(--fg); }
-.settings-card hr { border: 0; border-top: 1px solid #2a2a2a; margin: 14px 0; }
+.settings-card[open] summary { color: var(--ink); }
+.settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
 .muted { color: var(--muted); }
-.small { font-size: 12px; }
+.small { font-size: var(--font-caption); }
 
 /* ---------- toast ---------- */
+/* Glass pill above the floating nav — with the toast and the nav the only
+   shadowed/blurred elements (they float over scrolling content). */
 .toast {
   position: fixed;
-  bottom: 24px;
+  bottom: calc(
+    var(--bottom-tabs-height) + var(--bottom-tabs-margin) * 2 +
+    env(safe-area-inset-bottom, 0px) + var(--space-sm)
+  );
   left: 50%;
   transform: translateX(-50%);
-  background: #1f1f1f;
-  color: #fff;
-  padding: 12px 18px;
-  border-radius: 999px;
-  font-size: 14px;
-  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  background: var(--tabbar-bg);
+  -webkit-backdrop-filter: blur(20px) saturate(1.25);
+  backdrop-filter: blur(20px) saturate(1.25);
+  border: 1px solid var(--tabbar-border);
+  color: var(--ink);
+  padding: var(--gap) 18px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-label);
+  box-shadow: var(--shadow);
   pointer-events: none;
   opacity: 0;
   transition: opacity .2s;
   z-index: 1000;
 }
 .toast.visible { opacity: 1; }
-.toast.error { background: var(--danger); }
-.toast.success { background: var(--good); }
+.toast.error {
+  background: color-mix(in srgb, var(--danger) 75%, transparent);
+  border-color: var(--danger);
+  color: var(--accent-fg);
+}
+.toast.success {
+  background: color-mix(in srgb, var(--on) 75%, transparent);
+  border-color: var(--on);
+  color: var(--accent-fg);
+}
