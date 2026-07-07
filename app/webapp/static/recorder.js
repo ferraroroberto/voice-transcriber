@@ -13,8 +13,17 @@ import { refreshHistory } from './history.js';
 
 function setMode(m) { state.mode = m; }
 
-// Append is active when the ➕ toggle is on, or when this take was
-// started via the ▶ Resume button (state.forceAppend) — Resume
+// Record-button label states — CSS glyphs (no emoji / glyph-font
+// characters, per the fleet design system). Matches the idle markup
+// shipped in index.html.
+const LABEL_RECORD =
+  '<span class="rec-glyph rec-glyph-dot" aria-hidden="true"></span> RECORD';
+const LABEL_STOP =
+  '<span class="rec-glyph rec-glyph-square" aria-hidden="true"></span> STOP';
+const LABEL_BUSY = '<span class="rec-spinner" aria-hidden="true"></span>';
+
+// Append is active when the Append toggle is on, or when this take was
+// started via the Resume button (state.forceAppend) — Resume
 // continues the transcript no matter how the toggle is set.
 export function appendActive() {
   return isOn(els.appendToggle) || state.forceAppend;
@@ -165,7 +174,7 @@ async function startRecording() {
   startTimer();
   openPartialStream(state.sessionId);
 
-  els.recordLabel.textContent = '◼︎ STOP';
+  els.recordLabel.innerHTML = LABEL_STOP;
   els.recordTimer.hidden = false;
   els.recordTimer.textContent = '00:00';
   els.recordStatus.textContent = 'Recording…';
@@ -176,7 +185,7 @@ function stopRecording() {
   if (!state.recorder) return;
   setMode('uploading');
   els.recordStatus.textContent = 'Uploading…';
-  els.recordLabel.textContent = '⏳';
+  els.recordLabel.innerHTML = LABEL_BUSY;
   els.recordBtn.disabled = true;
   state.recorder.stop();
   // Keep `state.stream` alive so the next record reuses the grant —
@@ -206,10 +215,10 @@ export function finalizeForBackground() {
   stopRecording();
 }
 
-// The yellow ▶ Resume button — shown only after a take was finalised
+// The yellow Resume button — shown only after a take was finalised
 // by backgrounding (issue #14). It starts a fresh take that
 // force-appends onto the existing transcript regardless of the
-// ➕ Append toggle, so the seam across the app-switch is invisible.
+// Append toggle, so the seam across the app-switch is invisible.
 export function resumeRecording() {
   if (state.mode !== 'idle') return;
   state.forceAppend = true;
@@ -248,7 +257,7 @@ function enqueueChunkUpload(chunk) {
 
 async function onRecorderStopped(mimeType) {
   // Captured before the finally clears the flag — drives whether the
-  // ▶ Resume button is offered once this take settles.
+  // Resume button is offered once this take settles.
   const wasBackgrounded = state.backgroundFinalized;
   try {
     // Wait for any in-flight chunks to land before asking the server
@@ -296,7 +305,7 @@ async function onRecorderStopped(mimeType) {
       // so it can't hallucinate. Don't touch the transcript box; the
       // user may still have accumulated text from earlier takes.
       els.recordStatus.textContent =
-        `🤫 Empty audio (${data.dbfs} dBFS) — skipped`;
+        `Empty audio (${data.dbfs} dBFS) — skipped`;
       showToast('Empty audio — nothing transcribed', 'success');
       refreshHistory();
       return;
@@ -322,7 +331,7 @@ async function onRecorderStopped(mimeType) {
     if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyTranscript);
     const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
     els.recordStatus.textContent = state.backgroundFinalized
-      ? '✅ Saved while you were away — tap ▶ to continue'
+      ? 'Saved while you were away — tap Resume to continue'
       : `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
     refreshHistory();
   } catch (err) {
@@ -332,7 +341,7 @@ async function onRecorderStopped(mimeType) {
     refreshHistory();
   } finally {
     els.recordBtn.disabled = false;
-    els.recordLabel.textContent = '⬤ RECORD';
+    els.recordLabel.innerHTML = LABEL_RECORD;
     els.recordTimer.hidden = true;
     els.recordBtn.setAttribute('aria-pressed', 'false');
     els.levelFill.style.width = '0%';
@@ -470,7 +479,7 @@ function maybeFireAutoStop(loudness, threshold) {
     // recording-byte-counter writer doesn't immediately stamp on it.
     if (now - state.vadStatusOwnedUntil > 800) {
       els.recordStatus.textContent =
-        `🎙️ VAD peak=${loudness} (silence trips ≤ ${threshold}) · ${formatBytes(state.bytesSent)}`;
+        `VAD peak=${loudness} (silence trips ≤ ${threshold}) · ${formatBytes(state.bytesSent)}`;
       state.vadStatusOwnedUntil = now + 250;
     }
     return;
@@ -484,12 +493,12 @@ function maybeFireAutoStop(loudness, threshold) {
   // status-line ownership for 250 ms so the byte-counter writer
   // doesn't immediately overwrite it.
   els.recordStatus.textContent =
-    `🤫 silence ${silentFor} ms / ${trigger} ms`;
+    `Silence ${silentFor} ms / ${trigger} ms`;
   state.vadStatusOwnedUntil = now + 250;
   if (silentFor >= trigger) {
     state.vadStopFired = true;
     els.recordStatus.textContent =
-      '🤖 Auto-stop on silence — keep talking to cancel…';
+      'Auto-stop on silence — keep talking to cancel…';
     // 500 ms grace before actually stopping; if the user resumes
     // talking the next tick clears state.vadStopFired's effect.
     setTimeout(() => {

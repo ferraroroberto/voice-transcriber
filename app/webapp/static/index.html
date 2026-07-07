@@ -18,7 +18,7 @@
   <link rel="stylesheet" href="/static/_vendored/modal/modal.css?v=__VENDORED_MODAL_MODAL_CSS__">
   <link rel="stylesheet" href="/static/_vendored/empty-state/empty-state.css?v=__VENDORED_EMPTY_STATE_EMPTY_STATE_CSS__">
   <link rel="stylesheet" href="/static/styles.css?v=__STYLES_CSS__">
-  <title>🎙️ Whisper</title>
+  <title>Whisper</title>
   <script>
     (function(){
       var t = localStorage.getItem('voice-transcriber.theme');
@@ -125,6 +125,9 @@
     <symbol id="i-moon" viewBox="0 0 24 24" fill="none">
       <path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401" />
     </symbol>
+    <symbol id="i-play" viewBox="0 0 24 24" fill="none">
+      <polygon points="6 3 20 12 6 21 6 3" />
+    </symbol>
     <symbol id="i-sun" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2" />
@@ -145,19 +148,16 @@
     <button id="tabRecord" type="button" class="tab active" data-tab="record"
             role="tab" aria-selected="true" aria-controls="paneRecord">
       <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-mic" /></svg>
-      <span class="tab-emoji" aria-hidden="true">🎙️</span>
       <span class="tab-label">Record</span>
     </button>
     <button id="tabHistory" type="button" class="tab" data-tab="history"
             role="tab" aria-selected="false" aria-controls="paneHistory" tabindex="-1">
       <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-history" /></svg>
-      <span class="tab-emoji" aria-hidden="true">📜</span>
       <span class="tab-label">History</span>
     </button>
     <button id="tabSettings" type="button" class="tab" data-tab="settings"
             role="tab" aria-selected="false" aria-controls="paneSettings" tabindex="-1">
       <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-settings" /></svg>
-      <span class="tab-emoji" aria-hidden="true">⚙️</span>
       <span class="tab-label">Settings</span>
     </button>
   </nav>
@@ -185,10 +185,10 @@
 
       <section id="recordZone" class="record-zone">
         <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
-          <span id="recordLabel" class="record-label">⬤ RECORD</span>
+          <span id="recordLabel" class="record-label"><span class="rec-glyph rec-glyph-dot" aria-hidden="true"></span> RECORD</span>
           <span id="recordTimer" class="record-timer" hidden>00:00</span>
         </button>
-        <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden>▶</button>
+        <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg></button>
         <div id="recordStatus" class="record-status">Tap to start</div>
         <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
       </section>
@@ -295,14 +295,15 @@
           <button id="saveSettings" type="button" class="big-btn"><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
         </div>
         <hr>
-        <p class="muted small">
-          First time on iPhone? Install the trust profile:
-          <a href="/install-ca">/install-ca</a>
-        </p>
         <p id="statusReadout" class="muted small"></p>
-        <p id="buildInfo" class="muted small" title="Which build of the webapp this device loaded — see issue #13">Build: …</p>
       </section>
     </section>
+
+    <!-- Build identity: which build the PWA is running — visible under every
+         tab (home-automation's page-foot recipe). Filled by app.js. -->
+    <footer class="page-foot">
+      <p id="buildInfo" class="muted small" title="Which build of the webapp this device loaded — see issue #13">Build: …</p>
+    </footer>
   </main>
 
   <div id="toast" class="toast" hidden></div>
