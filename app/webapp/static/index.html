@@ -13,6 +13,10 @@
   <link rel="icon" href="/static/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" href="/static/icon-512.png">
   <link rel="stylesheet" href="/static/_vendored/nav/nav-tabs.css?v=__VENDORED_NAV_NAV_TABS_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/card/card.css?v=__VENDORED_CARD_CARD_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/switch/switch.css?v=__VENDORED_SWITCH_SWITCH_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/modal/modal.css?v=__VENDORED_MODAL_MODAL_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/empty-state/empty-state.css?v=__VENDORED_EMPTY_STATE_EMPTY_STATE_CSS__">
   <link rel="stylesheet" href="/static/styles.css?v=__STYLES_CSS__">
   <title>🎙️ Whisper</title>
   <script>
@@ -88,15 +92,12 @@
       <header class="header">
         <h1>🎙️ Whisper</h1>
         <div class="header-actions">
-          <label class="append-toggle" title="Append the next take to the current transcript instead of replacing it">
-            <input id="appendToggle" type="checkbox" hidden>
-            <span>➕ Append</span>
-          </label>
+          <button id="appendToggle" type="button" class="append-toggle" role="switch" aria-checked="false"
+                  title="Append the next take to the current transcript instead of replacing it">➕ Append</button>
           <button id="resetBtn" type="button" class="header-icon-btn" title="Reset — clear both boxes and the current session" aria-label="Reset">🧽</button>
-          <label class="incognito-btn" title="Incognito — don't save this recording to history">
-            <input id="incognitoToggle" type="checkbox" hidden>
-            <span class="icon-emoji">🕵️</span>
-          </label>
+          <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
+                  title="Incognito — don't save this recording to history"
+                  aria-label="Incognito — don't save this recording to history">🕵️</button>
         </div>
       </header>
 
@@ -111,8 +112,8 @@
       </section>
 
       <section class="card transcript-card">
-        <div class="card-header">
-          <h2><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Transcript</h2>
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Transcript</h2>
           <div class="row card-header-actions">
             <button id="saveTranscript" class="copy-btn" type="button" title="Save the pasted text to history without polishing" disabled>💾 Save</button>
             <button id="copyTranscript" class="copy-btn" type="button" disabled>📋 Copy</button>
@@ -122,8 +123,8 @@
       </section>
 
       <section class="card polish-card">
-        <div class="card-header">
-          <h2><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> Polish</h2>
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> Polish</h2>
           <div class="row card-header-actions">
             <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>Go</button>
             <button id="copyPolished" class="copy-btn" type="button" disabled>📋 Copy</button>
@@ -135,8 +136,9 @@
 
     <section id="paneHistory" class="pane" role="tabpanel" aria-labelledby="tabHistory" aria-label="History" hidden>
       <section class="card history-card">
-        <div class="card-header">
-          <h2><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History <span class="card-count">(<span id="historyCount">0</span>)</span></h2>
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</h2>
+          <span class="card-head-meta">(<span id="historyCount">0</span>)</span>
         </div>
         <p id="analyticsSummary" class="muted small"></p>
         <div class="history-actions">
@@ -151,8 +153,8 @@
 
     <section id="paneSettings" class="pane" role="tabpanel" aria-labelledby="tabSettings" aria-label="Settings" hidden>
       <section id="settingsPanel" class="card settings-card">
-        <div class="card-header">
-          <h2><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</h2>
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</h2>
         </div>
         <label class="row">
           <span>Polish model</span>
@@ -171,30 +173,34 @@
           <span>Language</span>
           <select id="languageSelect" class="select-native"></select>
         </label>
-        <label class="row toggle" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
+        <div class="row toggle" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
           <span>🌐 Translate to English</span>
-          <input id="translateToggle" type="checkbox">
-        </label>
+          <button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Translate to English"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
         <label class="row">
           <span>Microphone</span>
           <select id="micSelect" class="select-native"></select>
         </label>
-        <label class="row toggle">
+        <div class="row toggle">
           <span>Force built-in mic (skip Bluetooth)</span>
-          <input id="forceBuiltinMic" type="checkbox">
-        </label>
-        <label class="row toggle" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
+          <button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Force built-in mic (skip Bluetooth)"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
+        <div class="row toggle" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
           <span>🔊 Quiet-environment gain boost</span>
-          <input id="gainBoostToggle" type="checkbox">
-        </label>
+          <button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Quiet-environment gain boost"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
         <label class="row">
           <span>Boost amount (dB)</span>
           <input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native">
         </label>
-        <label class="row toggle" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
+        <div class="row toggle" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
           <span>🤖 Auto-stop on silence</span>
-          <input id="vadAutoStopToggle" type="checkbox">
-        </label>
+          <button id="vadAutoStopToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Auto-stop on silence"><span class="knob"></span><span class="toggle-label">OFF</span></button>
+        </div>
         <label class="row">
           <span>Silence duration (ms)</span>
           <input id="autoStopSilenceMs" type="number" min="200" max="10000" step="100" class="input-native">
@@ -219,8 +225,11 @@
 
   <div id="toast" class="toast" hidden></div>
 
-  <div id="loginOverlay" class="login-overlay" hidden>
-    <form id="loginForm" class="login-card" autocomplete="off">
+  <!-- Auth gate as a native <dialog> (fleet modal contract) — the vendored nav
+       hides itself while it is open via body:has(dialog[open]). Esc-dismissal
+       is suppressed in api.js: a closed gate is not an unlocked app. -->
+  <dialog id="loginOverlay" class="detail-dialog login-dialog">
+    <form id="loginForm" class="detail-card login-card" autocomplete="off">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg> Sign in</h2>
       <p class="muted small">Enter the password to use this voice transcriber.</p>
       <input
@@ -234,7 +243,7 @@
       <button type="submit" class="big-btn">Unlock</button>
       <div id="loginError" class="login-error" hidden></div>
     </form>
-  </div>
+  </dialog>
 
   <script type="module" src="/static/app.js?v=__APP_JS__"></script>
 </body>

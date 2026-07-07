@@ -4,9 +4,10 @@
 
 'use strict';
 
+import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state } from './state.js';
 import { authFetch, promptForPassword } from './api.js';
-import { capitalize, showToast } from './ui.js';
+import { capitalize, isOn, showToast } from './ui.js';
 
 export async function loadConfig() {
   // Single attempt first so we can detect 401 and prompt for the
@@ -103,16 +104,16 @@ export function populateConfigUI() {
     if (iso === state.config.language_default) opt.selected = true;
     els.languageSelect.appendChild(opt);
   }
-  els.forceBuiltinMic.checked = !!state.config.force_builtin_mic_default;
+  setSwitch(els.forceBuiltinMic, !!state.config.force_builtin_mic_default);
   els.retentionDays.value = state.config.history_retention_days;
   if (els.vadAutoStopToggle) {
-    els.vadAutoStopToggle.checked = !!state.config.vad_auto_stop_enabled;
+    setSwitch(els.vadAutoStopToggle, !!state.config.vad_auto_stop_enabled);
   }
   if (els.autoStopSilenceMs) {
     els.autoStopSilenceMs.value = state.config.auto_stop_silence_ms || 1500;
   }
   if (els.gainBoostToggle) {
-    els.gainBoostToggle.checked = !!state.config.gain_boost_enabled;
+    setSwitch(els.gainBoostToggle, !!state.config.gain_boost_enabled);
   }
   if (els.gainBoostDb) {
     els.gainBoostDb.value = state.config.gain_boost_db ?? 12;
@@ -144,12 +145,12 @@ export async function onSaveSettings() {
   const patch = {
     polish_model_default: els.polishModel.value,
     polish_prompt_default: els.polishStyle.value,
-    force_builtin_mic_default: els.forceBuiltinMic.checked,
+    force_builtin_mic_default: isOn(els.forceBuiltinMic),
     preferred_mic_id: els.micSelect.value || null,
     history_retention_days: parseInt(els.retentionDays.value, 10) || 30,
-    vad_auto_stop_enabled: !!(els.vadAutoStopToggle && els.vadAutoStopToggle.checked),
+    vad_auto_stop_enabled: isOn(els.vadAutoStopToggle),
     auto_stop_silence_ms: parseInt((els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10),
-    gain_boost_enabled: !!(els.gainBoostToggle && els.gainBoostToggle.checked),
+    gain_boost_enabled: isOn(els.gainBoostToggle),
     gain_boost_db: parseFloat((els.gainBoostDb && els.gainBoostDb.value) || '12'),
   };
   try {

@@ -8,6 +8,13 @@
 
 import { els } from './state.js';
 
+// The one read path for every role="switch" control (the vendored fleet
+// switch and the compact header chips) — the aria-checked attribute is the
+// state, mirroring the vendored setSwitch() write path.
+export function isOn(el) {
+  return !!el && el.getAttribute('aria-checked') === 'true';
+}
+
 export async function copyText(text, btn) {
   if (!text) return;
   // Drop any active selection so iOS doesn't bundle the styled DOM

@@ -4,6 +4,7 @@
 
 'use strict';
 
+import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, flashDanger, showToast } from './ui.js';
@@ -65,9 +66,20 @@ async function fetchHistoryPage(offset) {
     const shown = els.historyList.children.length;
     els.historyCount.textContent = total > shown ? `${shown}/${total}` : `${shown}`;
     els.loadMoreHistory.hidden = shown >= total;
+    renderEmptyState(shown);
   } catch (err) { /* swallow */ }
   finally {
     els.loadMoreHistory.disabled = false;
+  }
+}
+
+// The canonical fleet empty-state (vendored component) whenever the list can
+// legitimately render zero takes — never a silent blank area.
+function renderEmptyState(shown) {
+  const existing = els.historyList.parentElement.querySelector('.empty-state');
+  if (existing) existing.remove();
+  if (shown === 0) {
+    els.historyList.after(emptyStateEl('history', 'No takes yet — record something'));
   }
 }
 

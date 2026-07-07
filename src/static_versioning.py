@@ -46,6 +46,10 @@ HTML_STAMPED_ASSETS = (
     "app.js",
     "styles.css",
     "_vendored/nav/nav-tabs.css",
+    "_vendored/card/card.css",
+    "_vendored/switch/switch.css",
+    "_vendored/modal/modal.css",
+    "_vendored/empty-state/empty-state.css",
 )
 
 # Static ES-module imports inside the JS graph: ``from './x.js'`` and the

@@ -208,37 +208,20 @@ html, body {
 }
 .header-icon-btn:active { background: var(--card-off); }
 
-/* Append toggle — modelled on the sibling .incognito-btn below. The
-   checkbox is hidden; the <label> itself is the button. Opacity +
-   accent border flip on `:has(input:checked)` so on/off reads at a
-   glance instead of relying on a tiny tick (issue #22). */
-.append-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-size: var(--font-caption);
-  padding: var(--space-xs) 10px;
-  min-height: var(--control-h);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  user-select: none;
-  opacity: 0.55;
-  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
-}
-.append-toggle:active { background: var(--card-off); }
-.append-toggle:has(input:checked) {
-  opacity: 1;
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
+/* Append + incognito header chips — compact role="switch" buttons (same
+   aria-checked state contract as the fleet switch, own chip look). Opacity +
+   accent border flip on the checked state so on/off reads at a glance
+   instead of relying on a tiny tick (issue #22). */
+.append-toggle,
 .incognito-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--icon-title);
+  gap: 6px;
+  font: inherit;
+  font-size: var(--font-caption);
+  background: transparent;
+  color: var(--ink);
   padding: var(--space-xs) 10px;
   min-height: var(--control-h);
   border: 1px solid var(--line);
@@ -248,8 +231,11 @@ html, body {
   opacity: 0.55;
   transition: opacity 0.15s, border-color 0.15s, background 0.15s;
 }
+.incognito-btn { font-size: var(--icon-title); }
+.append-toggle:active,
 .incognito-btn:active { background: var(--card-off); }
-.incognito-btn:has(input:checked) {
+.append-toggle[aria-checked="true"],
+.incognito-btn[aria-checked="true"] {
   opacity: 1;
   border-color: var(--accent);
   background: var(--accent-soft);
@@ -355,31 +341,10 @@ html, body {
 }
 
 /* ---------- cards ---------- */
-.card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--ink);
-  padding: var(--space-md);
-  margin: var(--gap) 0;
-}
-.card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  margin-bottom: var(--space-sm);
-}
-.card-header h2 {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  margin: 0;
-  font-size: var(--font-body);
-  font-weight: 700;
-}
-.card-header h2 .icon { width: var(--icon-title); height: var(--icon-title); }
-.card-count { color: var(--muted); font-size: var(--font-caption); font-weight: 600; }
+/* The card surface itself is the vendored component (_vendored/card/card.css);
+   only the stacking rhythm between cards is this app's. */
+.card { margin: var(--gap) 0; }
+.card-head { margin-bottom: var(--space-sm); }
 
 .text-out {
   background: var(--input-bg);
@@ -506,22 +471,9 @@ textarea.text-out.editable::placeholder {
   resize: vertical;
 }
 
-.select-native, .input-native {
-  background: var(--input-bg);
-  color: var(--ink);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  padding: 0 10px;
-  font-family: var(--font);
-  font-size: var(--font-label);
-  height: var(--control-h);
-}
+/* The shared 36px inline control comes from the vendored modal.css; only the
+   select's chevron-clearance is app-side. */
 .select-native { appearance: none; -webkit-appearance: none; padding-right: 32px; }
-
-.toggle input[type="checkbox"] {
-  width: 22px; height: 22px;
-  accent-color: var(--on);
-}
 
 /* ---------- history ---------- */
 .history-actions {
@@ -538,36 +490,14 @@ textarea.text-out.editable::placeholder {
   margin-top: var(--space-sm);
 }
 
-/* ---------- login overlay (shown on 401) ---------- */
-.login-overlay {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  margin: 0;
-  background: var(--scrim);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-  box-sizing: border-box;
-}
+/* ---------- login dialog (shown on 401) ---------- */
+/* The shell is the vendored modal (.detail-dialog/.detail-card); only the
+   auth-gate specifics — narrow width, centered column — are app-side. */
+.login-dialog { width: min(360px, 92vw); }
 .login-card {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 28px var(--space-lg);
-  max-width: 360px;
-  width: 100%;
-  margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 14px;
-  box-sizing: border-box;
-  box-shadow: var(--shadow);
 }
 .login-card h2 {
   margin: 0;

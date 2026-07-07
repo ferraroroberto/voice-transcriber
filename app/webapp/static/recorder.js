@@ -8,7 +8,7 @@
 
 import { els, state, getStoredToken } from './state.js';
 import { authFetch } from './api.js';
-import { showToast, tryAutoCopy, truncate } from './ui.js';
+import { isOn, showToast, tryAutoCopy, truncate } from './ui.js';
 import { refreshHistory } from './history.js';
 
 function setMode(m) { state.mode = m; }
@@ -17,7 +17,7 @@ function setMode(m) { state.mode = m; }
 // started via the ▶ Resume button (state.forceAppend) — Resume
 // continues the transcript no matter how the toggle is set.
 export function appendActive() {
-  return (!!els.appendToggle && els.appendToggle.checked) || state.forceAppend;
+  return isOn(els.appendToggle) || state.forceAppend;
 }
 
 // When append is active, glue the new take onto the existing
@@ -108,7 +108,7 @@ async function startRecording() {
   // clean it up before starting a new one so disk stays tidy.
   await cleanupIncognitoSession();
 
-  const incognito = !!els.incognitoToggle.checked;
+  const incognito = isOn(els.incognitoToggle);
   const sessionRes = await authFetch('/api/sessions', {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
@@ -268,7 +268,7 @@ async function onRecorderStopped(mimeType) {
     els.recordStatus.textContent =
       `Server: ffmpeg → whisper · ${formatDuration(elapsedSec)} of audio…`;
     const t0 = Date.now();
-    const translate = !!els.translateToggle.checked;
+    const translate = isOn(els.translateToggle);
     const finishUrl =
       `/api/sessions/${state.sessionId}/finish` +
       `?language=${encodeURIComponent(els.languageSelect.value)}` +
@@ -346,7 +346,7 @@ async function onRecorderStopped(mimeType) {
 }
 
 function buildAudioConstraints() {
-  const wantBuiltin = els.forceBuiltinMic.checked;
+  const wantBuiltin = isOn(els.forceBuiltinMic);
   const deviceId = els.micSelect.value;
   if (deviceId) return { deviceId: { exact: deviceId } };
   if (wantBuiltin) {
@@ -453,7 +453,7 @@ function maybeFireAutoStop(loudness, threshold) {
   // Append / Incognito toggles): flip it and the next take honours
   // it without tapping Save. Save persists the choice as the default
   // for fresh page loads.
-  const enabled = els.vadAutoStopToggle && els.vadAutoStopToggle.checked;
+  const enabled = isOn(els.vadAutoStopToggle);
   if (!enabled) return;
   if (state.mode !== 'recording' || state.vadStopFired) return;
   const now = Date.now();

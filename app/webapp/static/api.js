@@ -39,9 +39,15 @@ export async function fetchJsonWithRetry(url, init, attempts) {
   throw lastErr;
 }
 
+// The auth gate is a native <dialog> (fleet modal contract) — Esc must not
+// dismiss it: a closed gate is not an unlocked app. One listener, module-wide.
+if (els.loginOverlay) {
+  els.loginOverlay.addEventListener('cancel', (e) => e.preventDefault());
+}
+
 export function promptForPassword() {
   return new Promise((resolve) => {
-    els.loginOverlay.hidden = false;
+    if (!els.loginOverlay.open) els.loginOverlay.showModal();
     els.loginPassword.value = '';
     els.loginError.hidden = true;
     els.loginError.textContent = '';
@@ -90,7 +96,7 @@ export function promptForPassword() {
           return;
         }
         try { localStorage.setItem(TOKEN_KEY, data.token); } catch (_) {}
-        els.loginOverlay.hidden = true;
+        els.loginOverlay.close();
         els.loginForm.removeEventListener('submit', onSubmit);
         resolve(true);
       } catch (err) {
