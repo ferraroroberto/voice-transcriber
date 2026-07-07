@@ -173,7 +173,7 @@
           <span>Language</span>
           <select id="languageSelect" class="select-native"></select>
         </label>
-        <div class="row toggle" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
+        <div class="row" title="Speak in the selected language above; whisper outputs English. Routes through the local-llm-hub's :8091 translate-capable model — first call after idle has a 3–8 s cold start.">
           <span>🌐 Translate to English</span>
           <button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Translate to English"><span class="knob"></span><span class="toggle-label">OFF</span></button>
@@ -182,12 +182,12 @@
           <span>Microphone</span>
           <select id="micSelect" class="select-native"></select>
         </label>
-        <div class="row toggle">
+        <div class="row">
           <span>Force built-in mic (skip Bluetooth)</span>
           <button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Force built-in mic (skip Bluetooth)"><span class="knob"></span><span class="toggle-label">OFF</span></button>
         </div>
-        <div class="row toggle" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
+        <div class="row" title="Amplify captured audio before it reaches whisper — for a quiet mic or a quiet room. Distinct from the silence-skip anti-hallucination gate below.">
           <span>🔊 Quiet-environment gain boost</span>
           <button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Quiet-environment gain boost"><span class="knob"></span><span class="toggle-label">OFF</span></button>
@@ -196,7 +196,7 @@
           <span>Boost amount (dB)</span>
           <input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native">
         </label>
-        <div class="row toggle" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
+        <div class="row" title="After this many ms of continuous near-silence, auto-fire Stop. A 500 ms 'keep talking to cancel' banner appears first.">
           <span>🤖 Auto-stop on silence</span>
           <button id="vadAutoStopToggle" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Auto-stop on silence"><span class="knob"></span><span class="toggle-label">OFF</span></button>

@@ -58,35 +58,43 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
     expect(label).to_contain_text("RECORD")
 
 
-def test_settings_panel_toggles(authed_page: Page, base_url: str) -> None:
-    """The settings panel is a <details> element collapsed by default;
-    clicking the summary expands it. Catches both a missing element and
-    a broken summary handler in one shot."""
+def test_settings_tab_activates(authed_page: Page, base_url: str) -> None:
+    """Settings lives on its own tab (fleet nav contract, issue #107):
+    hidden by default, revealed by activating the Settings tab, with the
+    Record pane yielding. Catches a missing pane and broken nav wiring
+    in one shot."""
     _navigate_collecting_errors(authed_page, base_url)
     panel = authed_page.locator("#settingsPanel")
     expect(panel).to_be_attached()
-    # <details> exposes its open state as a boolean attribute.
-    assert panel.evaluate("el => el.open") is False
-    panel.locator("summary").first.click()
-    expect(panel).to_have_attribute("open", "")
+    expect(panel).to_be_hidden()
+    authed_page.click("#tabSettings")
+    expect(panel).to_be_visible()
+    expect(authed_page.locator("#paneRecord")).to_be_hidden()
+    expect(authed_page.locator("#tabSettings")).to_have_attribute(
+        "aria-selected", "true"
+    )
 
 
-def test_login_overlay_dom_present(authed_page: Page, base_url: str) -> None:
-    """The login overlay markup is wired so showLogin() can reveal it.
+def test_login_dialog_dom_present(authed_page: Page, base_url: str) -> None:
+    """The login gate is a native <dialog> wired for showModal().
 
     We exercise the DOM directly rather than triggering a real 401: the
     bearer middleware bypasses loopback, so a bad token from 127.0.0.1
-    won't surface the overlay. This still catches the regression we care
-    about — overlay element + password input missing or renamed.
+    won't surface the dialog. This still catches the regression we care
+    about — dialog element + password input missing or renamed — plus the
+    auth-gate contract that Esc must not dismiss it.
     """
     _navigate_collecting_errors(authed_page, base_url)
-    overlay = authed_page.locator("#loginOverlay")
-    expect(overlay).to_be_hidden()
-    authed_page.evaluate(
-        "document.getElementById('loginOverlay').hidden = false"
-    )
-    expect(overlay).to_be_visible()
+    dialog = authed_page.locator("#loginOverlay")
+    expect(dialog).to_be_hidden()
+    authed_page.evaluate("document.getElementById('loginOverlay').showModal()")
+    expect(dialog).to_be_visible()
     pw = authed_page.locator("#loginPassword")
     expect(pw).to_be_editable()
     pw.fill("dummy")
     expect(pw).to_have_value("dummy")
+    # Esc is suppressed (api.js cancel handler): a closed gate != unlocked app.
+    authed_page.keyboard.press("Escape")
+    expect(dialog).to_be_visible()
+    authed_page.evaluate("document.getElementById('loginOverlay').close()")
+    expect(dialog).to_be_hidden()

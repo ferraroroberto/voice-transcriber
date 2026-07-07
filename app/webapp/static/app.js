@@ -108,8 +108,8 @@ function bindEvents() {
   els.polishStyle.addEventListener('change', refreshPromptPreview);
 
   // Fleet bottom-tab nav (vendored component — _vendored/nav/). Refresh the
-  // status readout whenever the Settings tab is activated, replacing the old
-  // <details> toggle listener from the single-scroll layout.
+  // status readout whenever the Settings tab is activated, replacing the
+  // disclosure-toggle listener from the old single-scroll layout.
   initNavTabs({
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',

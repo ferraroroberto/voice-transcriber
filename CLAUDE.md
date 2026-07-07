@@ -24,4 +24,4 @@ fails non-interactively).
   - app/webapp/static/**/*.css
   - app/webapp/static/**/*.{js,html}
 - key views:                      # single tabbed SPA served at `/`
-  - /          (record → history → settings panels)
+  - /          (Record · History · Settings bottom-tab panes, vendored fleet nav)

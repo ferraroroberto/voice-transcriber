@@ -49,13 +49,15 @@ flowchart TB
     MIDDLEWARE["middleware.py\nbearer-token auth, loopback bypass"]
     AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
-    STATIC["static/\nindex.html · app.js · recorder.js · api.js ·\nstate.js · ui.js · history.js · polish.js · styles.css"]
+    STATIC["static/\nindex.html (Record · History · Settings tabs) · app.js ·\nrecorder.js · api.js · state.js · ui.js · history.js ·\npolish.js · styles.css (fleet tokens, light+dark)"]
+    VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nnav · icons · card · switch · modal · empty-state"]
   end
   WEBSERVER --> ROUTERS
   WEBSERVER --> MIDDLEWARE
   ROUTERS --> AUDIOPY
   ROUTERS --> PARTIALW
   WEBSERVER --> STATIC
+  STATIC --> VENDORED
 
   subgraph logic["src/ — logic layer, no UI imports"]
     APPCONFIG["app_config.py\nAppConfig loader, config/config.json"]

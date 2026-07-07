@@ -68,9 +68,12 @@ def start_recording(page: Page) -> None:
     toggle off, the take ends only when the test ends it.
     """
     page.wait_for_selector("#recordBtn", state="visible", timeout=8_000)
+    # The toggle is the fleet role="switch" button (issue #107); mirror the
+    # vendored setSwitch() write path so isOn() reads it as off.
     page.evaluate(
         "var t = document.getElementById('vadAutoStopToggle');"
-        "if (t) t.checked = false;"
+        "if (t) { t.classList.remove('on');"
+        " t.setAttribute('aria-checked', 'false'); }"
     )
     page.click("#recordBtn")
     # aria-pressed flips to 'true' only once setMode('recording') has run.

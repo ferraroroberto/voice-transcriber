@@ -36,6 +36,19 @@ _STATIC_DIR = (
     Path(__file__).resolve().parents[2] / "app" / "webapp" / "static"
 )
 
+# Every asset index.html references directly with a ?v=__NAME__ placeholder —
+# root assets plus the vendored component CSS (issue #107). Must mirror
+# src.static_versioning.HTML_STAMPED_ASSETS.
+_STAMPED_ASSETS = (
+    "app.js",
+    "styles.css",
+    "_vendored/nav/nav-tabs.css",
+    "_vendored/card/card.css",
+    "_vendored/switch/switch.css",
+    "_vendored/modal/modal.css",
+    "_vendored/empty-state/empty-state.css",
+)
+
 
 @pytest.fixture
 def once(browser_name: str) -> None:
@@ -56,7 +69,7 @@ def test_index_revalidates(once: None, base_url: str) -> None:
 
 
 def test_static_assets_are_long_cached(once: None, base_url: str) -> None:
-    for asset in ("app.js", "styles.css"):
+    for asset in _STAMPED_ASSETS:
         cc = _get(base_url, f"/static/{asset}").headers.get("cache-control", "")
         assert "max-age=31536000" in cc and "immutable" in cc, (
             f"{asset} must be immutably cached; got {cc!r}"
@@ -65,9 +78,10 @@ def test_static_assets_are_long_cached(once: None, base_url: str) -> None:
 
 def test_index_stamps_match_on_disk(once: None, base_url: str) -> None:
     html = _get(base_url, "/").text
-    # The placeholders must have been substituted at render time.
-    assert "__APP_JS__" not in html and "__STYLES_CSS__" not in html
-    for asset in ("app.js", "styles.css"):
+    # Every placeholder must have been substituted at render time.
+    leftovers = re.findall(r"\?v=__[A-Z_]+__", html)
+    assert not leftovers, f"unstamped placeholders served: {leftovers}"
+    for asset in _STAMPED_ASSETS:
         match = re.search(
             rf"/static/{re.escape(asset)}\?v=([0-9a-f]{{8}})", html
         )
