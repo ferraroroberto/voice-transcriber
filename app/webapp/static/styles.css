@@ -330,6 +330,27 @@ html, body {
 }
 
 .record-label { font-size: var(--font-body); }
+/* CSS glyphs for the record-button label states — crisp filled shapes
+   instead of emoji-presentation characters (⬤ / ◼︎ / ⏳). */
+.rec-glyph {
+  display: inline-block;
+  width: 0.65em;
+  height: 0.65em;
+  background: currentColor;
+  vertical-align: baseline;
+}
+.rec-glyph-dot { border-radius: 50%; }
+.rec-glyph-square { border-radius: 2px; }
+.rec-spinner {
+  display: inline-block;
+  width: 1.1em;
+  height: 1.1em;
+  border: 2.5px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: rec-spin 0.9s linear infinite;
+}
+@keyframes rec-spin { to { transform: rotate(360deg); } }
 .record-timer { font-size: var(--font-heading-lg); margin-top: var(--space-xs); font-variant-numeric: tabular-nums; }
 
 .record-status {
@@ -418,32 +439,33 @@ textarea.text-out.editable::placeholder {
 .copy-btn .icon,
 .ghost-btn .icon,
 .danger-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
-/* button-primary: accent fill, accent-fg text, 48px */
-.big-btn { background: var(--accent); border: 1px solid var(--accent-border-strong); color: var(--accent-fg); flex: 1; }
-.big-btn:active { background: color-mix(in srgb, var(--accent) 85%, #000); }
-/* AA-safe disabled recipe (never opacity on a solid accent fill) */
+/* Accent-tinted ghost recipe — home-automation's canonical .big-btn
+   (accent tint + accent text + soft accent border), applied to every
+   accent button in the app. Status-colored controls (.record-btn,
+   .resume-btn, .danger-btn, the .copied / .danger-flash flashes) keep
+   their state colors. */
+.big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent); flex: 1; }
+.big-btn:active { transform: scale(0.98); }
 .big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 
-.polish-btn { background: var(--accent); }
-
 .copy-btn {
-  background: var(--card-off);
-  border: 1px solid var(--line);
-  color: var(--ink);
+  background: var(--accent-soft);
+  border: 1px solid var(--accent-border-soft);
+  color: var(--accent);
   min-width: 110px;
 }
-.copy-btn:active { background: var(--line-muted); }
-.copy-btn[disabled] { color: var(--muted); cursor: not-allowed; }
+.copy-btn:active { transform: scale(0.98); }
+.copy-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .copy-btn.copied { background: var(--on); border-color: var(--on); color: var(--accent-fg); }
 
 .ghost-btn {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid var(--line);
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent-border-soft);
   padding: 10px var(--gap);
   min-height: 40px;
 }
-.ghost-btn:active { background: var(--card-off); }
+.ghost-btn:active { transform: scale(0.98); }
 .ghost-btn.copied {
   background: var(--on);
   color: var(--accent-fg);
@@ -676,3 +698,11 @@ textarea.text-out.editable::placeholder {
   border-color: var(--on);
   color: var(--accent-fg);
 }
+
+/* Build-identity footer (which build the PWA is running) — visible under
+   every tab; home-automation's .page-foot recipe. */
+.page-foot {
+  margin: var(--space-md) var(--space-xs);
+  text-align: center;
+}
+.page-foot p { margin: 2px 0; }

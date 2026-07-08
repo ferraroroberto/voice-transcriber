@@ -63,19 +63,46 @@ async function init() {
   loadVersion();
 }
 
-// Surface the loaded build in the Settings panel so "is the phone
+// Surface the loaded build in the every-tab footer so "is the phone
 // running the current code?" is answerable at a glance — see issue #13.
+// Format + stale-shell reload guard mirror home-automation's main.js.
+function fmtBuildTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return String(iso).replace('T', ' ').slice(0, 16);
+  const pad = function (n) { return String(n).padStart(2, '0'); };
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+const ASSET_HASH_KEY = 'voice-transcriber.assetHash';
+const ASSET_RELOAD_KEY = 'voice-transcriber.assetReloadedFor';
+
 async function loadVersion() {
   if (!els.buildInfo) return;
   try {
     const r = await authFetch('/api/version');
     if (!r.ok) throw new Error(String(r.status));
     const v = await r.json();
-    const when = String(v.built_at || '')
-      .replace('T', ' ')
-      .replace(/(\+00:00|Z)$/, ' UTC');
-    els.buildInfo.textContent =
-      `Build: ${v.git_sha || '?'} · ${when}`.trim();
+    const sha = v.git_sha || '?';
+    const assetHash = v.asset_hash || '';
+    const previousHash = localStorage.getItem(ASSET_HASH_KEY) || '';
+    if (
+      assetHash && previousHash && previousHash !== assetHash &&
+      sessionStorage.getItem(ASSET_RELOAD_KEY) !== assetHash
+    ) {
+      // iOS standalone PWAs can cling to an old shell even with stamped
+      // asset URLs — the cached index.html keeps loading pre-deploy
+      // modules while this live /api/version fetch shows the new SHA.
+      // One automatic reload per deploy picks the fresh shell up.
+      localStorage.setItem(ASSET_HASH_KEY, assetHash);
+      sessionStorage.setItem(ASSET_RELOAD_KEY, assetHash);
+      window.location.reload();
+      return;
+    }
+    if (assetHash) localStorage.setItem(ASSET_HASH_KEY, assetHash);
+    const ts = fmtBuildTime(v.built_at || '');
+    els.buildInfo.textContent = ts ? `Build: ${sha} · ${ts}` : `Build: ${sha}`;
   } catch (_) {
     // Non-critical — leave the placeholder rather than alarming the user.
     els.buildInfo.textContent = 'Build: unavailable';

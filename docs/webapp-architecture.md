@@ -55,6 +55,11 @@ profile at `/install-ca`. iOS users install once via Settings → General
 → VPN & Device Management, then trust under Settings → General → About →
 Certificate Trust Settings. After that, no security warnings, ever.
 
+The `/install-ca` link was removed from the Settings pane in issue #109 —
+portless Tailscale/Cloudflare access supersedes the local-CA idea (same
+call whatsapp-radar made). The endpoint itself still serves, for legacy
+direct-`:8443` setups.
+
 For the Cloudflare path the certificate question goes away — Cloudflare
 terminates TLS — but a bearer token is enforced, since the URL is
 publicly reachable until the tunnel closes.
