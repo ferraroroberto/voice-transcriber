@@ -379,10 +379,10 @@ between recordings, so back-to-back records never re-prompt.
 
 ### Daily use
 
-Open the home-screen icon → tap the big red **⬤ RECORD** circle →
-speak → tap **◼︎ STOP**. The transcript appears, auto-copied to the
-clipboard (the **📋 Copy** button briefly flashes green to confirm),
-ready to paste anywhere. Optional second tap on **✨ Polish** runs the
+Open the home-screen icon → tap the big red **RECORD** circle →
+speak → tap **STOP**. The transcript appears, auto-copied to the
+clipboard (the **Copy** button briefly flashes green to confirm),
+ready to paste anywhere. Optional second tap on **Polish** runs the
 transcript through the local LLM hub for filler-word removal,
 auto-copies the polished version (same green flash on its Copy button).
 
@@ -390,19 +390,19 @@ The transcript and polished boxes are both editable — fix a misheard
 word before polishing, or tweak the polished output before copying.
 Edits are sent to the server on the next polish call so History matches
 what's on screen. You can also skip recording entirely: paste any text
-into the transcript box and tap **✨ Polish** — a text-only session is
+into the transcript box and tap **Polish** — a text-only session is
 created and shows up in History alongside dictated takes. If you only
 want to save the pasted text for later (no polish yet), tap
-**💾 Save** next to the transcript's Copy button — it creates a
+**Save** next to the transcript's Copy button — it creates a
 text-only session in History so you can polish or re-copy it from
 there, exactly as if you had dictated it. The
-**🧽** icon button in the top-right of the header clears both boxes
+eraser icon button in the top-right of the header clears both boxes
 and the current session so the next record starts fresh. Sits between
-**➕ Append** and **🕵️** Incognito.
+**Append** and **Incognito**.
 
 #### Append mode
 
-A **➕ Append** checkbox sits in the header. With it on, every new
+An **Append** checkbox sits in the header. With it on, every new
 take is glued onto the existing transcript with a blank-line
 separator instead of replacing it — useful when you're moving
 between locations or apps and want to build up one big transcript
@@ -415,12 +415,12 @@ either keeps both in sync; the webapp toggle is independent.
 
 #### Incognito mode
 
-A **🕵️** icon toggle in the header. When the outline turns blue,
+An incognito (mask) icon toggle in the header. When the outline turns blue,
 the **next recording** is flagged `incognito=true` server-side and
 never appears in the History list — useful for taking a private
 note that shouldn't sit on disk for the 30-day retention window.
 The session still works normally during its lifetime (record,
-transcribe, polish, copy); the moment you hit **🧽 Reset** or
+transcribe, polish, copy); the moment you hit **Reset** or
 start the next recording, the client sends `DELETE
 /api/sessions/{id}` so the folder is gone.
 
@@ -456,7 +456,7 @@ Whisper hallucinates plausible-sounding text on near-silent input
 runs through a loudness gate before transcription: clips with peak
 RMS below `silence_dbfs_threshold` (default `-50` dBFS, configurable
 in `config/webapp_config.json`) skip whisper entirely and report
-`🤫 Empty audio (X.X dBFS) — skipped` in the status line, with no
+`Empty audio (X.X dBFS) — skipped` in the status line, with no
 transcript written. False negatives (rejecting actual speech) are
 worse than the occasional hallucination slipping through, so the
 default is conservative — lower it (e.g. `-55`) if you whisper a lot,
@@ -465,13 +465,13 @@ raise it (e.g. `-45`) if hallucinations get through anyway.
 While recording, audio is streamed to the PC every second and persisted
 to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
 the connection drops mid-record, the partial recording is still on the
-PC — the **📜 History** view's *🔁 Redo* button replays whisper
+PC — the **History** view's *Redo* button replays whisper
 on any saved take.
 
 #### Quiet-environment gain boost
 
-A distinct control from silence skip above: **🔊 Quiet-environment gain
-boost** in **⚙️ Settings** amplifies captured audio by a configurable
+A distinct control from silence skip above: **Quiet-environment gain
+boost** in **Settings** amplifies captured audio by a configurable
 amount (default `12` dB, range `0`–`24`) before it reaches whisper —
 helping a quiet mic or a quiet room transcribe more reliably. It runs
 *after* the silence gate, so a genuinely silent take still gets skipped
@@ -501,16 +501,16 @@ Config knobs in `config/webapp_config.json`:
 
 #### Auto-stop on silence
 
-A **🤖 Auto-stop on silence** toggle in the **⚙️ Settings** panel —
+An **Auto-stop on silence** toggle in the **Settings** panel —
 when on, the page watches the mic energy floor and fires Stop after
 `auto_stop_silence_ms` of continuous near-silence (default `1500`).
 A 500 ms "keep talking to cancel" banner appears first so a thinking
 pause doesn't cut you off. The toggle takes effect immediately on
-flip (same UX as Translate / Append / Incognito); **💾 Save**
+flip (same UX as Translate / Append / Incognito); **Save**
 persists it as the default for fresh page loads.
 
 The detector runs on the existing `AnalyserNode` energy floor — no
-extra dependencies, no ONNX. A live `🎙️ VAD peak=N (silence trips
+extra dependencies, no ONNX. A live `VAD peak=N (silence trips
 ≤ 15)` readout in the status line lets you see exactly what your mic
 floor is, in case the threshold ever needs tuning.
 
@@ -525,13 +525,13 @@ relying on that would make the two platforms behave differently.)
 So the webapp does the next best thing, symmetrically on both: the
 moment you background it mid-record, the take is **finalised** — the
 audio streamed so far is transcribed and saved to History instead of
-silently lost. When you come back, a yellow **▶ Resume** button appears
+silently lost. When you come back, a yellow **Resume** (play) button appears
 next to the record button — one tap starts a new take that continues
-the same transcript (it force-appends, whatever the **➕ Append** toggle
+the same transcript (it force-appends, whatever the **Append** toggle
 is set to), so the seam across the app-switch is invisible. The plain
-**⬤ RECORD** button still starts a fresh take. Worst case — the page is
+**RECORD** button still starts a fresh take. Worst case — the page is
 discarded before the finalise lands — the streamed chunks are still on
-the PC, recoverable via History → **🔁 Redo**.
+the PC, recoverable via History → **Redo**.
 
 True background recording on iPhone is only possible from a native
 app; see issue #7 (Custom Keyboard Extension spin-off).
@@ -545,8 +545,8 @@ so a long take never feels stuck:
 |---|---|
 | Live recording | `Recording · 24.3 KB streamed to PC` (live byte counter) |
 | Rolling partial landed | `Recording · partial v3 · 41.2 KB streamed` |
-| Auto-stop armed | `🤫 silence 640 ms / 1500 ms` |
-| Auto-stop firing | `🤖 Auto-stop on silence — keep talking to cancel…` |
+| Auto-stop armed | `Silence 640 ms / 1500 ms` |
+| Auto-stop firing | `Auto-stop on silence — keep talking to cancel…` |
 | Stop, chunks pending | `Finalising upload · 2 chunks left` |
 | Server processing | `Server: ffmpeg → whisper · 1m 4s of audio…` |
 | Done | `Done in 3.2 s · 20.0× realtime — tap Copy or Polish` |
@@ -594,8 +594,8 @@ Gemini tiers). All six are stable version-free aliases — when the hub
 points an alias at a newer display_name nothing in this repo needs
 to change. Both surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
-**⚙️ Settings**; in the tk main window it sits inline on the polish
-row. **💾 Save** in webapp settings (or **⭐ Save defaults** in the tk
+**Settings**; in the tk main window it sits inline on the polish
+row. **Save** in webapp settings (or **⭐ Save defaults** in the tk
 window) persists your choice to `config/webapp_config.json` so the next
 launch defaults to it. Both surfaces share that file, so the defaults
 sync between them.
@@ -633,7 +633,7 @@ append an entry to `config/polish_prompts.json`:
 Restart the webapp + tk window. The new style appears in both
 dropdowns. No Python changes required.
 
-In the webapp's **⚙️ Settings**, a read-only preview shows the system
+In the webapp's **Settings**, a read-only preview shows the system
 prompt that will be sent for whichever style is currently selected — a
 quick way to verify what the LLM will see. The tk window has a
 **👁 Show prompt** button that opens the same preview in a popup.
@@ -690,14 +690,14 @@ Three buttons live above the list, all in a single right-aligned row:
 | Button | What it does |
 |---|---|
 | **🔄 Refresh** | Re-fetches the list from the server. Use this on a second device — the work PC, say — to pick up takes you just dictated from your phone into the home tray. |
-| **📋 Copy selected** | Concatenates every checked take's full text in chronological order (oldest → newest of the selection) with a blank-line separator and writes the whole bundle to the clipboard. Each item has a checkbox on the left; the newest take is auto-checked on every refresh, so the "just grab the latest" flow stays one click. Tick more boxes above it to bundle older takes. |
+| **Copy selected** | Concatenates every checked take's full text in chronological order (oldest → newest of the selection) with a blank-line separator and writes the whole bundle to the clipboard. Each item has a checkbox on the left; the newest take is auto-checked on every refresh, so the "just grab the latest" flow stays one click. Tick more boxes above it to bundle older takes. |
 | **🗑️ Clean** | Deletes every saved recording with a confirmation prompt. Briefly flashes red on success. |
 
 Each row also has its own three buttons:
 
-- **📋 Copy** — copies the full text from disk, not the 200-char
+- **Copy** — copies the full text from disk, not the 200-char
   preview the list payload carries.
-- **🔁 Redo** — re-runs whisper on the saved raw audio. Useful when
+- **Redo** — re-runs whisper on the saved raw audio. Useful when
   a phone died mid-record and you want to pull the transcript
   afterwards.
 - **🗑️ Delete** — confirmation dialog, then `DELETE
@@ -878,7 +878,7 @@ work in one foreground process.
 | Cloudflare Access blocks you | Email not on the policy allowlist | Zero Trust dashboard → Access → Applications → your app → Policies → edit Include rule, add your email, save. Effective immediately |
 | `Init failed: Load failed` toast | Network dropped while the page held a stale connection | Pull down on the page to reload — init retries automatically |
 | iOS prompts for mic on every record | Loaded from Safari URL bar, not from a Home Screen icon | **Add to Home Screen** and launch from the icon. Or whitelist the site under Settings → Safari → Settings for Websites → Microphone |
-| Not sure the phone is running the latest build | iOS cached an old copy of the webapp | Open **⚙️ Settings** — the `Build:` line shows the git SHA + build time the device loaded. Compare with `git rev-parse --short HEAD` on the PC, or `curl -k https://127.0.0.1:8443/api/version`. Asset URLs are content-hash stamped, so a tray restart after an edit always invalidates the cache — no manual cache-buster bumps |
+| Not sure the phone is running the latest build | iOS cached an old copy of the webapp | The `Build:` footer under every tab shows the git SHA + build time the device loaded. Compare with `git rev-parse --short HEAD` on the PC, or `curl -k https://127.0.0.1:8443/api/version`. Asset URLs are content-hash stamped, and a stale iOS PWA shell auto-reloads once per deploy when the served asset hash changes (#109) — no manual cache-buster bumps |
 | Polish fails with `502 hub returned…` from the `claude` or `gemini` CLI | Selected polish model's CLI isn't logged in, or the subscription is unreachable | Run `claude /login` (Claude subscription) or `gemini /auth login` (Google AI Pro) on the host running local-llm-hub. Or pick a different model in the dropdown — `gemini_flash` and `gemini_lite` are the cheapest tiers |
 | Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings |
 | Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button writes a single `text/plain` MIME type via `ClipboardItem` |
