@@ -48,6 +48,8 @@ import pytest
 import requests
 from playwright.sync_api import BrowserContext, Page
 
+from app.webapp.event_loop import LOOP_FACTORY
+
 logger = logging.getLogger(__name__)
 
 # Self-signed cert on 8443 — silence the urllib3 noise from /healthz.
@@ -189,6 +191,8 @@ def _autoboot_server() -> Iterator[str]:
             sys.executable, "-m", "uvicorn", "app.webapp.server:app",
             "--host", "127.0.0.1", "--port", str(port),
             "--log-level", "warning",
+            "--loop",
+            LOOP_FACTORY,
         ]
         if certs:
             cert, key = certs
