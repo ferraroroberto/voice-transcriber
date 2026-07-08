@@ -138,12 +138,12 @@ function renderHistoryItem(s) {
   });
 
   const reBtn = document.createElement('button');
-  reBtn.className = 'ghost-btn';
+  reBtn.className = 'button-tint compact';
   reBtn.innerHTML = icon('rotate-cw') + ' Redo';
   reBtn.addEventListener('click', () => retranscribe(s.session_id));
 
   const delBtn = document.createElement('button');
-  delBtn.className = 'ghost-btn';
+  delBtn.className = 'button-tint compact';
   delBtn.innerHTML = icon('trash-2') + ' Delete';
   delBtn.addEventListener('click', async () => {
     try {

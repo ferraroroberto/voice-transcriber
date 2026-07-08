@@ -419,7 +419,6 @@ textarea.text-out.editable::placeholder {
 /* ---------- buttons ---------- */
 .big-btn,
 .copy-btn,
-.ghost-btn,
 .danger-btn {
   display: inline-flex;
   align-items: center;
@@ -437,7 +436,6 @@ textarea.text-out.editable::placeholder {
 }
 .big-btn .icon,
 .copy-btn .icon,
-.ghost-btn .icon,
 .danger-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* Accent-tinted ghost recipe — home-automation's canonical .big-btn
    (accent tint + accent text + soft accent border), applied to every
@@ -458,20 +456,33 @@ textarea.text-out.editable::placeholder {
 .copy-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .copy-btn.copied { background: var(--on); border-color: var(--on); color: var(--accent-fg); }
 
-.ghost-btn {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border: 1px solid var(--accent-border-soft);
+/* History toolbar's compact tint buttons (was .ghost-btn — fleet-config#296
+   settled ghost = transparent fill; this recipe was always the tint tier
+   wearing the ghost name, issue #111). Color/border/radius/cursor and the
+   :active scale come from the vendored .button-tint (_vendored/button/
+   button.css); this block only restates the smaller footprint these
+   toolbar/row buttons have always used (14px/48px group base and the
+   vendored tint's own 13px/48px/font-body/700 are both too large here),
+   so the rename is a pure rename with zero visual change. */
+.button-tint.compact {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 600;
   padding: 10px var(--gap);
   min-height: 40px;
+  touch-action: manipulation;
 }
-.ghost-btn:active { transform: scale(0.98); }
-.ghost-btn.copied {
+.button-tint.compact .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.button-tint.compact.copied {
   background: var(--on);
   color: var(--accent-fg);
   border-color: var(--on);
 }
-.ghost-btn.danger-flash {
+.button-tint.compact.danger-flash {
   background: var(--danger);
   color: var(--accent-fg);
   border-color: var(--danger);
