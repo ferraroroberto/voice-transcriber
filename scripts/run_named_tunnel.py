@@ -79,6 +79,12 @@ def _spawn_uvicorn(port: int) -> subprocess.Popen:
         str(port),
         "--log-level",
         "warning",
+        # cloudflared connects over loopback -- trust it to set
+        # X-Forwarded-For so request.client.host reflects the real
+        # tunnel caller, not 127.0.0.1 (issue #117).
+        "--proxy-headers",
+        "--forwarded-allow-ips",
+        "127.0.0.1",
     ]
     if cert.exists() and key.exists():
         cmd.extend(["--ssl-keyfile", str(key), "--ssl-certfile", str(cert)])

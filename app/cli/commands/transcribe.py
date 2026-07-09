@@ -13,7 +13,7 @@ import pyperclip
 
 from src import TranscriptionClient, TranscriptionError
 from src.app_config import LANGUAGE_MODES
-from src.whisper_server import WhisperServerManager
+from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .base import BaseCommand
 
 logger = logging.getLogger(__name__)
@@ -36,6 +36,7 @@ class TranscribeCommand(BaseCommand):
 
     def execute(self, args: argparse.Namespace) -> int:
         manager = WhisperServerManager()
+        spawned_here = False
         status = manager.status()
         if not status.running:
             if not (args.start_server or self.config.auto_start_server):
@@ -46,6 +47,7 @@ class TranscribeCommand(BaseCommand):
                 return 2
             try:
                 manager.start()
+                spawned_here = True
             except RuntimeError as e:
                 logger.error(str(e))
                 return 2
@@ -61,6 +63,9 @@ class TranscribeCommand(BaseCommand):
         except TranscriptionError as e:
             logger.error(f"❌ {e}")
             return 1
+        finally:
+            if spawned_here and manager.status().ownership == OWNERSHIP_OURS:
+                manager.stop()
 
         sys.stdout.write(text + "\n")
         sys.stdout.flush()

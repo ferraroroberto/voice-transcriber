@@ -57,6 +57,19 @@ def test_manager_build_command_passes_loop_factory():
     assert cmd[cmd.index("--loop") + 1] == LOOP_FACTORY
 
 
+def test_manager_build_command_trusts_loopback_proxy_headers():
+    """Regression pin for issue #117: without --proxy-headers/
+    --forwarded-allow-ips, request.client.host in middleware.py sees the
+    raw TCP peer -- cloudflared connecting over loopback -- and every
+    tunnel request would hit the loopback auth bypass meant only for the
+    local tk window."""
+    mgr = WebappManager(WebappRuntimeConfig(port=18443))
+    cmd = mgr._build_command()
+    assert "--proxy-headers" in cmd
+    assert "--forwarded-allow-ips" in cmd
+    assert cmd[cmd.index("--forwarded-allow-ips") + 1] == "127.0.0.1"
+
+
 def test_e2e_autoboot_wires_loop_factory():
     """conftest.py's disposable-webapp spawn isn't independently importable
     (module-scoped fixture with subprocess side effects) — a static check
@@ -70,6 +83,22 @@ def test_webapp_bat_wires_loop_factory():
     src = (_REPO_ROOT / "webapp.bat").read_text(encoding="utf-8")
     assert "app.webapp.event_loop:selector_loop_factory" in src
     assert "--loop" in src
+
+
+def test_webapp_bat_wires_proxy_headers():
+    """Regression pin for issue #117 (see
+    test_manager_build_command_trusts_loopback_proxy_headers)."""
+    src = (_REPO_ROOT / "webapp.bat").read_text(encoding="utf-8")
+    assert src.count("--proxy-headers") == 2
+    assert src.count("--forwarded-allow-ips 127.0.0.1") == 2
+
+
+def test_run_named_tunnel_spawn_wires_proxy_headers():
+    """Regression pin for issue #117 -- scripts/run_named_tunnel.py's
+    _spawn_uvicorn is the other uvicorn invocation cloudflared fronts."""
+    src = (_REPO_ROOT / "scripts" / "run_named_tunnel.py").read_text(encoding="utf-8")
+    assert '"--proxy-headers",' in src
+    assert '"--forwarded-allow-ips",' in src
 
 
 async def _noop_handler(reader, writer):

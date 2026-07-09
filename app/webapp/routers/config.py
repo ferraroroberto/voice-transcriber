@@ -19,7 +19,7 @@ from src.webapp_config import WebappConfig, update_webapp_config
 from src.whisper_server import WhisperServerManager
 
 from app.webapp.audio import find_ffmpeg
-from app.webapp.routers._helpers import PROJECT_ROOT
+from app.webapp.routers._helpers import PROJECT_ROOT, maybe_json
 
 router = APIRouter()
 
@@ -70,7 +70,7 @@ async def get_config(request: Request) -> Dict[str, Any]:
 
 @router.post("/api/config")
 async def patch_config(request: Request) -> Dict[str, Any]:
-    body = await request.json()
+    body = await maybe_json(request)
     allowed = {
         "polish_model_default",
         "polish_prompt_default",

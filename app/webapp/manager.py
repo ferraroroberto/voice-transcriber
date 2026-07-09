@@ -273,6 +273,16 @@ class WebappManager:
             "warning",
             "--loop",
             LOOP_FACTORY,
+            # The tray's Cloudflare tunnel (cloudflared) connects to this
+            # uvicorn over loopback (webapp/cloudflared.yml points at
+            # https://localhost:8443) -- trust only that immediate peer to
+            # set X-Forwarded-For so request.client.host reflects the real
+            # tunnel caller, not 127.0.0.1 (issue #117). uvicorn already
+            # defaults to this; pinned explicitly so it can't silently
+            # regress on an upstream default change.
+            "--proxy-headers",
+            "--forwarded-allow-ips",
+            "127.0.0.1",
         ]
         certs = cert_paths()
         if certs is not None:

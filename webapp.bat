@@ -25,10 +25,10 @@ set "KEY=%CERT_DIR%\key.pem"
 if not exist "%CERT%" (
     echo [INFO] No HTTPS cert found, running HTTP-only on :8443.
     echo        Run scripts\gen_ssl_cert.py to enable HTTPS ^(required for mobile mics^).
-    "%VENV_PY%" -m uvicorn app.webapp.server:app --host 0.0.0.0 --port 8443 --loop app.webapp.event_loop:selector_loop_factory
+    "%VENV_PY%" -m uvicorn app.webapp.server:app --host 0.0.0.0 --port 8443 --loop app.webapp.event_loop:selector_loop_factory --proxy-headers --forwarded-allow-ips 127.0.0.1
 ) else (
     echo [INFO] HTTPS via %CERT%
-    "%VENV_PY%" -m uvicorn app.webapp.server:app --host 0.0.0.0 --port 8443 --ssl-keyfile "%KEY%" --ssl-certfile "%CERT%" --loop app.webapp.event_loop:selector_loop_factory
+    "%VENV_PY%" -m uvicorn app.webapp.server:app --host 0.0.0.0 --port 8443 --ssl-keyfile "%KEY%" --ssl-certfile "%CERT%" --loop app.webapp.event_loop:selector_loop_factory --proxy-headers --forwarded-allow-ips 127.0.0.1
 )
 
 exit /b %ERRORLEVEL%

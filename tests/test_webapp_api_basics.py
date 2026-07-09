@@ -129,6 +129,25 @@ class TestApiConfig:
         )
         assert resp.status_code == 400
 
+    def test_post_with_empty_body_does_not_500(self, webapp_client, tmp_path, monkeypatch):
+        """Regression pin for issue #117: patch_config used to call
+        `await request.json()` directly instead of the shared
+        `maybe_json` helper, so a malformed/empty POST body raised an
+        unhandled JSONDecodeError -> bare 500 instead of the established
+        empty-patch-is-a-no-op behaviour every other body-optional
+        endpoint uses."""
+        client, app, _ = webapp_client
+        target = tmp_path / "webapp_config.json"
+        monkeypatch.setattr(
+            "src.webapp_config.DEFAULT_CONFIG_PATH", target
+        )
+        from src.webapp_config import save_webapp_config
+        save_webapp_config(app.state.webapp_config, target)
+
+        resp = client.post("/api/config")  # no body, no content-type
+        assert resp.status_code == 200
+        assert resp.json()["ok"] is True
+
 
 class TestApiStatus:
     def test_returns_three_sections(self, webapp_client):
