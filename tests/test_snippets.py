@@ -16,10 +16,9 @@ import src.snippets as snippets
 
 
 @pytest.fixture(autouse=True)
-def isolate_snippets(monkeypatch, tmp_path: Path):
+def isolate_snippets(tmp_path: Path):
     target = tmp_path / "snippets.json"
-    monkeypatch.setattr(snippets, "_SNIPPETS_PATH", target)
-    monkeypatch.setattr(snippets, "_CACHE", (0.0, {}, None))
+    snippets._loader.reset(target)
     yield target
 
 

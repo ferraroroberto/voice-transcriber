@@ -27,8 +27,6 @@ from __future__ import annotations
 # Standard library imports
 import logging
 import os
-import shutil
-import signal
 import socket
 import subprocess
 import sys
@@ -37,12 +35,25 @@ import time
 from pathlib import Path
 from typing import Optional
 
-# Third-party imports
-import yaml
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# Run directly as `python scripts/run_named_tunnel.py` (see
+# webapp_tunnel_named.bat), so sys.path[0] is this script's own directory,
+# not the repo root -- `src` isn't importable without this.
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.tunnel import (  # noqa: E402
+    CloudflaredNotFoundError,
+    persist_tunnel_url,
+    read_tunnel_hostname,
+    remove_tunnel_url_file,
+    spawn_cloudflared,
+    stop_process,
+)
 
 logger = logging.getLogger("run_named_tunnel")
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_CONFIG = PROJECT_ROOT / "webapp" / "cloudflared.yml"
 SAMPLE_CONFIG = PROJECT_ROOT / "webapp" / "cloudflared.sample.yml"
 TUNNEL_URL_FILE = PROJECT_ROOT / "webapp" / "last_tunnel_url.txt"
@@ -106,71 +117,6 @@ def _wait_for_uvicorn(port: int, timeout: float = 15.0) -> bool:
     return False
 
 
-def _spawn_cloudflared(config_path: Path) -> subprocess.Popen:
-    bin_path = shutil.which("cloudflared")
-    if bin_path is None:
-        raise SystemExit(
-            "❌ cloudflared not found on PATH. Install: "
-            "winget install Cloudflare.cloudflared"
-        )
-    cmd = [bin_path, "tunnel", "--config", str(config_path), "run"]
-    logger.info(f"🌐 Starting cloudflared: {' '.join(cmd)}")
-    return subprocess.Popen(
-        cmd,
-        cwd=str(PROJECT_ROOT),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
-        text=True,
-        encoding="utf-8",
-        errors="replace",
-        bufsize=1,
-    )
-
-
-def _read_hostname(config_path: Path) -> Optional[str]:
-    """Pull the first hostname out of the ingress list — used to
-    persist the public URL to last_tunnel_url.txt."""
-    try:
-        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError) as exc:
-        logger.warning(f"⚠️  Could not parse {config_path}: {exc}")
-        return None
-    ingress = data.get("ingress") or []
-    for entry in ingress:
-        if isinstance(entry, dict) and entry.get("hostname"):
-            return str(entry["hostname"]).strip()
-    return None
-
-
-def _read_auth_token() -> str:
-    try:
-        from src.webapp_config import load_webapp_config
-        return (load_webapp_config().auth_token or "").strip()
-    except Exception as exc:
-        logger.debug(f"could not read auth_token: {exc}")
-        return ""
-
-
-def _persist_tunnel_url(hostname: str) -> None:
-    url = f"https://{hostname}"
-    token = _read_auth_token()
-    if token:
-        from src.webapp_config import append_auth_token
-        url = append_auth_token(url, token)
-    try:
-        TUNNEL_URL_FILE.parent.mkdir(parents=True, exist_ok=True)
-        TUNNEL_URL_FILE.write_text(url + "\n", encoding="utf-8")
-        logger.info(f"📡 Tunnel URL → {TUNNEL_URL_FILE}")
-        logger.info(f"   {url}")
-        if token:
-            logger.info(
-                "🔐 auth_token is set — the URL above includes ?token=… so "
-                "the phone bootstraps on first load."
-            )
-    except OSError as exc:
-        logger.warning(f"⚠️  Could not write {TUNNEL_URL_FILE}: {exc}")
-
-
 def _stream(proc: subprocess.Popen) -> None:
     for line in proc.stdout or ():
         sys.stdout.write(line)
@@ -195,7 +141,7 @@ def main() -> int:
         )
         return 1
 
-    hostname = _read_hostname(config_path)
+    hostname = read_tunnel_hostname(config_path)
     if hostname:
         logger.info(f"🌍 Public hostname: https://{hostname}")
     else:
@@ -216,12 +162,18 @@ def main() -> int:
                 uvicorn_proc.terminate()
             return 1
 
-    cloudflared = _spawn_cloudflared(config_path)
+    try:
+        cloudflared = spawn_cloudflared(config_path, PROJECT_ROOT, capture_output=True)
+    except CloudflaredNotFoundError as exc:
+        logger.error(f"❌ {exc}")
+        if uvicorn_proc is not None:
+            uvicorn_proc.terminate()
+        return 1
     streamer = threading.Thread(target=_stream, args=(cloudflared,), daemon=True)
     streamer.start()
 
     if hostname:
-        _persist_tunnel_url(hostname)
+        persist_tunnel_url(hostname, TUNNEL_URL_FILE)
 
     try:
         cloudflared.wait()
@@ -229,27 +181,9 @@ def main() -> int:
         logger.info("⏹️  Ctrl+C — shutting down")
     finally:
         for proc, name in ((cloudflared, "cloudflared"), (uvicorn_proc, "uvicorn")):
-            if proc is None:
-                continue
-            try:
-                logger.info(f"🛑 Stopping {name} (pid={proc.pid})")
-                if sys.platform == "win32":
-                    try:
-                        proc.send_signal(signal.CTRL_BREAK_EVENT)
-                    except Exception:
-                        pass
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-            except Exception as exc:
-                logger.debug(f"{name} stop failed: {exc}")
-        try:
-            if TUNNEL_URL_FILE.exists():
-                TUNNEL_URL_FILE.unlink()
-        except OSError:
-            pass
+            if proc is not None:
+                stop_process(proc, name)
+        remove_tunnel_url_file(TUNNEL_URL_FILE)
 
     return 0
 

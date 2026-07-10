@@ -18,8 +18,6 @@ from __future__ import annotations
 import logging
 import os
 import queue
-import shutil
-import signal
 import subprocess
 import sys
 import threading
@@ -30,7 +28,6 @@ from typing import Optional
 
 # Third-party imports
 import pyperclip
-import yaml
 from PIL import Image
 import pystray
 from pynput import keyboard
@@ -46,11 +43,18 @@ from src import (
     TranscriptionClient,
     TranscriptionError,
 )
-from src.gain import apply_gain_db
 from src.inject import parse_simple_hotkey, paste_at_caret
 from src.mic_glyph import draw_mic
 from src.recorder import Recording
-from src.silence import is_silent_samples
+from src.recording_pipeline import SilentTake, process_recording
+from src.tunnel import (
+    CloudflaredNotFoundError,
+    persist_tunnel_url,
+    read_tunnel_hostname,
+    remove_tunnel_url_file,
+    spawn_cloudflared,
+    stop_process,
+)
 from src.webapp_config import append_auth_token, load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from app.tray.single_instance import SingleInstance
@@ -78,25 +82,6 @@ EVT_QUIT = "quit"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 TUNNEL_CONFIG_PATH = PROJECT_ROOT / "webapp" / "cloudflared.yml"
 TUNNEL_URL_FILE = PROJECT_ROOT / "webapp" / "last_tunnel_url.txt"
-
-
-def _read_tunnel_hostname(config_path: Path) -> Optional[str]:
-    """Pull the first ingress[].hostname out of the cloudflared config.
-
-    Returns None when the file is missing or unparseable — the tray
-    treats either case as "no tunnel" and skips spawning cloudflared.
-    """
-    if not config_path.exists():
-        return None
-    try:
-        data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
-    except (OSError, yaml.YAMLError) as exc:
-        logger.warning(f"⚠️  Could not parse {config_path}: {exc}")
-        return None
-    for entry in data.get("ingress") or []:
-        if isinstance(entry, dict) and entry.get("hostname"):
-            return str(entry["hostname"]).strip()
-    return None
 
 
 class TrayApp:
@@ -147,7 +132,7 @@ class TrayApp:
         # so a single launch ('tray.bat') brings everything up. Hostname is
         # read from webapp/cloudflared.yml; missing config skips the tunnel.
         self._cloudflared_proc: Optional[subprocess.Popen] = None
-        self._tunnel_hostname: Optional[str] = _read_tunnel_hostname(TUNNEL_CONFIG_PATH)
+        self._tunnel_hostname: Optional[str] = read_tunnel_hostname(TUNNEL_CONFIG_PATH)
 
     # ------------------------------------------------------------ run / quit
 
@@ -589,8 +574,9 @@ class TrayApp:
         persistent public URL comes up alongside everything else.
         Best-effort — a missing cloudflared binary or a failed launch
         is logged but doesn't take the tray down."""
-        bin_path = shutil.which("cloudflared")
-        if bin_path is None:
+        try:
+            self._cloudflared_proc = spawn_cloudflared(TUNNEL_CONFIG_PATH, PROJECT_ROOT)
+        except CloudflaredNotFoundError:
             logger.warning(
                 "⚠️  cloudflared not on PATH — public URL won't be reachable. "
                 "Install: winget install Cloudflare.cloudflared"
@@ -600,20 +586,6 @@ class TrayApp:
                 "cloudflared not on PATH — install via winget",
             )
             return
-        cmd = [
-            bin_path, "tunnel", "--config", str(TUNNEL_CONFIG_PATH), "run",
-        ]
-        kw: dict = dict(
-            cwd=str(PROJECT_ROOT),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
-        if sys.platform == "win32":
-            kw["creationflags"] = (
-                subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
-            )
-        try:
-            self._cloudflared_proc = subprocess.Popen(cmd, **kw)
         except OSError as exc:
             logger.warning(f"⚠️  cloudflared failed to launch: {exc}")
             self._notify("Cloudflare tunnel", f"Failed to start: {exc}")
@@ -622,53 +594,16 @@ class TrayApp:
             f"🌍 Cloudflare tunnel started → https://{self._tunnel_hostname} "
             f"(pid={self._cloudflared_proc.pid})"
         )
-        self._persist_tunnel_url()
-
-    def _persist_tunnel_url(self) -> None:
-        """Write the public URL to webapp/last_tunnel_url.txt so external
-        tooling (the launcher hub) can surface it. Includes ?token=… when
-        an auth_token is configured."""
-        if self._tunnel_hostname is None:
-            return
-        url = f"https://{self._tunnel_hostname}"
-        try:
-            token = (load_webapp_config().auth_token or "").strip()
-        except Exception as exc:  # noqa: BLE001
-            logger.debug(f"could not read auth_token: {exc}")
-            token = ""
-        if token:
-            url = append_auth_token(url, token)
-        try:
-            TUNNEL_URL_FILE.parent.mkdir(parents=True, exist_ok=True)
-            TUNNEL_URL_FILE.write_text(url + "\n", encoding="utf-8")
-            logger.info(f"📡 Tunnel URL → {TUNNEL_URL_FILE}")
-        except OSError as exc:
-            logger.warning(f"⚠️  Could not write {TUNNEL_URL_FILE}: {exc}")
+        if self._tunnel_hostname is not None:
+            persist_tunnel_url(self._tunnel_hostname, TUNNEL_URL_FILE)
 
     def _stop_tunnel(self) -> None:
         proc = self._cloudflared_proc
         if proc is None:
             return
         self._cloudflared_proc = None
-        try:
-            logger.info(f"🛑 Stopping cloudflared (pid={proc.pid})")
-            if sys.platform == "win32":
-                try:
-                    proc.send_signal(signal.CTRL_BREAK_EVENT)
-                except Exception:
-                    pass
-            proc.terminate()
-            try:
-                proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                proc.kill()
-        except Exception as exc:
-            logger.debug(f"cloudflared stop failed: {exc}")
-        try:
-            if TUNNEL_URL_FILE.exists():
-                TUNNEL_URL_FILE.unlink()
-        except OSError:
-            pass
+        stop_process(proc, "cloudflared")
+        remove_tunnel_url_file(TUNNEL_URL_FILE)
 
     def _show_model_info(self) -> None:
         """Surface model/memory/runtime info either through the open main
@@ -735,25 +670,10 @@ class TrayApp:
         from_hotkey = self._record_from_hotkey
         self._record_from_hotkey = False
 
-        # Silence gate — skip whisper if the take is below the dBFS
-        # threshold so it can't hallucinate on empty audio.
         try:
             webapp_cfg = load_webapp_config()
         except Exception:
             webapp_cfg = None
-        threshold = webapp_cfg.silence_dbfs_threshold if webapp_cfg else -50.0
-        silent, dbfs = is_silent_samples(recording.samples, threshold)
-        if silent:
-            logger.info(
-                f"🤫 Skipping whisper: {dbfs:.1f} dBFS < {threshold} dBFS"
-            )
-            self._notify("🤫 Empty audio", f"Silent take ({dbfs:.1f} dBFS) — skipped")
-            return
-
-        # Quiet-environment gain boost — applied after the silence gate so
-        # the gate's calibration is unaffected.
-        if webapp_cfg is not None and webapp_cfg.gain_boost_enabled:
-            recording.samples = apply_gain_db(recording.samples, webapp_cfg.gain_boost_db)
 
         status = self.server.status()
         if self._transcription_client is None:
@@ -763,16 +683,21 @@ class TrayApp:
             )
         client = self._transcription_client
         try:
-            iso_lang = self.config.whisper_language
-            text = client.transcribe_array(
-                recording.samples, recording.sample_rate,
-                language=iso_lang,
-            )
+            result = process_recording(recording, self.config, webapp_cfg, client)
         except TranscriptionError as e:
             self._notify("Transcription failed", str(e))
             return
 
-        text = text.strip()
+        if isinstance(result, SilentTake):
+            logger.info(
+                f"🤫 Skipping whisper: {result.dbfs:.1f} dBFS < {result.threshold} dBFS"
+            )
+            self._notify(
+                "🤫 Empty audio", f"Silent take ({result.dbfs:.1f} dBFS) — skipped"
+            )
+            return
+
+        text = result.strip()
         if not text:
             self._notify("Empty transcription", "The server returned no text.")
             return

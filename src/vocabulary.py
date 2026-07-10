@@ -19,45 +19,32 @@ restart.
 
 from __future__ import annotations
 
-import json
 import logging
-import threading
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
+
+from .hot_reload_json import MtimeCachedJson
 
 logger = logging.getLogger(__name__)
 
 _VOCAB_PATH = Path(__file__).resolve().parent.parent / "config" / "vocabulary.json"
-_LOCK = threading.Lock()
-_CACHE: Tuple[float, Dict[str, List[str]]] = (0.0, {})
 
 
-def _load() -> Dict[str, List[str]]:
-    """Return the on-disk vocab map, hot-reloading on mtime change."""
-    global _CACHE
-    try:
-        mtime = _VOCAB_PATH.stat().st_mtime
-    except FileNotFoundError:
+def _parse(raw: object) -> Dict[str, List[str]]:
+    if not isinstance(raw, dict):
+        logger.warning("⚠️  vocabulary.json must be an object keyed by ISO code")
         return {}
-    cached_mtime, cached_map = _CACHE
-    if mtime == cached_mtime and cached_map:
-        return cached_map
-    with _LOCK:
-        try:
-            raw = json.loads(_VOCAB_PATH.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            logger.warning(f"⚠️  vocabulary.json invalid: {exc}")
-            return {}
-        if not isinstance(raw, dict):
-            logger.warning("⚠️  vocabulary.json must be an object keyed by ISO code")
-            return {}
-        cleaned: Dict[str, List[str]] = {}
-        for key, val in raw.items():
-            if not isinstance(val, list):
-                continue
-            cleaned[str(key).lower()] = [str(v).strip() for v in val if str(v).strip()]
-        _CACHE = (mtime, cleaned)
-        return cleaned
+    cleaned: Dict[str, List[str]] = {}
+    for key, val in raw.items():
+        if not isinstance(val, list):
+            continue
+        cleaned[str(key).lower()] = [str(v).strip() for v in val if str(v).strip()]
+    return cleaned
+
+
+_loader: MtimeCachedJson[Dict[str, List[str]]] = MtimeCachedJson(
+    _VOCAB_PATH, _parse, {}, label="vocabulary.json"
+)
 
 
 def prompt_for_language(iso_code: Optional[str]) -> Optional[str]:
@@ -67,7 +54,7 @@ def prompt_for_language(iso_code: Optional[str]) -> Optional[str]:
     Returns ``None`` when nothing applies — the caller should omit the
     ``prompt`` form-field entirely in that case.
     """
-    vocab = _load()
+    vocab = _loader.load()
     if not vocab:
         return None
     items: List[str] = list(vocab.get("all", []))

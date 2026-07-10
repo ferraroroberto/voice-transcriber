@@ -38,8 +38,9 @@ of the transcript and never when stripping would empty the text:
    or bare period (``Claudius, ``, ``Claudio Pagliauvao- ``,
    ``Claudius C. ``) — not colon alone. The file is an object keyed by
    name (values are free-text notes; ``_``-prefixed keys are ignored),
-   opt-in, and hot-reloads on mtime change, mirroring ``src/snippets.py``
-   / ``src/vocabulary.py``.
+   opt-in, and hot-reloads on mtime change via the shared
+   ``src/hot_reload_json.py`` loader (also used by ``src/snippets.py`` and
+   ``src/vocabulary.py``).
 
 A bare ``Roberto:`` or a real sentence that merely opens with a comma'd
 word (``Today: I woke up``, ``Ok, let me think``) is left untouched —
@@ -49,20 +50,18 @@ are ever stripped, and never when doing so would empty the take.
 
 from __future__ import annotations
 
-import json
 import logging
 import re
-import threading
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import List, Optional
+
+from .hot_reload_json import MtimeCachedJson
 
 logger = logging.getLogger(__name__)
 
 _BLOCKLIST_PATH = (
     Path(__file__).resolve().parent.parent / "config" / "speaker_blocklist.json"
 )
-_LOCK = threading.Lock()
-_CACHE: Tuple[float, Optional["re.Pattern[str]"]] = (0.0, None)
 
 # A leading ``label:`` whose label carries an academic/professional title
 # or is a generic diarization tag. The name portion is length-bounded so a
@@ -133,53 +132,44 @@ def _strip_assistant_family(text: str) -> str:
     return text
 
 
-def _load_blocklist_pattern() -> Optional["re.Pattern[str]"]:
-    """Compile a ``^name<sep>`` matcher from the gitignored blocklist file.
+def _parse_blocklist(raw: object) -> Optional["re.Pattern[str]"]:
+    """Compile a ``^name<sep>`` matcher from the decoded blocklist JSON.
 
-    Returns ``None`` when the file is missing, empty, or invalid — the
+    Returns ``None`` when the content is missing, empty, or invalid — the
     feature is opt-in and must never block transcription.
     """
-    global _CACHE
-    try:
-        mtime = _BLOCKLIST_PATH.stat().st_mtime
-    except FileNotFoundError:
+    if not isinstance(raw, dict):
+        logger.warning("⚠️  speaker_blocklist.json must be an object keyed by name")
         return None
-    cached_mtime, cached_re = _CACHE
-    if mtime == cached_mtime and cached_re is not None:
-        return cached_re
-    with _LOCK:
-        try:
-            raw = json.loads(_BLOCKLIST_PATH.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            logger.warning(f"⚠️  speaker_blocklist.json invalid: {exc}")
-            return None
-        if not isinstance(raw, dict):
-            logger.warning("⚠️  speaker_blocklist.json must be an object keyed by name")
-            return None
-        # Keys are the names; values are free-text notes. Skip the `_comment`
-        # documentation key (and any other `_`-prefixed key) like the sibling
-        # snippets / vocabulary configs.
-        names: List[str] = [
-            str(k).strip()
-            for k in raw
-            if str(k).strip() and not str(k).startswith("_")
-        ]
-        if not names:
-            return None
-        # Longest-first so "Claudius S" wins over a bare "Claudius" (and
-        # "Claudio Couto" over a stray "Claudio") — the alternation is tried
-        # left-to-right, so the more specific name must come first.
-        names.sort(key=len, reverse=True)
-        # Name + a run of separator punctuation (colon, comma, dash, period)
-        # + whitespace. whisper varies the separator it hallucinates, so the
-        # match can't be colon-only; requiring trailing whitespace keeps a
-        # real word glued to punctuation (e.g. an abbreviation) from matching.
-        pattern = re.compile(
-            r"^\s*(?:" + "|".join(re.escape(n) for n in names) + r")\s*[.,:;\-–—]+\s+",
-            re.IGNORECASE,
-        )
-        _CACHE = (mtime, pattern)
-        return pattern
+    # Keys are the names; values are free-text notes. Skip the `_comment`
+    # documentation key (and any other `_`-prefixed key) like the sibling
+    # snippets / vocabulary configs.
+    names: List[str] = [
+        str(k).strip() for k in raw if str(k).strip() and not str(k).startswith("_")
+    ]
+    if not names:
+        return None
+    # Longest-first so "Claudius S" wins over a bare "Claudius" (and
+    # "Claudio Couto" over a stray "Claudio") — the alternation is tried
+    # left-to-right, so the more specific name must come first.
+    names.sort(key=len, reverse=True)
+    # Name + a run of separator punctuation (colon, comma, dash, period)
+    # + whitespace. whisper varies the separator it hallucinates, so the
+    # match can't be colon-only; requiring trailing whitespace keeps a
+    # real word glued to punctuation (e.g. an abbreviation) from matching.
+    return re.compile(
+        r"^\s*(?:" + "|".join(re.escape(n) for n in names) + r")\s*[.,:;\-–—]+\s+",
+        re.IGNORECASE,
+    )
+
+
+_blocklist_loader: MtimeCachedJson[Optional["re.Pattern[str]"]] = MtimeCachedJson(
+    _BLOCKLIST_PATH, _parse_blocklist, None, label="speaker_blocklist.json"
+)
+
+
+def _load_blocklist_pattern() -> Optional["re.Pattern[str]"]:
+    return _blocklist_loader.load()
 
 
 def _strip_once(text: str, pattern: "re.Pattern[str]") -> str:
