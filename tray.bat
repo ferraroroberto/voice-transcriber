@@ -54,6 +54,15 @@ REM ============================================================================
 
 setlocal EnableDelayedExpansion
 set "SCRIPT_DIR=%~dp0"
+REM `%~dp0` always ends in a trailing backslash, which is what the path joins
+REM below want -- but NOT what a quoted argument can carry. Windows argv parsing
+REM treats an odd run of backslashes before a closing quote as escaping that
+REM quote, so `-ScriptDir "%SCRIPT_DIR%"` swallows the rest of the command line
+REM and every later switch (-TrayMatch, -Ports, ...) arrives EMPTY -- detect
+REM matches nothing, reclaim reclaims nothing, and --restart silently degrades
+REM to the adopt-the-stale-build start this template exists to prevent
+REM (project-scaffolding#145). Pass the de-slashed copy as the argument.
+set "SCRIPT_DIR_ARG=%SCRIPT_DIR:~0,-1%"
 
 cd /d "%SCRIPT_DIR%" || exit /b 1
 
@@ -80,11 +89,14 @@ if not exist "%TRAY_PS%" (
 REM === ADAPT (4/4): this tray's exclusively-owned ports as a comma list.
 REM     Exclude any mutex-shared port -- see the :8090/:8091 note above. ===
 set "OWNED_PORTS=8443"
-REM Optional override. Leave blank to verify http://127.0.0.1:<first-owned-port>/api/version.
-set "VERSION_URL="
+REM This app serves HTTPS-only on its owned port (self-signed cert per
+REM gen_ssl_cert.py) -- the launch verb's default inferred URL is
+REM http://127.0.0.1:<first-owned-port>/api/version, which would always fail
+REM restart verification against an HTTPS-only listener. Set explicitly.
+set "VERSION_URL=https://127.0.0.1:8443/api/version"
 
 set "RESTART_ARG="
 if defined WANT_RESTART set "RESTART_ARG=-Restart"
 
-%PS% -NoProfile -NonInteractive -File "%TRAY_PS%" launch -AppName "%APP_NAME%" -ScriptDir "%SCRIPT_DIR%" -VenvDir "%TRAY_VENV%" -TrayMatch "launcher\.py\s+tray" -Ports "%OWNED_PORTS%" -TrayLaunch "%TRAY_LAUNCH%" -VersionUrl "%VERSION_URL%" !RESTART_ARG!
+%PS% -NoProfile -NonInteractive -File "%TRAY_PS%" launch -AppName "%APP_NAME%" -ScriptDir "%SCRIPT_DIR_ARG%" -VenvDir "%TRAY_VENV%" -TrayMatch "launcher\.py\s+tray" -Ports "%OWNED_PORTS%" -TrayLaunch "%TRAY_LAUNCH%" -VersionUrl "%VERSION_URL%" !RESTART_ARG!
 exit /b %ERRORLEVEL%
