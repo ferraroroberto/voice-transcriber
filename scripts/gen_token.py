@@ -44,9 +44,12 @@ from __future__ import annotations
 
 # Standard library imports
 import argparse
+import logging
 import secrets
 import sys
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 # Local imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -77,18 +80,21 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
     cfg = load_webapp_config()
     if args.clear:
         cfg.auth_token = ""
         save_webapp_config(cfg)
-        print(f"🧹 Cleared auth_token in {DEFAULT_CONFIG_PATH}")
-        print("   The webapp's auth gate is now OFF.")
+        log.info("🧹 Cleared auth_token in %s", DEFAULT_CONFIG_PATH)
+        log.info("   The webapp's auth gate is now OFF.")
         return 0
 
     if cfg.auth_token and not args.force:
-        print(
-            f"ℹ️  auth_token is already set in {DEFAULT_CONFIG_PATH}.\n"
-            f"   Re-run with --force to rotate, or --clear to disable."
+        log.info(
+            "ℹ️  auth_token is already set in %s.\n"
+            "   Re-run with --force to rotate, or --clear to disable.",
+            DEFAULT_CONFIG_PATH,
         )
         return 0
 
@@ -96,29 +102,29 @@ def main() -> int:
     cfg.auth_token = token
     save_webapp_config(cfg)
 
-    print()
-    print("✅ Wrote a new auth_token to:")
-    print(f"   {DEFAULT_CONFIG_PATH}")
-    print()
-    print("Token (also saved above — no need to copy):")
-    print(f"   {token}")
-    print()
-    print("What happens next")
-    print("─────────────────")
-    print("• The webapp's auth gate is now ON. Restart the tray or the")
-    print("  webapp process so the new config is picked up.")
-    print("• Loopback callers (the tk main window) keep working without")
-    print("  the token — local UX is unchanged.")
-    print("• Remote (tunnel) callers must present the token. They pick")
-    print("  it up automatically the first time they open a tokenised URL:")
-    print("    – Tray menu → 📋 Copy Cloudflare URL (URL already includes")
-    print("      ?token=…). Paste into the phone's browser, open it,")
-    print("      done. The page strips ?token=… from the visible URL")
-    print("      after stashing it in localStorage.")
-    print("• Rotation: re-run with --force, then re-open the new")
-    print("  tokenised URL once on each device that should keep")
-    print("  working. Other devices stop working immediately.")
-    print()
+    log.info("")
+    log.info("✅ Wrote a new auth_token to:")
+    log.info("   %s", DEFAULT_CONFIG_PATH)
+    log.info("")
+    log.info("Token (also saved above — no need to copy):")
+    log.info("   %s", token)
+    log.info("")
+    log.info("What happens next")
+    log.info("─────────────────")
+    log.info("• The webapp's auth gate is now ON. Restart the tray or the")
+    log.info("  webapp process so the new config is picked up.")
+    log.info("• Loopback callers (the tk main window) keep working without")
+    log.info("  the token — local UX is unchanged.")
+    log.info("• Remote (tunnel) callers must present the token. They pick")
+    log.info("  it up automatically the first time they open a tokenised URL:")
+    log.info("    – Tray menu → 📋 Copy Cloudflare URL (URL already includes")
+    log.info("      ?token=…). Paste into the phone's browser, open it,")
+    log.info("      done. The page strips ?token=… from the visible URL")
+    log.info("      after stashing it in localStorage.")
+    log.info("• Rotation: re-run with --force, then re-open the new")
+    log.info("  tokenised URL once on each device that should keep")
+    log.info("  working. Other devices stop working immediately.")
+    log.info("")
     return 0
 
 

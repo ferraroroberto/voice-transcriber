@@ -27,10 +27,13 @@ from __future__ import annotations
 
 # Standard library imports
 import argparse
+import logging
 import sys
 from pathlib import Path
 
-# Make sure emoji in print statements survive a cp1252 PowerShell.
+log = logging.getLogger(__name__)
+
+# Make sure emoji in log output survive a cp1252 PowerShell.
 if hasattr(sys.stdout, "reconfigure"):
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -62,20 +65,22 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
+
     cfg = load_webapp_config()
 
     if args.clear:
         cfg.auth_password = ""
         save_webapp_config(cfg)
-        print(f"🧹 Cleared auth_password in {DEFAULT_CONFIG_PATH}")
-        print("   The password prompt is now OFF.")
+        log.info("🧹 Cleared auth_password in %s", DEFAULT_CONFIG_PATH)
+        log.info("   The password prompt is now OFF.")
         return 0
 
     if not args.password:
         parser.error("provide a password as the first argument, or use --clear")
 
     if not cfg.auth_token:
-        print(
+        log.error(
             "ℹ️  No auth_token is set yet — the password by itself does\n"
             "   nothing because /api/login hands back the bearer token.\n"
             "   Run `python scripts/gen_token.py` first, then re-run this."
@@ -84,18 +89,18 @@ def main() -> int:
 
     cfg.auth_password = args.password
     save_webapp_config(cfg)
-    print(f"✅ Set auth_password (length {len(args.password)})")
-    print(f"   Stored in: {DEFAULT_CONFIG_PATH}")
-    print()
-    print("Next steps")
-    print("──────────")
-    print("• Restart the tray so the new value is picked up.")
-    print("• Open the webapp on a device with no token in localStorage")
-    print("  (e.g. iPhone PWA). The login overlay appears — type the")
-    print("  password, the server hands the bearer token back, the")
-    print("  page stashes it, you're in.")
-    print("• Failed attempts are logged with client IP to:")
-    print(f"  {PROJECT_ROOT / 'webapp' / 'auth.log'}")
+    log.info("✅ Set auth_password (length %d)", len(args.password))
+    log.info("   Stored in: %s", DEFAULT_CONFIG_PATH)
+    log.info("")
+    log.info("Next steps")
+    log.info("──────────")
+    log.info("• Restart the tray so the new value is picked up.")
+    log.info("• Open the webapp on a device with no token in localStorage")
+    log.info("  (e.g. iPhone PWA). The login overlay appears — type the")
+    log.info("  password, the server hands the bearer token back, the")
+    log.info("  page stashes it, you're in.")
+    log.info("• Failed attempts are logged with client IP to:")
+    log.info("  %s", PROJECT_ROOT / "webapp" / "auth.log")
     return 0
 
 
