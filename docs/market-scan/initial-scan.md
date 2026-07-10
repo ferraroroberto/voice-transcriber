@@ -6,7 +6,7 @@ tracked as GitHub issues (linked below), not as TODOs in this file. Update this
 file's content in place as features ship or the competitive landscape moves;
 don't append dated snapshots.
 
-*Last verified: 2026-07-03.* The `/voice-market-scan` command refreshes this
+*Last verified: 2026-07-10.* The `/voice-market-scan` command refreshes this
 file in place and files a GitHub issue for each newly-identified gap — it does
 not write a new dated file.
 
@@ -81,8 +81,8 @@ Sources used for the initial comparison are listed at the bottom.
 | Live streaming preview (text appears as you speak) | Yes | Partial | No | Yes (killer feature) |
 | Push-to-talk alongside toggle | Yes | Yes | Yes | Yes |
 | Auto-stop on silence | Yes | Yes | Yes | Yes |
-| Quiet-environment gain boost (distinct from anti-hallucination silence gate) | No — [tracked in #97](https://github.com/ferraroroberto/voice-transcriber/issues/97) | Yes | Yes | — |
-| Usage analytics (words/min, daily count, time saved) | No — [tracked in #95](https://github.com/ferraroroberto/voice-transcriber/issues/95), low priority | Yes | Yes | Yes |
+| Quiet-environment gain boost (distinct from anti-hallucination silence gate) | Yes | Yes | Yes | — |
+| Usage analytics (words/min, daily count, time saved) | Yes | Yes | Yes | Yes |
 | Cross-device sync of dictionary/snippets | No — [tracked in #96](https://github.com/ferraroroberto/voice-transcriber/issues/96) | Yes (cloud) | Yes (iCloud) | Yes |
 | Privacy mode / no-storage toggle | Yes (incognito mode) | Yes | Always private | — |
 | Cloudflare-tunnel public URL with iOS PWA | Yes | No | No | No |
@@ -98,9 +98,7 @@ its own and is independently shippable.
 
 - [#93 — Voice command mode](https://github.com/ferraroroberto/voice-transcriber/issues/93)
 - [#94 — App-aware polish style](https://github.com/ferraroroberto/voice-transcriber/issues/94)
-- [#95 — Usage analytics](https://github.com/ferraroroberto/voice-transcriber/issues/95) (low priority)
 - [#96 — Cross-device sync of vocabulary/snippets](https://github.com/ferraroroberto/voice-transcriber/issues/96)
-- [#97 — Quiet-environment gain boost](https://github.com/ferraroroberto/voice-transcriber/issues/97)
 
 ## Where this repo already wins
 
