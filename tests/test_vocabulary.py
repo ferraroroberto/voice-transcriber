@@ -14,13 +14,12 @@ import src.vocabulary as vocab
 
 
 @pytest.fixture(autouse=True)
-def isolate_vocab(monkeypatch, tmp_path: Path):
+def isolate_vocab(tmp_path: Path):
     """Point the module at a temp file and clear its mtime cache so
     tests don't read whatever the developer happens to have in
     config/vocabulary.json."""
     target = tmp_path / "vocabulary.json"
-    monkeypatch.setattr(vocab, "_VOCAB_PATH", target)
-    monkeypatch.setattr(vocab, "_CACHE", (0.0, {}))
+    vocab._loader.reset(target)
     yield target
 
 

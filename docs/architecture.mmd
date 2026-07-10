@@ -40,7 +40,8 @@ flowchart TB
   TRAYPY --> SINGLEINST
   TRAYPY -->|boots + owns lifecycle of| WHISPERMGR
   TRAYPY -->|boots + owns lifecycle of| WEBAPPMGR
-  TRAYPY -->|spawns if cloudflared.yml present| CLOUDFLARED["cloudflared tunnel"]
+  TRAYPY --> TUNNEL
+  TUNNEL -->|spawns if cloudflared.yml present| CLOUDFLARED["cloudflared tunnel"]
 
   subgraph webapp["app/webapp/ — FastAPI mobile PWA"]
     WEBSERVER["server.py\nroutes + lifespan (archive cleanup on boot)"]
@@ -78,10 +79,16 @@ flowchart TB
     INJECT["inject.py\nclipboard + caret paste"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
     MICGLYPH["mic_glyph.py\nLucide-proportioned mic silhouette —\nshared by tray.py + scripts/gen_app_icons.py"]
+    RECPIPE["recording_pipeline.py\nsilence-gate -> gain-boost -> transcribe,\nshared by app.py + tray.py"]
+    TUNNEL["tunnel.py\ncloudflared spawn/persist/stop,\nshared by tray.py + scripts/run_named_tunnel.py"]
+    HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
     WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
   end
   WHISPERMGR --> WHISPERYAML
+  VOCAB --> HOTRELOAD
+  SNIPPETS --> HOTRELOAD
+  SPEAKERLABEL --> HOTRELOAD
 
   CLICMDS --> RECORDER
   CLICMDS --> TRANSCLIENT
@@ -99,8 +106,10 @@ flowchart TB
   ROUTERS --> SILENCE
   ROUTERS --> GAIN
   ROUTERS --> SPEAKERLABEL
-  TKAPP --> GAIN
-  TRAYPY --> GAIN
+  TKAPP --> RECPIPE
+  TRAYPY --> RECPIPE
+  RECPIPE --> SILENCE
+  RECPIPE --> GAIN
   TRANSCLIENT --> VOCAB
   STATIC --> STATICVER
   RECORDER --> APPCONFIG

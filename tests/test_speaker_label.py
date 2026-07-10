@@ -14,13 +14,12 @@ import src.speaker_label as sl
 
 
 @pytest.fixture(autouse=True)
-def isolate_blocklist(monkeypatch, tmp_path: Path):
+def isolate_blocklist(tmp_path: Path):
     """Point the module at a temp blocklist and clear its mtime cache so
     tests don't read whatever config/speaker_blocklist.json the developer
     happens to have."""
     target = tmp_path / "speaker_blocklist.json"
-    monkeypatch.setattr(sl, "_BLOCKLIST_PATH", target)
-    monkeypatch.setattr(sl, "_CACHE", (0.0, None))
+    sl._blocklist_loader.reset(target)
     yield target
 
 

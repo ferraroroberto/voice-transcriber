@@ -29,14 +29,14 @@ from src import (
     TranscriptionClient,
     TranscriptionError,
 )
-from src.gain import apply_gain_db, MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
+from src.gain import MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
 from src.polish import PolishClient, PolishError
-from src.silence import is_silent_samples
 from src.polish_prompts import (
     PolishPrompt,
     get_prompt,
     load_polish_prompts,
 )
+from src.recording_pipeline import SilentTake, process_recording
 from src.webapp_config import load_webapp_config, update_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .diagnostics_window import DiagnosticsWindow
@@ -734,39 +734,15 @@ class TranscriberApp:
         ).start()
 
     def _transcribe_and_show(self, recording) -> None:
-        # Silence gate — skip whisper on near-silent takes so it can't
-        # hallucinate "Thanks for watching" on an empty recording.
-        threshold = self.webapp_config.silence_dbfs_threshold
-        silent, dbfs = is_silent_samples(recording.samples, threshold)
-        if silent:
-            logger.info(
-                f"🤫 Skipping whisper: {dbfs:.1f} dBFS < {threshold} dBFS"
-            )
-            self.root.after(
-                0,
-                lambda d=dbfs: messagebox.showinfo(
-                    "Empty audio",
-                    f"Recording was silent ({d:.1f} dBFS) — nothing transcribed.",
-                ),
-            )
-            return
-
-        if self.webapp_config.gain_boost_enabled:
-            recording.samples = apply_gain_db(
-                recording.samples, self.webapp_config.gain_boost_db,
-            )
-
         status = self.server.status()
         client = TranscriptionClient(
             status.base_url,
             translate_base_url=self.config.translate_base_url,
         )
-        iso_lang = self.config.whisper_language
         translate = bool(self.translate_var.get())
         try:
-            text = client.transcribe_array(
-                recording.samples, recording.sample_rate,
-                language=iso_lang,
+            result = process_recording(
+                recording, self.config, self.webapp_config, client,
                 translate=translate,
             )
         except TranscriptionError as e:
@@ -775,7 +751,22 @@ class TranscriberApp:
             self.root.after(0, lambda m=msg: messagebox.showerror("Transcription failed", m))
             return
 
-        self._post_transcription(text)
+        if isinstance(result, SilentTake):
+            # Silence gate — skip whisper on near-silent takes so it can't
+            # hallucinate "Thanks for watching" on an empty recording.
+            logger.info(
+                f"🤫 Skipping whisper: {result.dbfs:.1f} dBFS < {result.threshold} dBFS"
+            )
+            self.root.after(
+                0,
+                lambda d=result.dbfs: messagebox.showinfo(
+                    "Empty audio",
+                    f"Recording was silent ({d:.1f} dBFS) — nothing transcribed.",
+                ),
+            )
+            return
+
+        self._post_transcription(result)
 
     def _show_result(self, text: str) -> None:
         win = tk.Toplevel(self.root)
