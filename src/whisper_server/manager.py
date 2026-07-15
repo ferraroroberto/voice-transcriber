@@ -39,7 +39,12 @@ OWNERSHIP_NONE = "none"          # server not running
 OWNERSHIP_OURS = "ours"          # we started it; we kill on exit
 OWNERSHIP_EXTERNAL = "external"  # someone else started it; hands off
 
-# Valid values for `mode` in whisper_server.yaml.
+# Valid values for `mode` in whisper_server.yaml. Default is MODE_EXTERNAL
+# (issue #131) — MODE_LOCAL hard-fails at the next (re)start if a sibling
+# project happens to be holding the mutex-shared port, which is a silent
+# regression waiting to happen; only the committed whisper_server.yaml is
+# authoritative, this default is just the safe fallback for a config that
+# omits `mode` entirely.
 MODE_LOCAL = "local"        # we own the server — refuse if host:port is externally held
 MODE_EXTERNAL = "external"  # reuse an already-running server if present, else spawn
 _VALID_MODES = (MODE_LOCAL, MODE_EXTERNAL)
@@ -59,7 +64,7 @@ class ServerConfig:
     poll_interval_seconds: float
     request_timeout_seconds: float
     project_root: Path
-    mode: str = MODE_LOCAL
+    mode: str = MODE_EXTERNAL
 
     @property
     def base_url(self) -> str:
@@ -265,7 +270,7 @@ def load_config(config_path: Optional[Path] = None) -> ServerConfig:
     model = raw.get("model") or {}
     health = raw.get("health") or {}
 
-    mode = str(raw.get("mode", MODE_LOCAL)).strip().lower()
+    mode = str(raw.get("mode", MODE_EXTERNAL)).strip().lower()
     if mode not in _VALID_MODES:
         raise ValueError(
             f"whisper_server.yaml `mode` must be one of {_VALID_MODES}, got {mode!r}"
