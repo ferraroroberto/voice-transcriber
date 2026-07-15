@@ -16,12 +16,17 @@
 #              kill it on exit.
 #
 #   external — a whisper-server may already be running (e.g. started by
-#              the sibling `claude-local-calls` hub). At launch, probe
+#              the sibling `local-llm-hub` hub). At launch, probe
 #              `host:port`; if reachable, reuse it untouched. If nothing
 #              is there, fall back to spawning our own so the app still
 #              works offline. An externally-owned server is never stopped
 #              by this app.
-mode: local
+#
+# `external` is the default (issue #131) — port 8090 is intentionally
+# mutex-shared with `local-llm-hub`, and `local` hard-fails with a
+# RuntimeError at the next (re)start if that sibling happens to be holding
+# the port, which is a silent, hours-later regression waiting to happen.
+mode: external
 
 server:
   host: "127.0.0.1"        # host this app talks to (and, for `local`, binds)
