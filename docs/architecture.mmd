@@ -78,7 +78,7 @@ flowchart TB
     SPEAKERLABEL["speaker_label.py\nstrip fabricated leading speaker labels"]
     INJECT["inject.py\nclipboard + caret paste"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
-    MICGLYPH["mic_glyph.py\nLucide-proportioned mic silhouette —\nshared by tray.py + scripts/gen_app_icons.py"]
+    MICGLYPH["mic_glyph.py\nruntime state-tinted tray renderer —\nsame mic.svg silhouette as brand_gen"]
     RECPIPE["recording_pipeline.py\nsilence-gate -> gain-boost -> transcribe,\nshared by app.py + tray.py"]
     TUNNEL["tunnel.py\ncloudflared spawn/persist/stop,\nshared by tray.py + scripts/run_named_tunnel.py"]
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py"]
