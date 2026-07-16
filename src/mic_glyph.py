@@ -1,10 +1,9 @@
-"""Shared microphone silhouette, used by both the PWA icon generator
-(``scripts/gen_app_icons.py``) and the runtime tray icon (``app/gui/tray.py``)
-so every surface renders the same shape.
+"""Runtime renderer for the state-tinted microphone tray icon.
 
 Renders Lucide's ``mic`` glyph (24x24 viewBox) directly via ``resvg-py`` —
 the path data below is vendored verbatim from ``project-scaffolding``'s
-``brand/mic.svg`` (app-launcher#65's shared fleet icon-brand generator),
+``brand/mic.svg`` (the same master the static ``scripts/gen_app_icons.py``
+passes to the shared ``brand_gen.render_set`` generator),
 embedded here rather than read from that repo at runtime: this module is
 called on every tray recording-state change, and a live cross-repo file read
 on that hot path is more fragile than a one-shot dev-time generator import.
@@ -45,10 +44,9 @@ def draw_mic(
 
     ``pad_ratio`` is the fraction of the canvas reserved as padding on each
     side; the glyph fills the remaining safe area, scaled uniformly from
-    Lucide's 24x24 coordinate space. ``bg=None`` gives a transparent canvas
-    (the tray icon, colour-tinted by recording state); a solid tuple gives an
-    opaque full-bleed tile (PWA/favicon/Stream Deck — required for iOS, which
-    composites alpha against black and applies its own corner mask).
+    Lucide's 24x24 coordinate space. ``bg=None`` gives the transparent canvas
+    used by the live tray icon. A solid background remains supported for
+    focused renderer tests; committed static assets come from ``brand_gen``.
     """
     glyph_size = canvas_size * (1 - 2 * pad_ratio)
     offset = canvas_size * pad_ratio
