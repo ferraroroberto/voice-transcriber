@@ -258,10 +258,17 @@ after the fact. Same query params and response shape as `/finish`.
 
 - `GET /api/sessions/{id}/text` → `{session_id, transcript, polished}`
   — the full text (the list endpoint only returns 200-char previews).
-- `GET /api/sessions?limit=10&offset=0` → `{sessions: [...], total, offset, limit}`
+- `GET /api/sessions?limit=10&offset=0` → `{sessions: [...], total, has_more, offset, limit}`
   — history list with per-session metadata + previews. Each session
   entry carries its `source` (see [History attribution](#history-attribution))
   alongside `created_at`, `language`, and the transcript/polished previews.
+  `has_more` is the authoritative "another page exists" flag — the server
+  derives it from an incognito-aware one-row-over probe, so page on it
+  rather than on `offset + len(sessions) < total`. `total` is a **cheap
+  folder count** kept O(directory-walk) so the list stays fast as the
+  archive grows (#139); it counts every session folder, so with incognito
+  takes on disk it can read a few higher than the number of rows you can
+  actually page to. The listing itself still excludes incognito sessions.
 - `DELETE /api/sessions/{id}` → `{removed: "<id>"}` — drop one session
   (folder and all). `404` if unknown.
 - `DELETE /api/sessions` → `{removed: <count>}` — drop everything.
@@ -500,6 +507,14 @@ with httpx.Client(base_url=BASE, verify=False, timeout=None) as c:
 Breaking changes to the `/api/sessions*` contract are recorded here.
 Pin a build via `GET /api/version` (`git_sha`) if you need certainty.
 
+- **2026-07-17** — `GET /api/sessions` gains a `has_more` boolean in the
+  response — the authoritative pagination signal (see the list section).
+  The list/count internals were rewritten to page lazily instead of
+  hydrating every session per request, so History load time no longer
+  grows with the archive (issue #139). Additive — existing `total`/
+  `sessions`/`offset`/`limit` fields are unchanged; `total` is now a
+  cheap folder count that may run slightly high when incognito takes
+  linger on disk.
 - **2026-06-12** — `POST /api/sessions` accepts an optional `source`
   label (caller self-identification, e.g. `"app-launcher"`; defaults to
   `"api"`), echoed in the create response and surfaced per-session in

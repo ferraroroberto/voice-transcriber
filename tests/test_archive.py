@@ -162,16 +162,45 @@ class TestSessionListing:
         self._make(archive, datetime(2026, 1, 2), incognito=True)
         assert len(archive.list_sessions()) == 1
 
-    def test_count_excludes_incognito(self, archive):
+    def test_count_is_cheap_folder_count(self, archive):
+        # count_sessions() is a name-only folder walk (no meta reads) so it
+        # stays cheap as the archive grows (#139); it counts *all* folders,
+        # incognito included. Incognito exclusion for pagination lives in
+        # the endpoint's `has_more` probe, not here.
         self._make(archive, datetime(2026, 1, 1))
         self._make(archive, datetime(2026, 1, 2), incognito=True)
-        assert archive.count_sessions() == 1
+        assert archive.count_sessions() == 2
+
+    def test_list_still_excludes_incognito(self, archive):
+        # The listing itself (unlike the raw count) still drops incognito.
+        self._make(archive, datetime(2026, 1, 1))
+        self._make(archive, datetime(2026, 1, 2), incognito=True)
+        assert len(archive.list_sessions()) == 1
 
     def test_pagination(self, archive):
         for i in range(5):
             self._make(archive, datetime(2026, 1, i + 1))
         page = archive.list_sessions(limit=2, offset=1)
         assert len(page) == 2
+
+    def test_list_hydrates_only_the_page(self, archive, monkeypatch):
+        # Acceptance criterion for #139: a page of N hydrates ~N sessions,
+        # not the whole archive. Spy on _hydrate and assert the call count
+        # is bounded by the page size, not the total session count.
+        for i in range(25):
+            self._make(archive, datetime(2026, 1, 1 + i))
+        calls = {"n": 0}
+        real_hydrate = archive._hydrate
+
+        def counting_hydrate(folder):
+            calls["n"] += 1
+            return real_hydrate(folder)
+
+        monkeypatch.setattr(archive, "_hydrate", counting_hydrate)
+        page = archive.list_sessions(limit=5, offset=0)
+        assert len(page) == 5
+        # 5 collected, all non-incognito → exactly 5 hydrations, never 25.
+        assert calls["n"] <= 6
 
     def test_since_window_keeps_only_recent(self, archive):
         old = self._make(archive, datetime.now() - timedelta(days=30))

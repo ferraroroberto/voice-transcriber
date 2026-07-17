@@ -82,13 +82,48 @@ class TestListSessions:
         assert len(body["sessions"]) == 2
         assert body["total"] == 5
 
-    def test_excludes_incognito(self, webapp_client):
+    def test_excludes_incognito_from_listing(self, webapp_client):
+        client, app, _ = webapp_client
+        archive = app.state.archive
+        normal = archive.new_session(now=datetime(2026, 1, 1))
+        normal.write_meta()
+        secret = archive.new_session(now=datetime(2026, 1, 2), incognito=True)
+        secret.write_meta()
+        body = client.get("/api/sessions").json()
+        # The listing drops the incognito take (only the normal row
+        # surfaces), and `has_more` is False so the button hides — even
+        # though the cheap folder count (`total`) includes the incognito
+        # folder. See #139.
+        surfaced = [s["session_id"] for s in body["sessions"]]
+        assert surfaced == [normal.session_id]
+        assert secret.session_id not in surfaced
+        assert body["has_more"] is False
+        assert body["total"] == 2
+
+    def test_has_more_true_when_more_pages(self, webapp_client):
+        client, app, _ = webapp_client
+        archive = app.state.archive
+        for i in range(3):
+            archive.new_session(now=datetime(2026, 1, i + 1)).write_meta()
+        first = client.get("/api/sessions?limit=2&offset=0").json()
+        assert len(first["sessions"]) == 2
+        assert first["has_more"] is True
+        second = client.get("/api/sessions?limit=2&offset=2").json()
+        assert len(second["sessions"]) == 1
+        assert second["has_more"] is False
+
+    def test_has_more_ignores_incognito_tail(self, webapp_client):
+        # Two loadable takes + one incognito. A page of 10 shows both and
+        # must report has_more=False (no reachable next page), so the
+        # incognito folder can't wedge the Load-more button. See #139.
         client, app, _ = webapp_client
         archive = app.state.archive
         archive.new_session(now=datetime(2026, 1, 1)).write_meta()
-        archive.new_session(now=datetime(2026, 1, 2), incognito=True).write_meta()
-        body = client.get("/api/sessions").json()
-        assert body["total"] == 1
+        archive.new_session(now=datetime(2026, 1, 2)).write_meta()
+        archive.new_session(now=datetime(2026, 1, 3), incognito=True).write_meta()
+        body = client.get("/api/sessions?limit=10").json()
+        assert len(body["sessions"]) == 2
+        assert body["has_more"] is False
 
     def test_includes_transcript_preview(self, webapp_client):
         client, app, _ = webapp_client
