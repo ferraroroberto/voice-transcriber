@@ -48,14 +48,26 @@ def test_polish_options_populated(authed_page: Page, base_url: str) -> None:
 
 
 def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
-    """The record button is the headline UI; if it's gone, the app is
-    useless. We do NOT click it — that would start real mic capture."""
+    """The complete Speak step is one card, followed by Transcript.
+
+    We do NOT click Record — that would start real mic capture.
+    """
     _navigate_collecting_errors(authed_page, base_url)
-    record_btn = authed_page.locator("#recordBtn")
+    speak_card = authed_page.locator(".speak-card")
+    expect(speak_card).to_have_class("card speak-card")
+    expect(speak_card.locator(".card-title")).to_contain_text("Speak")
+    for control_id in ("appendToggle", "resetBtn", "incognitoToggle", "themeToggle"):
+        expect(speak_card.locator(f"#{control_id}")).to_be_attached()
+
+    record_btn = speak_card.locator("#recordBtn")
     expect(record_btn).to_be_visible()
-    label = authed_page.locator("#recordLabel")
+    label = speak_card.locator("#recordLabel")
     expect(label).to_be_visible()
     expect(label).to_contain_text("RECORD")
+
+    transcript_title = authed_page.locator(".transcript-card .card-title")
+    expect(transcript_title).to_contain_text("Transcript")
+    expect(transcript_title.locator("use")).to_have_attribute("href", "#i-file-text")
 
 
 def test_settings_tab_activates(authed_page: Page, base_url: str) -> None:
