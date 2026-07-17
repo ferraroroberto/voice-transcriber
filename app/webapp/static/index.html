@@ -42,6 +42,13 @@
       <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
       <rect x="9" y="2" width="6" height="13" rx="3" />
     </symbol>
+    <symbol id="i-file-text" viewBox="0 0 24 24" fill="none">
+      <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+      <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+      <path d="M10 9H8" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+    </symbol>
     <symbol id="i-history" viewBox="0 0 24 24" fill="none">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
       <path d="M3 3v5h5" />
@@ -165,38 +172,40 @@
 
   <main class="app">
     <section id="paneRecord" class="pane" role="tabpanel" aria-labelledby="tabRecord" aria-label="Record">
-      <header class="header">
-        <h1><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Whisper</h1>
-        <div class="header-actions">
-          <button id="appendToggle" type="button" class="append-toggle" role="switch" aria-checked="false"
-                  title="Append the next take to the current transcript instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
-          <button id="resetBtn" type="button" class="header-icon-btn" title="Reset — clear both boxes and the current session" aria-label="Reset"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg></button>
-          <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
-                  title="Incognito — don't save this recording to history"
-                  aria-label="Incognito — don't save this recording to history"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg></button>
-          <!-- Sprite moon + sun; CSS shows the glyph for the ACTION keyed on
-               html[data-theme] (the app-launcher #355 pattern). -->
-          <button id="themeToggle" type="button" class="header-icon-btn theme-toggle"
-                  title="Toggle theme" aria-label="Toggle dark mode">
-            <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
-            <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
-          </button>
-        </div>
-      </header>
+      <section class="card speak-card">
+        <header class="card-head">
+          <h1 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Speak</h1>
+          <div class="header-actions">
+            <button id="appendToggle" type="button" class="append-toggle" role="switch" aria-checked="false"
+                    title="Append the next take to the current transcript instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
+            <button id="resetBtn" type="button" class="header-icon-btn" title="Reset — clear both boxes and the current session" aria-label="Reset"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg></button>
+            <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
+                    title="Incognito — don't save this recording to history"
+                    aria-label="Incognito — don't save this recording to history"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg></button>
+            <!-- Sprite moon + sun; CSS shows the glyph for the ACTION keyed on
+                 html[data-theme] (the app-launcher #355 pattern). -->
+            <button id="themeToggle" type="button" class="header-icon-btn theme-toggle"
+                    title="Toggle theme" aria-label="Toggle dark mode">
+              <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
+              <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
+            </button>
+          </div>
+        </header>
 
-      <section id="recordZone" class="card record-zone">
-        <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
-          <span id="recordLabel" class="record-label"><span class="rec-glyph rec-glyph-dot" aria-hidden="true"></span> RECORD</span>
-          <span id="recordTimer" class="record-timer" hidden>00:00</span>
-        </button>
-        <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg></button>
-        <div id="recordStatus" class="record-status">Tap to start</div>
-        <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+        <div id="recordZone" class="record-zone">
+          <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
+            <span id="recordLabel" class="record-label"><span class="rec-glyph rec-glyph-dot" aria-hidden="true"></span> RECORD</span>
+            <span id="recordTimer" class="record-timer" hidden>00:00</span>
+          </button>
+          <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg></button>
+          <div id="recordStatus" class="record-status">Tap to start</div>
+          <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+        </div>
       </section>
 
       <section class="card transcript-card">
         <div class="card-head">
-          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Transcript</h2>
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-file-text" /></svg> Transcript</h2>
           <div class="row card-header-actions">
             <button id="saveTranscript" class="copy-btn" type="button" title="Save the pasted text to history without polishing" disabled><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
             <button id="copyTranscript" class="copy-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>

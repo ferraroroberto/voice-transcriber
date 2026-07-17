@@ -177,22 +177,6 @@ html, body {
     calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--gap) 0 var(--space-xs);
-}
-.header h1 {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4em;
-  margin: 0;
-  font-size: var(--font-body);
-  font-weight: 700;
-}
-.header h1 .icon { width: var(--icon-title); height: var(--icon-title); }
-
 .header-actions {
   display: flex;
   align-items: center;
