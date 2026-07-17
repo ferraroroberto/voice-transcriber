@@ -69,7 +69,11 @@ async function fetchHistoryPage(offset) {
     }
     const shown = els.historyList.children.length;
     els.historyCount.textContent = total > shown ? `${shown}/${total}` : `${shown}`;
-    els.loadMoreHistory.hidden = shown >= total;
+    // `has_more` is the authoritative, incognito-aware pagination signal
+    // (the server derives it from a one-row-over probe); `total` is a
+    // cheap folder count that may run slightly high, so don't gate the
+    // button on `shown >= total`. See #139.
+    els.loadMoreHistory.hidden = !data.has_more;
     renderEmptyState(shown);
   } catch (err) { /* swallow */ }
   finally {

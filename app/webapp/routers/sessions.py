@@ -466,7 +466,15 @@ async def list_sessions(
     if offset < 0:
         offset = 0
     window = _resolve_since(days, since)
-    sessions = archive.list_sessions(limit=limit, offset=offset, since=window)
+    # Fetch one extra row so we know whether a further page exists without
+    # an O(N) count — this probe is incognito-aware, so it's the
+    # authoritative "Load more" signal (``total`` below is a cheap
+    # folder count that may include incognito takes). See #139.
+    page_plus_one = archive.list_sessions(
+        limit=limit + 1, offset=offset, since=window
+    )
+    has_more = len(page_plus_one) > limit
+    sessions = page_plus_one[:limit]
     total = archive.count_sessions()
     return {
         "sessions": [
@@ -487,6 +495,7 @@ async def list_sessions(
             for s in sessions
         ],
         "total": total,
+        "has_more": has_more,
         "offset": offset,
         "limit": limit,
     }
