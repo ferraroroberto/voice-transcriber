@@ -151,9 +151,30 @@ async def _bombard_with_aborts(rounds: int, burst: int) -> None:
         await server.wait_closed()
 
 
+def _run_bombard_in_clean_thread(*, rounds: int, burst: int, loop_factory) -> None:
+    """Runs asyncio.run() on a dedicated thread so it gets a clean asyncio
+    context regardless of what the main thread's event loop state looks like
+    (issue #141 — a preceding Playwright sync-API e2e test in the same pytest
+    process leaves the main thread's asyncio state dirty, tripping
+    asyncio.run()'s running-loop guard)."""
+    result: dict = {}
+
+    def _target() -> None:
+        try:
+            asyncio.run(_bombard_with_aborts(rounds=rounds, burst=burst), loop_factory=loop_factory)
+        except BaseException as exc:  # re-raised on the test thread below
+            result["exc"] = exc
+
+    t = threading.Thread(target=_target)
+    t.start()
+    t.join()
+    if "exc" in result:
+        raise result["exc"]
+
+
 @pytest.mark.skipif(sys.platform != "win32", reason="proactor-loop bug is Windows-only")
 def test_selector_loop_survives_aborted_connections():
-    asyncio.run(_bombard_with_aborts(rounds=10, burst=20), loop_factory=asyncio.SelectorEventLoop)
+    _run_bombard_in_clean_thread(rounds=10, burst=20, loop_factory=asyncio.SelectorEventLoop)
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="proactor-loop bug is Windows-only")
@@ -162,6 +183,4 @@ def test_proactor_loop_dies_on_aborted_connections():
     fails. If a future CPython/uvicorn release fixes the proactor loop
     itself, this test (not the shim) is what should be revisited."""
     with pytest.raises(AssertionError):
-        asyncio.run(
-            _bombard_with_aborts(rounds=10, burst=20), loop_factory=asyncio.ProactorEventLoop
-        )
+        _run_bombard_in_clean_thread(rounds=10, burst=20, loop_factory=asyncio.ProactorEventLoop)
