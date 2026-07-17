@@ -26,6 +26,7 @@ jobs:
     # by GitHub, and this is a Windows-only app whose runner shouldn't drift
     # under us. Action majors are on Node 24 (the Node 20 ones are deprecated).
     runs-on: windows-2025
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
