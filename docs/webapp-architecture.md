@@ -12,8 +12,9 @@ polish it through the local LLM hub. **Never lose a recording**, even
 if the connection drops mid-take. Same flow available from any other
 device with a mic + browser.
 
-The app is mobile-first but works identically from a desktop browser at
-work (over Cloudflare) or at home (over Tailscale).
+The app is mobile-first but works identically from a desktop browser
+sitting at the PC (loopback) or from anywhere else in the world, over
+the same Cloudflare tunnel.
 
 ## Why FastAPI, not Streamlit
 
@@ -40,29 +41,37 @@ tool for a single huge-button voice recorder.
 
 ## Network exposure
 
-Two contexts, both supported via separate launchers:
+One context per launcher, both live from the same `tray.bat`:
 
-| Context | Tunnel | Reason |
+| Context | Path | Reason |
 |---|---|---|
-| Home (PC + iPhone on tailnet) | Tailscale | Zero-latency, no public exposure. Same pattern as `grocery-shopping-automation`. |
-| Work (no Tailscale) | Cloudflare named tunnel | Public HTTPS URL, no firewall changes. Same pattern as `facilitation-shuffle/launch_server.bat`. |
+| Sitting at the PC | Loopback (`https://127.0.0.1:8443`) | No tunnel needed; a local self-signed cert gives Safari/Chrome the secure context `getUserMedia` requires. |
+| Anywhere else (phone, work PC, hotel Wi-Fi) | Cloudflare named tunnel | Public HTTPS URL, no firewall changes, real edge TLS. Same pattern as `facilitation-shuffle/launch_server.bat`. |
 
-**HTTPS is mandatory** because iOS Safari refuses `getUserMedia` over
-plain HTTP on LAN. Same self-signed-CA pattern that
-`grocery-shopping-automation/gen_ssl_cert.py` already uses, with one
-addition: the webapp also serves a `voice-transcriber-ca.mobileconfig`
-profile at `/install-ca`. iOS users install once via Settings → General
-→ VPN & Device Management, then trust under Settings → General → About →
-Certificate Trust Settings. After that, no security warnings, ever.
+Tailscale support (a third, direct-to-`:8443` tunnel context) was
+dropped in favor of Cloudflare-only remote access (`2611178`,
+2026-05-09) — the tray no longer offers a "Copy Tailscale URL" entry,
+and the README's routing table only documents the loopback and
+Cloudflare rows above. The PC may still run Tailscale for unrelated
+reasons, and a tailnet peer that knows the machine's Tailscale IP can
+still technically reach `:8443` directly — the bearer-token middleware
+(below) accounts for that as a defense-in-depth case — but it is not a
+documented or promoted way to reach this app.
 
-The `/install-ca` link was removed from the Settings pane in issue #109 —
-portless Tailscale/Cloudflare access supersedes the local-CA idea (same
-call whatsapp-radar made). The endpoint itself still serves, for legacy
-direct-`:8443` setups.
+**HTTPS is mandatory** for the loopback context because iOS/desktop
+Safari refuses `getUserMedia` over plain HTTP. `scripts/gen_ssl_cert.py`
+provisions a self-signed CA + leaf cert used *only* for that loopback
+endpoint; the webapp also serves a `voice-transcriber-ca.mobileconfig`
+profile at `/install-ca` for anyone trusting that cert manually.
 
-For the Cloudflare path the certificate question goes away — Cloudflare
-terminates TLS — but a bearer token is enforced, since the URL is
-publicly reachable until the tunnel closes.
+The `/install-ca` link was removed from the Settings pane in issue #109
+— phones reach the app over Cloudflare, which terminates real TLS at
+the edge, so they never need the local-CA trust dance at all. The
+endpoint itself still serves, for legacy direct-`:8443` setups.
+
+For the Cloudflare path the certificate question goes away entirely —
+Cloudflare terminates TLS — but a bearer token is enforced, since the
+URL is publicly reachable until the tunnel closes.
 
 ## Launching, unified
 
