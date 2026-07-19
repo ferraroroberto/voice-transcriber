@@ -13,6 +13,7 @@ import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state, captureTokenFromURL } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, isOn, showToast } from './ui.js';
+import { icon } from './_vendored/icons/icons.js';
 import {
   applyConfigDefaults,
   loadConfig,
@@ -201,8 +202,8 @@ function bindEvents() {
       }
     } else if (document.visibilityState === 'visible') {
       if (state.backgroundFinalized && state.mode === 'uploading') {
-        els.recordStatus.textContent =
-          '⏸️ Paused while you were away — finalising…';
+        els.recordStatus.innerHTML =
+          icon('pause') + ' Paused while you were away — finalising…';
       }
       // The platform auto-releases the screen wake lock whenever the page
       // is hidden; re-acquire if we came back while still recording (the

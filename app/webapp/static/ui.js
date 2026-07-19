@@ -7,6 +7,7 @@
 'use strict';
 
 import { els } from './state.js';
+import { icon } from './_vendored/icons/icons.js';
 
 // The one read path for every role="switch" control (the vendored fleet
 // switch and the compact header chips) — the aria-checked attribute is the
@@ -55,7 +56,7 @@ function flashCopied(btn) {
   // Lucide sprite icon that a textContent restore would strip.
   const original = btn.innerHTML;
   btn.dataset.flashing = '1';
-  btn.textContent = '✓ Copied';
+  btn.innerHTML = icon('check') + ' Copied';
   btn.classList.add('copied');
   setTimeout(() => {
     btn.innerHTML = original;
@@ -88,7 +89,7 @@ export function flashDanger(btn) {
   // innerHTML for the same icon-preserving reason as flashCopied above.
   const original = btn.innerHTML;
   btn.classList.add('danger-flash');
-  btn.textContent = '✓ Cleared';
+  btn.innerHTML = icon('check') + ' Cleared';
   setTimeout(() => {
     btn.innerHTML = original;
     btn.classList.remove('danger-flash');

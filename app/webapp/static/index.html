@@ -136,6 +136,13 @@
     <symbol id="i-play" viewBox="0 0 24 24" fill="none">
       <polygon points="6 3 20 12 6 21 6 3" />
     </symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none">
+      <path d="M20 6 9 17l-5-5" />
+    </symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24" fill="none">
+      <rect x="14" y="3" width="5" height="18" rx="1" />
+      <rect x="5" y="3" width="5" height="18" rx="1" />
+    </symbol>
     <symbol id="i-sun" viewBox="0 0 24 24" fill="none">
       <circle cx="12" cy="12" r="4" />
       <path d="M12 2v2" />
@@ -320,7 +327,14 @@
 
   <!-- Auth gate as a native <dialog> (fleet modal contract) — the vendored nav
        hides itself while it is open via body:has(dialog[open]). Esc-dismissal
-       is suppressed in api.js: a closed gate is not an unlocked app. -->
+       is suppressed in api.js: a closed gate is not an unlocked app.
+
+       Deliberate modal-header contract exception (design-drift audit #144):
+       this dialog intentionally has no square × close button. The editor-modal
+       header contract assumes a dismissable box; this one can't be dismissed
+       without authenticating, so a close button would either be a no-op or a
+       security hole (letting an unauthenticated user "close" their way into
+       the app). Accepted as-is — do not add a close affordance here. -->
   <dialog id="loginOverlay" class="detail-dialog login-dialog">
     <form id="loginForm" class="detail-card login-card" autocomplete="off">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg> Sign in</h2>
