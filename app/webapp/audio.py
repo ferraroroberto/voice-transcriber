@@ -82,6 +82,7 @@ def transcode_to_wav(
             capture_output=True,
             text=True,
             check=False,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
     except OSError as exc:
         raise AudioTranscodeError(f"ffmpeg failed to launch: {exc}") from exc
