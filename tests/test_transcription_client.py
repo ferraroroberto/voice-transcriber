@@ -13,11 +13,13 @@ import pytest
 import requests
 
 # Local imports
+from src.app_config import AppConfig
 from src.transcription_client import (
     TranscriptionClient,
     TranscriptionError,
     _extract_text,
     _flatten,
+    build_transcription_client,
     samples_to_wav_bytes,
 )
 
@@ -219,3 +221,86 @@ class TestTranscribeArray:
         # The file body should be a valid WAV starting with RIFF.
         body = files["file"][1]
         assert body[:4] == b"RIFF"
+
+
+# ---------------------------------------------------------------------------
+# Hub-first with local-whisper fallback (#149)
+# ---------------------------------------------------------------------------
+
+class TestHubFallback:
+    def test_falls_back_to_whisper_on_transport_error(self, mocker):
+        # Hub (primary) is unreachable; the local whisper fallback serves.
+        c = TranscriptionClient(
+            "http://hub:8000", fallback_base_url="http://whisper:8090"
+        )
+        fake = mocker.patch.object(c, "_session")
+
+        def route(url, **kwargs):
+            if "hub:8000" in url:
+                raise requests.ConnectionError("refused")
+            return _ok_response("from whisper")
+
+        fake.post.side_effect = route
+        assert c.transcribe_wav_bytes(b"x") == "from whisper"
+        urls = [call.args[0] for call in fake.post.call_args_list]
+        # hub tried first, whisper second.
+        assert urls[0] == "http://hub:8000/v1/audio/transcriptions"
+        assert urls[1] == "http://whisper:8090/v1/audio/transcriptions"
+
+    def test_non_200_from_hub_is_not_failed_over(self, mocker):
+        # A real HTTP error is surfaced as-is — never silently substituted.
+        c = TranscriptionClient(
+            "http://hub:8000", fallback_base_url="http://whisper:8090"
+        )
+        fake = mocker.patch.object(c, "_session")
+        fake.post.return_value = MagicMock(
+            spec=requests.Response, status_code=500, text="boom"
+        )
+        with pytest.raises(TranscriptionError, match="500"):
+            c.transcribe_wav_bytes(b"x")
+        assert fake.post.call_count == 1  # whisper never tried
+
+    def test_no_fallback_raises_on_transport_error(self, mocker):
+        c = TranscriptionClient("http://hub:8000")  # no fallback configured
+        fake = mocker.patch.object(c, "_session")
+        fake.post.side_effect = requests.ConnectionError("refused")
+        with pytest.raises(TranscriptionError, match="could not reach"):
+            c.transcribe_wav_bytes(b"x")
+        assert fake.post.call_count == 1
+
+    def test_translate_does_not_use_fallback(self, mocker):
+        # Translate has no hub role — its own endpoint, no whisper fallback.
+        c = TranscriptionClient(
+            "http://hub:8000",
+            translate_base_url="http://tr:8091",
+            fallback_base_url="http://whisper:8090",
+        )
+        fake = mocker.patch.object(c, "_session")
+        fake.post.side_effect = requests.ConnectionError("refused")
+        with pytest.raises(TranscriptionError, match="could not reach"):
+            c.transcribe_wav_bytes(b"x", translate=True)
+        assert fake.post.call_count == 1
+        assert "tr:8091" in fake.post.call_args.args[0]
+
+    def test_fallback_equal_to_primary_skips_retry(self, mocker):
+        # No pointless second call to the same dead URL.
+        c = TranscriptionClient(
+            "http://same:8090", fallback_base_url="http://same:8090"
+        )
+        fake = mocker.patch.object(c, "_session")
+        fake.post.side_effect = requests.ConnectionError("refused")
+        with pytest.raises(TranscriptionError, match="could not reach"):
+            c.transcribe_wav_bytes(b"x")
+        assert fake.post.call_count == 1
+
+
+class TestBuildTranscriptionClient:
+    def test_wires_hub_primary_whisper_fallback_and_translate(self):
+        cfg = AppConfig(
+            transcribe_base_url="http://hub:8000",
+            translate_base_url="http://tr:8091",
+        )
+        c = build_transcription_client(cfg, "http://whisper:8090")
+        assert c.base_url == "http://hub:8000"
+        assert c.fallback_base_url == "http://whisper:8090"
+        assert c.translate_base_url == "http://tr:8091"

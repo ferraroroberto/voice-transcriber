@@ -24,7 +24,11 @@ from .diagnostics import (
     port_owner,
 )
 from .recorder import AudioRecorder, RecordingError
-from .transcription_client import TranscriptionClient, TranscriptionError
+from .transcription_client import (
+    TranscriptionClient,
+    TranscriptionError,
+    build_transcription_client,
+)
 
 __all__ = [
     "AppConfig",
@@ -39,6 +43,7 @@ __all__ = [
     "TranscriptionClient",
     "TranscriptionError",
     "WHISPER_LANGUAGES",
+    "build_transcription_client",
     "resolve_iso",
     "app_log_handler",
     "attach_app_log_handler",

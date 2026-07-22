@@ -26,8 +26,8 @@ from src import (
     AppConfig,
     AudioRecorder,
     resolve_iso,
-    TranscriptionClient,
     TranscriptionError,
+    build_transcription_client,
 )
 from src.gain import MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
 from src.polish import PolishClient, PolishError
@@ -735,10 +735,7 @@ class TranscriberApp:
 
     def _transcribe_and_show(self, recording) -> None:
         status = self.server.status()
-        client = TranscriptionClient(
-            status.base_url,
-            translate_base_url=self.config.translate_base_url,
-        )
+        client = build_transcription_client(self.config, status.base_url)
         translate = bool(self.translate_var.get())
         try:
             result = process_recording(
@@ -832,10 +829,7 @@ class TranscriberApp:
 
     def _transcribe_file_worker(self, path: str) -> None:
         status = self.server.status()
-        client = TranscriptionClient(
-            status.base_url,
-            translate_base_url=self.config.translate_base_url,
-        )
+        client = build_transcription_client(self.config, status.base_url)
         iso_lang = self.config.whisper_language
         translate = bool(self.translate_var.get())
         try:

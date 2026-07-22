@@ -28,7 +28,7 @@ from typing import Optional, Union
 import numpy as np
 import requests
 
-from .app_config import resolve_iso
+from .app_config import AppConfig, resolve_iso
 from .snippets import apply_snippets
 from .speaker_label import strip_speaker_label
 from .vocabulary import prompt_for_language
@@ -42,6 +42,21 @@ class TranscriptionError(Exception):
     """Raised when the server returns an error or is unreachable."""
 
 
+class _Unreachable(Exception):
+    """Internal: a *transport* failure (connection refused / timeout) — the
+    endpoint could not be reached at all, as opposed to an HTTP error response.
+
+    Only a transport failure against the primary transcribe endpoint makes the
+    client fall back to the local whisper-server; a real HTTP error (non-200)
+    is surfaced as-is, never silently substituted.
+    """
+
+    def __init__(self, url: str, cause: Exception) -> None:
+        super().__init__(str(cause))
+        self.url = url
+        self.cause = cause
+
+
 class TranscriptionClient:
     """Tiny wrapper around whisper-server's OpenAI-shaped audio endpoints."""
 
@@ -50,6 +65,7 @@ class TranscriptionClient:
         base_url: str,
         timeout: float = DEFAULT_TIMEOUT,
         translate_base_url: Optional[str] = None,
+        fallback_base_url: Optional[str] = None,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         # Translation falls back to the primary URL when no separate translate
@@ -57,6 +73,10 @@ class TranscriptionClient:
         # output will be junk, which is on the user to debug. The two-server
         # wiring is the supported path.
         self.translate_base_url = (translate_base_url or base_url).rstrip("/")
+        # Direct whisper-server URL to retry against when the primary transcribe
+        # endpoint (typically the hub :8000) is *unreachable*. ``None`` disables
+        # the fallback — the pre-hub behaviour. See ``build_transcription_client``.
+        self.fallback_base_url = fallback_base_url.rstrip("/") if fallback_base_url else None
         self.timeout = timeout
         self._session = requests.Session()
 
@@ -72,9 +92,6 @@ class TranscriptionClient:
         filename: str = "audio.wav",
         translate: bool = False,
     ) -> str:
-        base = self.translate_base_url if translate else self.base_url
-        url = base + "/v1/audio/transcriptions"
-
         iso = resolve_iso(language) if language else None
         data = {"response_format": "json"}
         # Only send `language` when transcribing — the :8091 translate proxy
@@ -94,15 +111,48 @@ class TranscriptionClient:
 
         files = {"file": (filename, wav_bytes, "audio/wav")}
 
+        # Translate has a single endpoint (no hub role); transcribe is hub-first
+        # with a local-whisper fallback when the hub itself is unreachable.
+        if translate:
+            try:
+                return self._transcribe_once(self.translate_base_url, data, files)
+            except _Unreachable as u:
+                raise TranscriptionError(f"could not reach {u.url}: {u.cause}") from u.cause
+
+        try:
+            return self._transcribe_once(self.base_url, data, files)
+        except _Unreachable as u:
+            if not self.fallback_base_url or self.fallback_base_url == self.base_url:
+                raise TranscriptionError(f"could not reach {u.url}: {u.cause}") from u.cause
+            logger.warning(
+                f"⚠️ transcribe endpoint {self.base_url} unreachable ({u.cause}) — "
+                f"falling back to local whisper {self.fallback_base_url}"
+            )
+            try:
+                return self._transcribe_once(self.fallback_base_url, data, files)
+            except _Unreachable as u2:
+                raise TranscriptionError(
+                    f"could not reach fallback {u2.url}: {u2.cause}"
+                ) from u2.cause
+
+    def _transcribe_once(self, base: str, data: dict, files: dict) -> str:
+        """POST one audio request to ``base`` and return the extracted text.
+
+        Raises ``_Unreachable`` on a transport failure (so the caller can decide
+        whether to fall back) and ``TranscriptionError`` on a non-200 response
+        (a real server error — never a fallback trigger).
+        """
+        url = base + "/v1/audio/transcriptions"
+        prompt = data.get("prompt")
         logger.info(
-            f"📤 POST {url} (language={iso or 'auto'}"
-            f"{', task=translate' if translate else ''}"
+            f"📤 POST {url} (language={data.get('language', 'auto')}"
+            f"{', task=translate' if data.get('task') == 'translate' else ''}"
             f"{', vocab=' + str(prompt.count(',') + 1) + ' terms' if prompt else ''})"
         )
         try:
             response = self._session.post(url, data=data, files=files, timeout=self.timeout)
         except requests.RequestException as e:
-            raise TranscriptionError(f"could not reach {url}: {e}") from e
+            raise _Unreachable(url, e) from e
 
         if response.status_code != 200:
             raise TranscriptionError(
@@ -138,6 +188,33 @@ class TranscriptionClient:
             filename=path.name,
             translate=translate,
         )
+
+
+# ------------------------------------------------------------------- factory
+
+
+def build_transcription_client(
+    config: AppConfig,
+    whisper_base_url: str,
+    timeout: float = DEFAULT_TIMEOUT,
+) -> TranscriptionClient:
+    """Construct a hub-first ``TranscriptionClient`` with a local-whisper fallback.
+
+    The single wiring point every call site (tray, webapp, GUI, CLI) shares so
+    the routing can't drift between them:
+
+    - transcription → ``config.transcribe_base_url`` (the hub :8000 → parakeet +
+      the hub's role-failover chain, with observability);
+    - on a *transport* failure against the hub (its process is down), retry the
+      local whisper-server at ``whisper_base_url`` (the :8090 this app owns);
+    - translation → ``config.translate_base_url`` (its own proven endpoint).
+    """
+    return TranscriptionClient(
+        config.transcribe_base_url,
+        timeout=timeout,
+        translate_base_url=config.translate_base_url,
+        fallback_base_url=whisper_base_url,
+    )
 
 
 # --------------------------------------------------------------------- helpers

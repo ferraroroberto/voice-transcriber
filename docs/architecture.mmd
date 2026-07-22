@@ -63,7 +63,7 @@ flowchart TB
   subgraph logic["src/ — logic layer, no UI imports"]
     APPCONFIG["app_config.py\nAppConfig loader, config/config.json"]
     RECORDER["recorder.py\nsounddevice capture"]
-    TRANSCLIENT["transcription_client.py\nHTTP -> whisper-server"]
+    TRANSCLIENT["transcription_client.py\nHTTP → hub transcribe role,\nlocal whisper fallback"]
     DIAGNOSTICS["diagnostics.py\nlog ring + port-owner introspection"]
     POLISH["polish.py\nlocal-llm-hub client"]
     POLISHPROMPTS["polish_prompts.py\nstyle-library loader"]
@@ -121,14 +121,15 @@ flowchart TB
     WHISPERBIN["whisper-server(.exe) + ggml-large-v3-turbo.bin"]
   end
   WHISPERMGR -->|spawns / adopts| WHISPERBIN
-  TRANSCLIENT -->|POST /v1/audio/transcriptions :8090| WHISPERBIN
+  TRANSCLIENT -.->|fallback: hub unreachable → direct :8090| WHISPERBIN
 
   subgraph ext["External dependencies"]
-    LLMHUB["claude-local-calls\nlocal-llm-hub :8000 — polish models\n+ translate whisper :8091"]
+    LLMHUB["claude-local-calls\nlocal-llm-hub :8000 — polish models,\ntranscribe role (parakeet + whisper failover),\ntranslate whisper :8091"]
     CLOUDFLAREACCESS["Cloudflare Access + named tunnel"]
   end
   POLISH -->|POST /v1/messages| LLMHUB
-  TRANSCLIENT -->|translate_base_url, task=translate| LLMHUB
+  TRANSCLIENT -->|POST /v1/audio/transcriptions :8000, role| LLMHUB
+  TRANSCLIENT -->|translate_base_url, task=translate :8091| LLMHUB
   CLOUDFLARED --> CLOUDFLAREACCESS
 
   subgraph data["archive/ + webapp/ (gitignored runtime data)"]

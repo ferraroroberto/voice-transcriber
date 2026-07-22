@@ -111,10 +111,20 @@ class AppConfig:
     # Push-to-talk threshold: hold the hotkey ≥ this many ms and release
     # ends the take. Anything shorter is treated as a tap (toggle).
     ptt_threshold_ms: int = 600
+    # Primary transcription endpoint. Defaults to the local-llm-hub on :8000,
+    # which resolves the `roles.audio.transcribe` chain — parakeet (Mac ANE)
+    # primary with an automatic whisper failover — and records the request in
+    # the hub's observability ring. No `model` field is sent, so the hub applies
+    # the role rather than a concrete model. When the hub process itself is
+    # unreachable, the client falls back to the local whisper-server the app
+    # already owns (see `build_transcription_client`), so dictation is never
+    # worse than the pre-hub direct-:8090 path.
+    transcribe_base_url: str = "http://127.0.0.1:8000"
     # Translation server URL — a second whisper-server instance loaded with
     # a translate-capable model (e.g. ggml-medium.bin). When the translate
     # toggle is on, requests route here instead of the primary turbo server.
-    # Defaults to the local-llm-hub's :8091 contract.
+    # Defaults to the local-llm-hub's :8091 contract. (Translate keeps its own
+    # proven whisper endpoint — it does not route through the hub role.)
     translate_base_url: str = "http://127.0.0.1:8091"
     # Optional webapp section — when missing, the tray spawns the webapp
     # on `:8443` with default settings. Set webapp.enabled:false to opt out.
@@ -201,6 +211,7 @@ def load_app_config(path: Optional[Path] = None) -> AppConfig:
         suppress_hotkey=bool(raw.get("suppress_hotkey", True)),
         show_notifications=bool(raw.get("show_notifications", True)),
         ptt_threshold_ms=int(raw.get("ptt_threshold_ms", 600)),
+        transcribe_base_url=str(raw.get("transcribe_base_url") or "http://127.0.0.1:8000"),
         translate_base_url=str(raw.get("translate_base_url") or "http://127.0.0.1:8091"),
         webapp=raw.get("webapp") or {},
         enabled_languages=raw.get("enabled_languages") or None,

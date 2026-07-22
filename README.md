@@ -68,6 +68,7 @@ Two config files live under the repo: one for the app, one for the server.
   "log_level": "INFO",
   "auto_paste_after_hotkey": true,
   "ptt_threshold_ms": 600,
+  "transcribe_base_url": "http://127.0.0.1:8000",
   "translate_base_url": "http://127.0.0.1:8091"
 }
 ```
@@ -97,9 +98,19 @@ Other knobs:
   registers as PTT. A second safety net inside the tray ignores any PTT
   release that fires while the recorder has been live for less than 400 ms,
   so a press that races the event pump can't kill a fresh take.
+- `transcribe_base_url` — the primary transcription endpoint. Defaults to the
+  local-llm-hub on `:8000`, which resolves the hub's `roles.audio.transcribe`
+  chain — **parakeet** (Mac ANE) as primary with an automatic **whisper
+  failover** — and records the request in the hub's observability ring. No
+  `model` is sent, so the hub applies the role rather than a fixed model. If the
+  hub process itself is unreachable, transcription **falls back to the local
+  whisper-server** the app already runs (the `:8090` it spawns/adopts), so
+  dictation is never worse than the pre-hub direct path. Point it at
+  `http://127.0.0.1:8090` to bypass the hub and go straight to local whisper.
 - `translate_base_url` — the secondary whisper-server URL used when the
   🌐 Translate toggle is on. Defaults to the local-llm-hub's `:8091`
-  contract. See "Translation" below.
+  contract. (Translate keeps its own proven whisper endpoint — it does not
+  route through the hub role.) See "Translation" below.
 
 Three optional companion files (all gitignored, sample-tracked):
 

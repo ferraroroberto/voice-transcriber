@@ -204,3 +204,25 @@ class TestLoadAppConfig:
 
     def test_valid_log_levels_are_canonical(self):
         assert VALID_LOG_LEVELS == ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+# ---------------------------------------------------------------------------
+# transcribe_base_url — STT front door (#149)
+# ---------------------------------------------------------------------------
+
+class TestTranscribeBaseUrl:
+    def test_defaults_to_hub(self):
+        assert AppConfig().transcribe_base_url == "http://127.0.0.1:8000"
+
+    def test_loads_from_json(self, tmp_path):
+        target = tmp_path / "c.json"
+        target.write_text(
+            json.dumps({"transcribe_base_url": "http://elsewhere:9000"}),
+            encoding="utf-8",
+        )
+        assert load_app_config(target).transcribe_base_url == "http://elsewhere:9000"
+
+    def test_absent_key_falls_back_to_default(self, tmp_path):
+        target = tmp_path / "c.json"
+        target.write_text(json.dumps({"language": "english"}), encoding="utf-8")
+        assert load_app_config(target).transcribe_base_url == "http://127.0.0.1:8000"
