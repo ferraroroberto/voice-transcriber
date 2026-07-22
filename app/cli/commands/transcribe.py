@@ -11,7 +11,7 @@ from pathlib import Path
 # Third-party imports
 import pyperclip
 
-from src import TranscriptionClient, TranscriptionError
+from src import TranscriptionError, build_transcription_client
 from src.app_config import LANGUAGE_MODES
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .base import BaseCommand
@@ -57,7 +57,7 @@ class TranscribeCommand(BaseCommand):
             self.config.language = args.language
         iso_lang = self.config.whisper_language
 
-        client = TranscriptionClient(status.base_url)
+        client = build_transcription_client(self.config, status.base_url)
         try:
             text = client.transcribe_file(args.file, language=iso_lang)
         except TranscriptionError as e:

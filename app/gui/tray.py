@@ -42,6 +42,7 @@ from src import (
     AudioRecorder,
     TranscriptionClient,
     TranscriptionError,
+    build_transcription_client,
 )
 from src.inject import parse_simple_hotkey, paste_at_caret
 from src.mic_glyph import draw_mic
@@ -677,9 +678,8 @@ class TrayApp:
 
         status = self.server.status()
         if self._transcription_client is None:
-            self._transcription_client = TranscriptionClient(
-                status.base_url,
-                translate_base_url=self.config.translate_base_url,
+            self._transcription_client = build_transcription_client(
+                self.config, status.base_url,
             )
         client = self._transcription_client
         try:

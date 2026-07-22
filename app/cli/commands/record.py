@@ -12,7 +12,12 @@ from typing import Optional
 # Third-party imports
 import pyperclip
 
-from src import AudioRecorder, RecordingError, TranscriptionClient, TranscriptionError
+from src import (
+    AudioRecorder,
+    RecordingError,
+    TranscriptionError,
+    build_transcription_client,
+)
 from src.app_config import LANGUAGE_MODES
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .base import BaseCommand
@@ -114,7 +119,7 @@ def _record_and_transcribe(
         stop_thread.stop()
 
     logger.info(f"🔇 Captured {len(result.samples) / result.sample_rate:.1f}s (peak={result.peak_level:.3f})")
-    client = TranscriptionClient(base_url)
+    client = build_transcription_client(config, base_url)
     return client.transcribe_array(
         result.samples, result.sample_rate, language=language,
     )

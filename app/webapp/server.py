@@ -44,7 +44,7 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
-from src import TranscriptionClient, load_app_config
+from src import build_transcription_client, load_app_config
 from src import activity_log
 from src.archive import SessionArchive
 from src.polish import PolishClient
@@ -172,9 +172,8 @@ def create_app() -> FastAPI:
     webapp_cfg = load_webapp_config()
     server_manager = WhisperServerManager()
     archive = SessionArchive()
-    transcription_client = TranscriptionClient(
-        server_manager.config.base_url,
-        translate_base_url=app_config.translate_base_url,
+    transcription_client = build_transcription_client(
+        app_config, server_manager.config.base_url,
     )
     polish_client = PolishClient(webapp_cfg.llm_hub_url)
 
