@@ -28,11 +28,12 @@ from src.transcription_client import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _ok_response(text: str):
+def _ok_response(text: str, headers: dict | None = None):
     resp = MagicMock(spec=requests.Response)
     resp.status_code = 200
     resp.json.return_value = {"text": text}
     resp.text = '{"text": "%s"}' % text
+    resp.headers = headers or {}
     return resp
 
 
@@ -292,6 +293,49 @@ class TestHubFallback:
         with pytest.raises(TranscriptionError, match="could not reach"):
             c.transcribe_wav_bytes(b"x")
         assert fake.post.call_count == 1
+
+
+# ---------------------------------------------------------------------------
+# last_served_model / last_served_host — hub observability headers (#156)
+# ---------------------------------------------------------------------------
+
+class TestLastServed:
+    def test_records_hub_served_headers(self, mocker):
+        c = TranscriptionClient("http://hub:8000")
+        fake = mocker.patch.object(c, "_session")
+        fake.post.return_value = _ok_response(
+            "hi",
+            headers={
+                "X-Hub-Served-Model": "parakeet",
+                "X-Hub-Served-Host": "mac-mini-m4",
+            },
+        )
+        c.transcribe_wav_bytes(b"x")
+        assert c.last_served_model == "parakeet"
+        assert c.last_served_host == "mac-mini-m4"
+
+    def test_missing_headers_falls_back_to_local_sentinel(self, mocker):
+        c = TranscriptionClient("http://whisper:8090")
+        fake = mocker.patch.object(c, "_session")
+        fake.post.return_value = _ok_response("hi")  # no X-Hub-* headers
+        c.transcribe_wav_bytes(b"x")
+        assert c.last_served_model == "whisper (local fallback)"
+        assert c.last_served_host  # some machine-name string, non-empty
+
+    def test_stale_served_pair_cleared_on_fallback_take(self, mocker):
+        # A hub-routed take records parakeet; a later take that falls back
+        # to bare whisper must not keep showing the stale hub answer.
+        c = TranscriptionClient("http://hub:8000")
+        fake = mocker.patch.object(c, "_session")
+        fake.post.return_value = _ok_response(
+            "hi", headers={"X-Hub-Served-Model": "parakeet", "X-Hub-Served-Host": "mac-mini-m4"},
+        )
+        c.transcribe_wav_bytes(b"x")
+        assert c.last_served_model == "parakeet"
+
+        fake.post.return_value = _ok_response("hi")  # no headers this time
+        c.transcribe_wav_bytes(b"x")
+        assert c.last_served_model == "whisper (local fallback)"
 
 
 class TestBuildTranscriptionClient:

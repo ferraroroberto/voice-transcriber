@@ -19,6 +19,7 @@ from __future__ import annotations
 # Standard library imports
 import io
 import logging
+import platform
 import re
 import wave
 from pathlib import Path
@@ -57,6 +58,17 @@ class _Unreachable(Exception):
         self.cause = cause
 
 
+HEADER_SERVED_MODEL = "X-Hub-Served-Model"
+HEADER_SERVED_HOST = "X-Hub-Served-Host"
+
+# Sentinel served-model/host pair used whenever a transcription did not go
+# through the hub's observability proxy — a fallback to the local
+# whisper-server, or the translate proxy (which never sets the headers, see
+# whisper_translate_proxy.py in local-llm-hub). Distinguishes "we genuinely
+# don't know" from "the hub told us" for UI consumers (issue #156).
+_LOCAL_FALLBACK_MODEL = "whisper (local fallback)"
+
+
 class TranscriptionClient:
     """Tiny wrapper around whisper-server's OpenAI-shaped audio endpoints."""
 
@@ -79,6 +91,13 @@ class TranscriptionClient:
         self.fallback_base_url = fallback_base_url.rstrip("/") if fallback_base_url else None
         self.timeout = timeout
         self._session = requests.Session()
+        # Which backend/host actually served the most recent transcription
+        # (issue #156) — read from the hub's X-Hub-Served-* response headers
+        # (local-llm-hub#412). Best-effort, display-only: this app is a
+        # single-desktop-user process, so no locking against a concurrent
+        # request — a rare race just shows a stale label for one tick.
+        self.last_served_model: str = ""
+        self.last_served_host: str = ""
 
     def close(self) -> None:
         self._session.close()
@@ -159,7 +178,27 @@ class TranscriptionClient:
                 f"server returned {response.status_code}: {response.text[:500]}"
             )
 
+        self._record_served_from(response)
         return apply_snippets(strip_speaker_label(_extract_text(response)))
+
+    def _record_served_from(self, response: requests.Response) -> None:
+        """Stash who actually served this transcription (issue #156).
+
+        The hub stamps ``X-Hub-Served-Model``/``X-Hub-Served-Host`` on every
+        ``/v1/audio/*`` response (local-llm-hub#412). A bare whisper-server —
+        the local fallback path, or the translate proxy, neither of which
+        goes through the hub's observability proxy — never sets them, so
+        that case falls back to a local sentinel rather than showing a
+        previous take's (now stale) served pair.
+        """
+        served_model = response.headers.get(HEADER_SERVED_MODEL, "").strip()
+        served_host = response.headers.get(HEADER_SERVED_HOST, "").strip()
+        if served_model:
+            self.last_served_model = served_model
+            self.last_served_host = served_host or _local_machine_name()
+        else:
+            self.last_served_model = _LOCAL_FALLBACK_MODEL
+            self.last_served_host = _local_machine_name()
 
     def transcribe_array(
         self,
@@ -218,6 +257,13 @@ def build_transcription_client(
 
 
 # --------------------------------------------------------------------- helpers
+
+
+def _local_machine_name() -> str:
+    try:
+        return platform.node() or "this machine"
+    except Exception:
+        return "this machine"
 
 
 def samples_to_wav_bytes(samples: np.ndarray, sample_rate: int) -> bytes:

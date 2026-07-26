@@ -104,6 +104,14 @@ class TestAppJsSourcePins:
         assert "source-badge" in app_js
         assert "s.source" in app_js
 
+    def test_model_route_indicator_wired(self, app_js: str):
+        """The Record tab must surface which STT backend/host actually
+        served the last take (issue #156) — read from the /finish response
+        and rendered into #modelRoute."""
+        assert "function updateModelRoute" in app_js
+        assert "updateModelRoute(data.served_model, data.served_host)" in app_js
+        assert "els.modelRoute" in app_js
+
     def test_no_hardcoded_alias_list_in_offline_fallback(self, app_js: str):
         """`applyConfigDefaults` should not hardcode the alias list — the
         offline fallback should be empty so the model list always comes

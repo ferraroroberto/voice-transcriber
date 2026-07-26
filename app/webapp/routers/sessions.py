@@ -10,6 +10,7 @@ from __future__ import annotations
 # Standard library imports
 import asyncio
 import logging
+import re
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -664,7 +665,21 @@ async def _transcribe_session_payload(
         "session_id": session.session_id,
         "transcript": text,
         "language": chosen_lang,
+        "served_model": humanize_backend_id(client.last_served_model),
+        "served_host": humanize_backend_id(client.last_served_host),
     }
+
+
+def humanize_backend_id(raw: str) -> str:
+    """Turn a hub registry id (``parakeet``, ``mac-mini-m4``) into a display
+    label (``Parakeet``, ``Mac Mini M4``) for the served-model indicator
+    (#156). Hyphens/underscores become spaces, each word is title-cased —
+    a heuristic, not a lookup against the hub's own ``display_name`` fields
+    (avoiding a second hub call just to prettify a label users only glance
+    at)."""
+    if not raw:
+        return ""
+    return " ".join(word.capitalize() for word in re.split(r"[-_]+", raw) if word)
 
 
 def _preview(text: Optional[str], n: int) -> Optional[str]:
