@@ -17,6 +17,31 @@ logger = logging.getLogger(__name__)
 
 ProgressCallback = Callable[[float, float], None]  # (remaining_seconds, level_0_to_1)
 
+_portaudio_lock = threading.Lock()
+
+
+def _refresh_portaudio_devices() -> None:
+    """Force PortAudio to re-scan host audio devices.
+
+    PortAudio enumerates its device table once at ``Pa_Initialize()`` (i.e.
+    once per process) and never notices devices that come or go afterwards.
+    A USB mic riding a monitor's USB hub drops out when the monitor is
+    disconnected, and PortAudio keeps serving the stale pre-disconnect table
+    even after Windows re-attaches the device — recordings then fail with no
+    way to recover short of restarting the whole app. Terminating and
+    re-initializing PortAudio forces a fresh scan so a reconnected mic is
+    picked up on the very next recording attempt.
+    """
+    with _portaudio_lock:
+        try:
+            sd._terminate()
+        except Exception as e:
+            logger.debug(f"PortAudio terminate before device refresh: {e}")
+        try:
+            sd._initialize()
+        except Exception as e:
+            logger.warning(f"⚠️  PortAudio re-initialize failed: {e}")
+
 
 class RecordingError(Exception):
     """Raised when recording fails (no device, no signal, etc.)."""
@@ -79,12 +104,33 @@ class AudioRecorder:
         device: Optional[int] = None,
         progress: Optional[ProgressCallback] = None,
     ) -> Recording:
-        if device is None:
-            device = self.select_device()
-        if device is None:
-            raise RecordingError("no input devices available")
-
         self._stop_event.clear()
+        last_error: Optional[RecordingError] = None
+        attempts = 1 if device is not None else 2
+        for attempt in range(attempts):
+            _refresh_portaudio_devices()
+            chosen = device if device is not None else self.select_device()
+            if chosen is None:
+                last_error = RecordingError("no input devices available")
+                continue
+            try:
+                return self._capture(chosen, max_seconds, progress)
+            except RecordingError as e:
+                last_error = e
+                if attempt < attempts - 1:
+                    logger.warning(
+                        f"⚠️  Recording attempt failed ({e}) — refreshing "
+                        "audio devices and retrying once"
+                    )
+        assert last_error is not None
+        raise last_error
+
+    def _capture(
+        self,
+        device: int,
+        max_seconds: int,
+        progress: Optional[ProgressCallback],
+    ) -> Recording:
         chunks: List[np.ndarray] = []
         last_level: List[float] = [0.0]
         start = time.time()
