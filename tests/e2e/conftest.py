@@ -9,13 +9,32 @@ Two engine projections, both always on (issue #31):
   same engine family as iOS Safari, so it catches the large majority of
   "Safari is unhappy" regressions before they reach a phone.
 
-Two run modes:
+Three run modes:
 
-* **Default (ad-hoc).** Runs against a live tray on
-  https://127.0.0.1:8443. The autouse ``_require_live_tray`` fixture
-  skips the whole module with a clear message if /healthz isn't
-  reachable, so a forgotten tray fails fast. ``VT_E2E_BASE_URL`` points
-  the suite at any other instance.
+* **Default (bare ``pytest tests/e2e``).** Guarded by the vendor-verbatim
+  ``tests/e2e/_e2e_live_guard.py`` (project-scaffolding issue #191/#194;
+  same module every fleet adopter copies byte-identical). If the live
+  tray's port is occupied and ``VT_E2E_LIVE`` isn't set, it refuses via
+  ``pytest.exit`` naming the flag — an accidental bare run must not
+  silently load-test the tray the phone is using. If the port is free,
+  the suite falls back to booting its own disposable instance, same as
+  autoboot below. See issue #158.
+* **Live (explicit opt-in).** ``VT_E2E_LIVE=1`` (``scripts/run-e2e.ps1``
+  sets it — the deliberate dev-loop entry point) means the caller has
+  chosen to *act* on the already-running tray at
+  https://127.0.0.1:8443. What "act" means is caller-owned and
+  repo-specific per the guard's own contract — the two legitimate
+  meanings are read-only assertions against the live instance (the
+  ``app-launcher`` ``LAUNCHER_E2E_LIVE`` precedent), or, only where a
+  repo genuinely needs to reclaim the port, that repo's own canonical
+  restart recipe — never a by-hand kill. This repo's choice is the
+  former: read-only smoke checks. The tray holds live sessions and a
+  whisper connection, and this repo's own restart discipline already
+  forbids hand-rolling a kill of it (the canonical path is ``tray.bat
+  --restart``, reserved for an actual restart need, not a test opt-in).
+  ``VT_E2E_BASE_URL`` points the suite at any other instance and
+  bypasses the guard (already an explicit, deliberate choice of
+  target).
 * **Autoboot (pre-ship gate).** Enabled with ``--e2e-autoboot`` or
   ``VT_E2E_AUTOBOOT=1``. ``_autoboot_server`` spawns a disposable webapp
   on a free port (HTTPS, reusing ``webapp/certificates/``) and yields
@@ -49,6 +68,7 @@ import requests
 from playwright.sync_api import BrowserContext, Page
 
 from app.webapp.event_loop import LOOP_FACTORY
+from tests.e2e._e2e_live_guard import require_disposable_instance
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +84,13 @@ _TOKEN_KEY = "vt_auth_token"  # must match TOKEN_KEY in app/webapp/static/state.
 _IPHONE_DEVICE = "iPhone 15 Pro Max"
 
 _AUTOBOOT_ENV = "VT_E2E_AUTOBOOT"
+# Explicit opt-in for adopting the LIVE tray on :8443 (issue #158) — the
+# flag name passed to the vendored _e2e_live_guard.require_disposable_instance.
+# Without it a bare `pytest tests/e2e` must not silently load-test whatever
+# instance is currently listening — that instance may be the one the phone
+# is using.
+_LIVE_ENV = "VT_E2E_LIVE"
+_LIVE_PORT = 8443
 
 # Bounded default Playwright timeout (issue #69).  A stuck auto-waiting
 # action (click / goto / wait_for_selector with no explicit timeout=) now
@@ -245,14 +272,24 @@ def _skip_desktop_only_on_webkit(
 
 @pytest.fixture(scope="session")
 def base_url(request: pytest.FixtureRequest) -> str:
-    # Precedence: an explicit URL wins; then autoboot's disposable
-    # server; then the live tray on the default port.
+    # Precedence: an explicit URL wins (already a deliberate, explicit
+    # choice of target — bypasses the live-tray guard entirely); then
+    # autoboot's disposable server; then the guarded live-tray path.
     explicit = os.environ.get("VT_E2E_BASE_URL", "").strip()
     if explicit:
         return explicit
     if _autoboot_enabled(request.config):
         return request.getfixturevalue("_autoboot_server")
-    return _DEFAULT_BASE_URL
+
+    # Vendored guard (issue #158): refuses via pytest.exit if the live
+    # port is occupied and VT_E2E_LIVE isn't set. This repo's caller-side
+    # choice on an opt-in hit is to *adopt* the live tray for read-only
+    # smoke checks, never kill it — see the module docstring above.
+    live_opt_in = require_disposable_instance(_LIVE_PORT, _LIVE_ENV)
+    if live_opt_in and _wait_healthz(_DEFAULT_BASE_URL, timeout=2):
+        logger.info("✅ %s=1 — adopting live tray at %s", _LIVE_ENV, _DEFAULT_BASE_URL)
+        return _DEFAULT_BASE_URL
+    return request.getfixturevalue("_autoboot_server")
 
 
 @pytest.fixture(scope="session")
@@ -268,24 +305,6 @@ def auth_token(webapp_config: dict) -> str:
     # for these local tests. We still seed it when present so the SPA boot
     # path mirrors a real phone session.
     return (webapp_config.get("auth_token") or "").strip()
-
-
-@pytest.fixture(scope="session", autouse=True)
-def _require_live_tray(request: pytest.FixtureRequest, base_url: str) -> None:
-    # Under autoboot the disposable server is already up — _autoboot_server
-    # hard-fails if it isn't, so the skip-guard below would be wrong there.
-    # The guard only protects the default ad-hoc path against a forgotten tray.
-    if _autoboot_enabled(request.config):
-        return
-    try:
-        res = requests.get(f"{base_url}/healthz", timeout=2, verify=False)
-        res.raise_for_status()
-    except Exception as exc:
-        pytest.skip(
-            f"No webapp answering /healthz at {base_url} "
-            f"({exc.__class__.__name__}) — start tray.bat (or run with "
-            "--e2e-autoboot), then re-run the suite."
-        )
 
 
 @pytest.fixture(scope="session")

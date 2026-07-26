@@ -938,7 +938,7 @@ Python-only machines.
 
 ### Playwright browser smoke tests
 
-A `pytest-playwright` suite under `tests/e2e/` catches SPA boot regressions (JS errors, empty `<select>`s, broken settings toggle, missing login overlay) plus regression pins for past iPhone-only bugs (cache hygiene, background-finalize, ▶ Resume). Runs against the **live tray on `https://127.0.0.1:8443`** — does not boot anything itself; if the tray isn't up, every test is skipped with a clear message. Set `VT_E2E_BASE_URL` to point the suite at a different instance.
+A `pytest-playwright` suite under `tests/e2e/` catches SPA boot regressions (JS errors, empty `<select>`s, broken settings toggle, missing login overlay) plus regression pins for past iPhone-only bugs (cache hygiene, background-finalize, ▶ Resume). Instance selection is guarded by the vendor-verbatim `tests/e2e/_e2e_live_guard.py` (project-scaffolding issue #191/#194, adopted fleet-wide byte-identical — issue #158): a bare `pytest tests/e2e` with the tray up **refuses to run** with a guard message rather than silently adopting it; with the tray down it boots its own disposable instance instead. Set `VT_E2E_LIVE=1` (`scripts/run-e2e.ps1` does) to explicitly *adopt* the live tray on `https://127.0.0.1:8443` for read-only smoke checks — this repo never kills it to satisfy the opt-in (`tray.bat --restart` owns that). Set `VT_E2E_BASE_URL` to point the suite at a different instance (bypasses the guard, since it's already an explicit choice of target).
 
 Every test runs in **two engine projections**: Chromium-desktop and **WebKit + iPhone** (the iOS-Safari engine family, projected onto an `iPhone 15 Pro Max` viewport — issue #31). Pin one engine for a faster loop with `--browser chromium`. The record-flow regression tests are marked `desktop_only`: they need Chromium's fake-media-stream flags and skip under the WebKit projection.
 
@@ -954,10 +954,11 @@ Then with the tray running (`tray.bat`):
 ```powershell
 .\scripts\run-e2e.ps1
 # or directly:
+$env:VT_E2E_LIVE = "1"
 & .\.venv\Scripts\python.exe -m pytest -m smoke -v tests/e2e
 ```
 
-Without a tray, run the suite against a disposable webapp it boots itself on a free port — `--e2e-autoboot` (or `VT_E2E_AUTOBOOT=1`).
+Without a tray, a bare run already boots its own disposable webapp on a free port (the live-tray port being free means nothing to adopt). `--e2e-autoboot` (or `VT_E2E_AUTOBOOT=1`) forces that same disposable path unconditionally, regardless of whether a tray is running — this is what the pre-ship gate uses, so it never touches a live tray.
 
 ### Verifying changes before ship
 
