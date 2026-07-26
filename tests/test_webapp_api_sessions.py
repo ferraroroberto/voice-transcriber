@@ -9,6 +9,26 @@ from unittest.mock import MagicMock
 
 # Local imports
 from src.polish import PolishError, PolishResult
+from app.webapp.routers.sessions import humanize_backend_id
+
+
+class TestHumanizeBackendId:
+    """Served-model/host display label for the Record-tab indicator (#156)."""
+
+    def test_hyphenated_id(self):
+        assert humanize_backend_id("mac-mini-m4") == "Mac Mini M4"
+
+    def test_single_word_id(self):
+        assert humanize_backend_id("parakeet") == "Parakeet"
+
+    def test_underscored_id(self):
+        assert humanize_backend_id("whisper_turbo") == "Whisper Turbo"
+
+    def test_empty_string_passthrough(self):
+        assert humanize_backend_id("") == ""
+
+    def test_local_fallback_sentinel_reads_naturally(self):
+        assert humanize_backend_id("whisper (local fallback)") == "Whisper (local fallback)"
 
 
 class TestCreateSession:

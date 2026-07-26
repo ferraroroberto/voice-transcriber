@@ -345,6 +345,14 @@ html, body {
   text-align: center;
 }
 
+/* Which STT backend/host actually served the last take (#156) — same
+   quiet treatment as the build-info footer (.muted.small), just relocated
+   next to the record status it's most relevant to. */
+.model-route {
+  margin-top: 2px;
+  text-align: center;
+}
+
 .level-bar {
   width: min(72vw, 280px);
   height: 6px;

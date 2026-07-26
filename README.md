@@ -209,6 +209,15 @@ confirm it without grepping logs.
      system    : n_threads = 4 / 16 | AVX = 1 | ...
   ```
 
+That's the *locally-configured* model. When `transcribe_base_url` points at
+the local-llm-hub (the default), the hub can route a take to a different
+backend entirely — e.g. Parakeet on a Mac Mini, falling back across its
+`roles.audio.transcribe` chain. The **webapp**'s Record tab shows which
+backend actually served the *last* take (e.g. `via Parakeet · Mac Mini M4`),
+read from the hub's `X-Hub-Served-Model`/`X-Hub-Served-Host` response
+headers — a small line under the record status, populated after each take
+completes.
+
 ## 🗂️ Layout
 
 The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — same convention used by `local-llm-hub`, `grocery-shopping-automation`, and `facilitation-shuffle`.

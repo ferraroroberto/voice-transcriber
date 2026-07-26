@@ -139,6 +139,11 @@ def webapp_client(tmp_path: Path, monkeypatch):
     tx_mock = MagicMock()
     tx_mock.transcribe_file.return_value = "stubbed transcript"
     tx_mock.transcribe_wav_bytes.return_value = "stubbed transcript"
+    # Real TranscriptionClient starts with empty served-model/host strings
+    # (see src/transcription_client.py, #156) — match that here so a test
+    # hitting /finish doesn't trip humanize_backend_id() over a MagicMock.
+    tx_mock.last_served_model = ""
+    tx_mock.last_served_host = ""
     app.state.transcription_client = tx_mock
 
     # The real webapp_config.json may have a bearer token configured —

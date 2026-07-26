@@ -333,6 +333,7 @@ async function onRecorderStopped(mimeType) {
     els.recordStatus.textContent = state.backgroundFinalized
       ? 'Saved while you were away — tap Resume to continue'
       : `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
+    updateModelRoute(data.served_model, data.served_host);
     refreshHistory();
   } catch (err) {
     console.error(err);
@@ -397,6 +398,17 @@ function startTimer() {
         `Recording · ${formatBytes(state.bytesSent)} streamed to PC`;
     }
   }, 250);
+}
+
+// Shows which STT backend/host actually served the last take (#156) — the
+// hub's routing (parakeet-first, whisper failover) is otherwise invisible.
+// Missing/empty fields (older server, or the silent-skip branch which never
+// calls whisper at all) leave whatever was shown before untouched, rather
+// than blanking a still-accurate previous answer.
+function updateModelRoute(servedModel, servedHost) {
+  if (!els.modelRoute || !servedModel) return;
+  els.modelRoute.textContent = servedHost ? `via ${servedModel} · ${servedHost}` : `via ${servedModel}`;
+  els.modelRoute.hidden = false;
 }
 
 function formatBytes(n) {

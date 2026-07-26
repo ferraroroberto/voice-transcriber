@@ -14,6 +14,7 @@ export const els = {
   recordLabel:      document.getElementById('recordLabel'),
   recordTimer:      document.getElementById('recordTimer'),
   recordStatus:     document.getElementById('recordStatus'),
+  modelRoute:       document.getElementById('modelRoute'),
   levelFill:        document.getElementById('levelFill'),
 
   transcript:       document.getElementById('transcript'),
