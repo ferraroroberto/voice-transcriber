@@ -155,12 +155,11 @@ async def append_chunk(session_id: str, request: Request) -> Dict[str, Any]:
 async def session_events(session_id: str, request: Request) -> StreamingResponse:
     """Server-Sent Events stream for one session's partial transcripts.
 
-    The client opens this on record start and consumes ``partial``,
-    ``polish_partial``, ``final``, and ``polish_final`` events as
-    they arrive. Cloudflare passes SSE through cleanly without any
-    special config. The middleware accepts the bearer token from
-    the ``?token=`` query string so EventSource (no custom headers)
-    still authenticates.
+    The client opens this on record start and consumes ``partial`` and
+    ``final`` events as they arrive. Cloudflare passes SSE through
+    cleanly without any special config. The middleware accepts the
+    bearer token from the ``?token=`` query string so EventSource
+    (no custom headers) still authenticates.
     """
     session = request.app.state.archive.get(session_id)
     if session is None:

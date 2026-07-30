@@ -139,7 +139,6 @@ async function startRecording() {
 
   const mimeType = pickMimeType();
   state.mimeType = mimeType;
-  state.chunks = [];
   state.uploadChain = Promise.resolve();
   state.pendingUploads = 0;
   state.bytesSent = 0;
@@ -150,7 +149,6 @@ async function startRecording() {
   // phone dies mid-record, the partial recording is still recoverable.
   state.recorder.ondataavailable = e => {
     if (!e.data || e.data.size === 0) return;
-    state.chunks.push(e.data);
     enqueueChunkUpload(e.data);
   };
   state.recorder.onstop = () => onRecorderStopped(mimeType);
