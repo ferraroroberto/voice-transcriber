@@ -47,7 +47,7 @@ from src import (
 from src.inject import parse_simple_hotkey, paste_at_caret
 from src.mic_glyph import draw_mic
 from src.recorder import Recording
-from src.recording_pipeline import SilentTake, process_recording
+from src.recording_pipeline import SilentTake, finalize_transcript, process_recording
 from src.tunnel import (
     CloudflaredNotFoundError,
     persist_tunnel_url,
@@ -697,20 +697,16 @@ class TrayApp:
             )
             return
 
-        text = result.strip()
-        if not text:
+        text = finalize_transcript(
+            result,
+            last_transcription=self.last_transcription,
+            append_mode=self.append_mode,
+            auto_copy=self.config.auto_copy,
+        )
+        if text is None:
             self._notify("Empty transcription", "The server returned no text.")
             return
-
-        if self.append_mode and self.last_transcription:
-            text = self.last_transcription.rstrip() + "\n\n" + text
         self.last_transcription = text
-
-        if self.config.auto_copy:
-            try:
-                pyperclip.copy(text)
-            except Exception as exc:
-                logger.warning(f"⚠️  Clipboard copy failed: {exc}")
 
         pasted = False
         if from_hotkey and self.config.auto_paste_after_hotkey:

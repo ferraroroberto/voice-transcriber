@@ -12,10 +12,14 @@ from __future__ import annotations
 import json
 import logging
 import os
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
-from typing import List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse
+
+from .gain import DEFAULT_GAIN_BOOST_DB
+from .polish_prompts import DEFAULT_PROMPT_ID as DEFAULT_POLISH_PROMPT_ID
+from .silence import DEFAULT_SILENCE_DBFS as DEFAULT_SILENCE_DBFS_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
@@ -31,17 +35,19 @@ SAMPLE_CONFIG_PATH = (
 # JSON edit, no repo push. The sample file is the source of truth for
 # first-run defaults; the runtime `webapp_config.json` (gitignored) is
 # the user's persisted overrides on top of it.
-DEFAULT_POLISH_PROMPT_ID = "filler-words"
+#
+# DEFAULT_POLISH_PROMPT_ID, DEFAULT_SILENCE_DBFS_THRESHOLD and
+# DEFAULT_GAIN_BOOST_DB are re-exported (imported above) from their owning
+# domain modules — polish_prompts.py, silence.py, gain.py — rather than
+# re-declared here, so each literal has exactly one source.
 DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
 DEFAULT_HOST = "0.0.0.0"
 DEFAULT_PORT = 8443
 DEFAULT_RETENTION_DAYS = 30
-DEFAULT_SILENCE_DBFS_THRESHOLD = -50.0
 # Quiet-environment gain boost — amplifies captured audio before whisper,
 # orthogonal to the silence gate above (see src/gain.py). Off by default;
 # mirrors the vad_auto_stop_enabled + auto_stop_silence_ms enable/value pair.
 DEFAULT_GAIN_BOOST_ENABLED = False
-DEFAULT_GAIN_BOOST_DB = 12.0
 # Pillar 1 (rolling transcription): how often to re-run whisper on the
 # accumulated take while the user is still recording. 0 disables the
 # rolling worker entirely; the webapp falls back to the legacy "one
@@ -117,6 +123,23 @@ class WebappConfig:
     auto_stop_silence_ms: int = DEFAULT_AUTO_STOP_SILENCE_MS
 
 
+# Fields whose raw JSON value is treated as "absent" when falsy (empty
+# string / empty list), not just when the key is missing entirely — the
+# polish-model picks and the mic pick fall back to their computed default
+# even when a stale/empty value was persisted.
+_OR_ABSENT_FIELDS = frozenset(
+    {"polish_model_default", "polish_models_available", "preferred_mic_id"}
+)
+
+
+def _caster_for(default: Any) -> Callable[[Any], Any]:
+    """Infer a JSON-value coercion from a field's default value's type."""
+    if default is None:
+        return lambda v: v
+    py_type = type(default)
+    return list if py_type is list else py_type
+
+
 def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
     """Load the webapp config, falling back to defaults if the file is missing.
 
@@ -139,48 +162,26 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
         )
         return WebappConfig()
 
-    sample_default, sample_available = _sample_polish_defaults()
-    cfg = WebappConfig(
-        polish_model_default=str(
-            raw.get("polish_model_default") or sample_default
-        ),
-        polish_models_available=list(
-            raw.get("polish_models_available") or sample_available
-        ),
-        polish_prompt_default=str(
-            raw.get("polish_prompt_default", DEFAULT_POLISH_PROMPT_ID)
-        ),
-        llm_hub_url=str(raw.get("llm_hub_url", DEFAULT_LLM_HUB_URL)),
-        host=str(raw.get("host", DEFAULT_HOST)),
-        port=int(raw.get("port", DEFAULT_PORT)),
-        history_retention_days=int(
-            raw.get("history_retention_days", DEFAULT_RETENTION_DAYS)
-        ),
-        force_builtin_mic_default=bool(
-            raw.get("force_builtin_mic_default", False)
-        ),
-        preferred_mic_id=raw.get("preferred_mic_id") or None,
-        auth_token=str(raw.get("auth_token", "")),
-        auth_password=str(raw.get("auth_password", "")),
-        silence_dbfs_threshold=float(
-            raw.get("silence_dbfs_threshold", DEFAULT_SILENCE_DBFS_THRESHOLD)
-        ),
-        gain_boost_enabled=bool(
-            raw.get("gain_boost_enabled", DEFAULT_GAIN_BOOST_ENABLED)
-        ),
-        gain_boost_db=float(raw.get("gain_boost_db", DEFAULT_GAIN_BOOST_DB)),
-        partial_interval_seconds=float(
-            raw.get("partial_interval_seconds", DEFAULT_PARTIAL_INTERVAL_SECONDS)
-        ),
-        vad_auto_stop_enabled=bool(
-            raw.get("vad_auto_stop_enabled", DEFAULT_VAD_AUTO_STOP_ENABLED)
-        ),
-        auto_stop_silence_ms=int(
-            raw.get("auto_stop_silence_ms", DEFAULT_AUTO_STOP_SILENCE_MS)
-        ),
-    )
+    # One field list (dataclasses.fields()), not three: each field's own
+    # declared default supplies both the fallback value and — via its
+    # Python type — the JSON coercion, so a new knob needs no reader edit.
+    defaults = WebappConfig()
+    kwargs: Dict[str, Any] = {}
+    for f in fields(WebappConfig):
+        default = getattr(defaults, f.name)
+        if f.name in _OR_ABSENT_FIELDS:
+            raw_value = raw.get(f.name) or default
+        else:
+            raw_value = raw.get(f.name, default)
+        kwargs[f.name] = _caster_for(default)(raw_value)
+    cfg = WebappConfig(**kwargs)
     _validate(cfg)
     return cfg
+
+
+def _field_value(cfg: WebappConfig, name: str) -> Any:
+    value = getattr(cfg, name)
+    return list(value) if isinstance(value, list) else value
 
 
 def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
@@ -188,25 +189,7 @@ def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
     target = Path(path) if path is not None else DEFAULT_CONFIG_PATH
     target.parent.mkdir(parents=True, exist_ok=True)
 
-    payload = {
-        "polish_model_default": cfg.polish_model_default,
-        "polish_models_available": list(cfg.polish_models_available),
-        "polish_prompt_default": cfg.polish_prompt_default,
-        "llm_hub_url": cfg.llm_hub_url,
-        "host": cfg.host,
-        "port": cfg.port,
-        "history_retention_days": cfg.history_retention_days,
-        "force_builtin_mic_default": cfg.force_builtin_mic_default,
-        "preferred_mic_id": cfg.preferred_mic_id,
-        "auth_token": cfg.auth_token,
-        "auth_password": cfg.auth_password,
-        "silence_dbfs_threshold": cfg.silence_dbfs_threshold,
-        "gain_boost_enabled": cfg.gain_boost_enabled,
-        "gain_boost_db": cfg.gain_boost_db,
-        "partial_interval_seconds": cfg.partial_interval_seconds,
-        "vad_auto_stop_enabled": cfg.vad_auto_stop_enabled,
-        "auto_stop_silence_ms": cfg.auto_stop_silence_ms,
-    }
+    payload = {f.name: _field_value(cfg, f.name) for f in fields(WebappConfig)}
 
     tmp = target.with_suffix(target.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -239,6 +222,29 @@ def append_auth_token(url: str, token: Optional[str]) -> str:
     extra = urlencode({"token": token})
     new_query = f"{existing}&{extra}" if existing else extra
     return urlunparse(parsed._replace(query=new_query))
+
+
+# Fields never sent to the client: secrets (auth_token/auth_password), and
+# host/port/llm_hub_url/silence_dbfs_threshold which are server-internal
+# (see the field comments above on WebappConfig).
+CLIENT_HIDDEN_FIELDS = frozenset(
+    {"auth_token", "auth_password", "host", "port", "llm_hub_url", "silence_dbfs_threshold"}
+)
+
+
+def config_to_client_dict(cfg: WebappConfig) -> Dict[str, Any]:
+    """Serialize the client-facing subset of ``cfg`` for the webapp API.
+
+    Single source for what `GET /api/config` and `POST /api/config` both
+    return, so the two responses can never drift out of shape from each
+    other again — adding a client-visible knob is a dataclass-field edit,
+    not a fifth hand-written dict.
+    """
+    return {
+        f.name: _field_value(cfg, f.name)
+        for f in fields(WebappConfig)
+        if f.name not in CLIENT_HIDDEN_FIELDS
+    }
 
 
 def _validate(cfg: WebappConfig) -> None:

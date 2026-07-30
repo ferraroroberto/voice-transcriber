@@ -5,15 +5,10 @@ from __future__ import annotations
 # Standard library imports
 import argparse
 import logging
-import sys
 from pathlib import Path
-
-# Third-party imports
-import pyperclip
 
 from src import TranscriptionError, build_transcription_client
 from src.app_config import LANGUAGE_MODES
-from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .base import BaseCommand
 
 logger = logging.getLogger(__name__)
@@ -35,23 +30,10 @@ class TranscribeCommand(BaseCommand):
         parser.add_argument("--start-server", action="store_true")
 
     def execute(self, args: argparse.Namespace) -> int:
-        manager = WhisperServerManager()
-        spawned_here = False
-        status = manager.status()
-        if not status.running:
-            if not (args.start_server or self.config.auto_start_server):
-                logger.error(
-                    f"❌ Whisper server is not running at {status.base_url}. "
-                    "Pass --start-server or set auto_start_server:true."
-                )
-                return 2
-            try:
-                manager.start()
-                spawned_here = True
-            except RuntimeError as e:
-                logger.error(str(e))
-                return 2
-            status = manager.status()
+        ensured = self._ensure_server(args)
+        if ensured is None:
+            return 2
+        manager, spawned_here, status = ensured
 
         if args.language:
             self.config.language = args.language
@@ -64,17 +46,7 @@ class TranscribeCommand(BaseCommand):
             logger.error(f"❌ {e}")
             return 1
         finally:
-            if spawned_here and manager.status().ownership == OWNERSHIP_OURS:
-                manager.stop()
+            self._release_server(manager, spawned_here)
 
-        sys.stdout.write(text + "\n")
-        sys.stdout.flush()
-
-        if not args.no_copy and self.config.auto_copy:
-            try:
-                pyperclip.copy(text)
-                logger.info("📋 Copied to clipboard")
-            except Exception as e:
-                logger.warning(f"⚠️  Clipboard copy failed: {e}")
-
+        self._emit(text, args)
         return 0

@@ -43,6 +43,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from app.webapp.manager import build_uvicorn_command, cert_paths  # noqa: E402
 from src.tunnel import (  # noqa: E402
     CloudflaredNotFoundError,
     persist_tunnel_url,
@@ -77,28 +78,14 @@ def _find_python() -> Path:
 
 
 def _spawn_uvicorn(port: int) -> subprocess.Popen:
-    cert = PROJECT_ROOT / "webapp" / "certificates" / "cert.pem"
-    key = PROJECT_ROOT / "webapp" / "certificates" / "key.pem"
-    cmd = [
-        str(_find_python()),
-        "-m",
-        "uvicorn",
-        "app.webapp.server:app",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        str(port),
-        "--log-level",
-        "warning",
-        # cloudflared connects over loopback -- trust it to set
-        # X-Forwarded-For so request.client.host reflects the real
-        # tunnel caller, not 127.0.0.1 (issue #117).
-        "--proxy-headers",
-        "--forwarded-allow-ips",
-        "127.0.0.1",
-    ]
-    if cert.exists() and key.exists():
-        cmd.extend(["--ssl-keyfile", str(key), "--ssl-certfile", str(cert)])
+    # Bound to loopback only -- cloudflared connects to this uvicorn over
+    # 127.0.0.1, never the tray's config-driven bind host. Command
+    # construction beyond host/port/certs is shared with
+    # `WebappManager._build_command` via `build_uvicorn_command` so a flag
+    # can never be added to one spawn path only (voice-transcriber#160).
+    cmd = [str(_find_python())] + build_uvicorn_command(
+        "127.0.0.1", port, cert_paths(PROJECT_ROOT)
+    )
     logger.info(f"🚀 Starting uvicorn: {' '.join(cmd)}")
     kw: dict = dict(cwd=str(PROJECT_ROOT))
     if sys.platform == "win32":

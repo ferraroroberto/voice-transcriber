@@ -6,7 +6,7 @@
 
 'use strict';
 
-import { els } from './state.js';
+import { els, state } from './state.js';
 import { icon } from './_vendored/icons/icons.js';
 
 // The one read path for every role="switch" control (the vendored fleet
@@ -105,6 +105,23 @@ export function showToast(msg, kind) {
     els.toast.classList.remove('visible');
     setTimeout(() => { els.toast.hidden = true; }, 200);
   }, 2400);
+}
+
+// Push a transcript into the DOM and re-derive the buttons that depend on
+// it. Shared by every "the transcript just changed" caller — a fresh take,
+// a retranscribe, Reset — so `els.transcript`/`els.polished` and the
+// derived copyTranscript/copyPolished/polishBtn/saveTranscript states are
+// owned in exactly one place. Always clears the polished pane: a new
+// transcript makes any prior polish stale. Pass '' to clear (Reset).
+export function renderTranscript(text) {
+  state.transcript = text || '';
+  state.polished = '';
+  els.transcript.value = state.transcript;
+  els.polished.value = '';
+  els.copyTranscript.disabled = !state.transcript;
+  els.copyPolished.disabled = true;
+  els.polishBtn.disabled = !state.transcript;
+  els.saveTranscript.disabled = true;
 }
 
 export function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }

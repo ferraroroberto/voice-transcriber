@@ -8,7 +8,7 @@
 
 import { els, state, getStoredToken } from './state.js';
 import { authFetch } from './api.js';
-import { isOn, showToast, tryAutoCopy, truncate } from './ui.js';
+import { isOn, renderTranscript, showToast, tryAutoCopy, truncate } from './ui.js';
 import { refreshHistory } from './history.js';
 
 function setMode(m) { state.mode = m; }
@@ -312,18 +312,10 @@ async function onRecorderStopped(mimeType) {
     }
     // Merge against the pre-take base, not state.transcript (which
     // already includes any partial that arrived via SSE — using it
-    // would double-append the take onto the base prefix).
-    state.transcript = mergeForAppend(
-      state.partialBaseTranscript, data.transcript || '',
-    );
-    state.polished = '';
-    els.transcript.value = state.transcript;
-    els.polished.value = '';
-    els.copyTranscript.disabled = !state.transcript;
-    els.copyPolished.disabled = true;
-    els.polishBtn.disabled = !state.transcript;
-    // The take already lives on disk — saving again would duplicate it.
-    els.saveTranscript.disabled = true;
+    // would double-append the take onto the base prefix). The take
+    // already lives on disk, so renderTranscript's saveTranscript
+    // disable is correct here too (saving again would duplicate it).
+    renderTranscript(mergeForAppend(state.partialBaseTranscript, data.transcript || ''));
     // Auto-copy reads from the textarea so what lands on the clipboard
     // is exactly what's on screen — including the merged accumulator
     // when Append is on.

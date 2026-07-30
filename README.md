@@ -1025,11 +1025,13 @@ still covers the same logic via the parity port in
 | `tests\test_app_config.py` | 100-language Whisper map, ISO normalisation, validation |
 | `tests\test_silence.py` | RMS dBFS gate (int16, float, 8-bit, stereo WAV) |
 | `tests\test_gain.py` | Quiet-environment gain boost — amplitude math, int16 clipping, in-place WAV boost, fail-open on unsupported sample width |
+| `tests\test_recording_pipeline.py` | `finalize_transcript` — the strip -> append-merge -> clipboard-copy tail shared by the tray and the tk window (issue #160) |
 | `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
 | `tests\test_activity_log.py` | Persistent SQLite events log — record, read, count, prune-older-than |
 | `tests\test_analytics.py` | Today's usage summary — take count / wpm / time-saved, derived from the activity log |
 | `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows (issue #147) |
 | `tests\test_event_loop.py` | Selector event-loop shim wiring + accept-loop resilience — root cause of the :8443 wedge (issue #113) |
+| `tests\test_process_supervisor.py` | Shared adopt-or-spawn primitives — TCP probe, stop ladder, readiness poll — composed by both `WhisperServerManager` and `WebappManager` (issue #160) |
 | `tests\test_e2e_live_guard.py` | Live-tray adoption guard — free-port autoboot vs. refuse-without-opt-in |
 | `tests\test_recorder.py` | PortAudio device hot-plug recovery — device-table refresh + retry-once on stream-open failure |
 | `tests\test_single_instance.py` | Named-mutex primitive (`app/tray/single_instance.py`) — importable contract + in-process behaviour |

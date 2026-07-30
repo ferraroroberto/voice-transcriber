@@ -13,12 +13,9 @@ from __future__ import annotations
 import logging
 import os
 import re
-import signal
-import socket
 import subprocess
 import sys
 import threading
-import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -28,16 +25,21 @@ from typing import Any, Deque, Dict, List, Optional
 import requests
 import yaml
 
+from src.process_supervisor import (
+    OWNERSHIP_EXTERNAL,
+    OWNERSHIP_NONE,
+    OWNERSHIP_OURS,
+    is_port_in_use,
+    stop_popen,
+    wait_until_ready,
+)
+
 try:
     import psutil  # type: ignore
 except ImportError:  # pragma: no cover - psutil is listed in the root requirements
     psutil = None  # type: ignore
 
 logger = logging.getLogger(__name__)
-
-OWNERSHIP_NONE = "none"          # server not running
-OWNERSHIP_OURS = "ours"          # we started it; we kill on exit
-OWNERSHIP_EXTERNAL = "external"  # someone else started it; hands off
 
 # Valid values for `mode` in whisper_server.yaml. Default is MODE_EXTERNAL
 # (issue #131) — MODE_LOCAL hard-fails at the next (re)start if a sibling
@@ -317,9 +319,7 @@ class WhisperServerManager:
 
     def is_port_in_use(self) -> bool:
         """Low-level port probe — works even if HTTP is not yet listening."""
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.2)
-            return s.connect_ex((self.config.host, self.config.port)) == 0
+        return is_port_in_use(self.config.host, self.config.port)
 
     def status(self) -> ServerStatus:
         running_here = self._proc is not None and self._proc.poll() is None
@@ -454,20 +454,8 @@ class WhisperServerManager:
             )
 
         p = self._proc
-        logger.info(f"🛑 Stopping whisper-server (pid={p.pid})")
         try:
-            if sys.platform == "win32":
-                try:
-                    p.send_signal(signal.CTRL_BREAK_EVENT)
-                except Exception as exc:
-                    logger.debug(f"CTRL_BREAK_EVENT failed: {exc}")
-            p.terminate()
-            try:
-                p.wait(timeout=8)
-            except subprocess.TimeoutExpired:
-                logger.warning("⚠️  whisper-server didn't exit; killing")
-                p.kill()
-                p.wait(timeout=5)
+            stop_popen(p, name="whisper-server", terminate_timeout=8, kill_timeout=5)
         finally:
             self._proc = None
             self._clear_pid_file()
@@ -574,21 +562,22 @@ class WhisperServerManager:
                 self._log.append(line)
 
     def _wait_until_ready(self) -> None:
-        deadline = time.time() + self.config.startup_timeout_seconds
-        while time.time() < deadline:
-            if self._proc is None or self._proc.poll() is not None:
-                tail = "\n".join(self.log_lines()[-20:])
-                raise RuntimeError(
-                    f"❌ whisper-server exited before becoming ready.\nLast output:\n{tail}"
-                )
-            if self.is_reachable():
-                logger.info(f"✅ Whisper server ready at {self.config.base_url}")
-                return
-            time.sleep(self.config.poll_interval_seconds)
-        raise RuntimeError(
-            f"❌ whisper-server did not become ready within "
-            f"{self.config.startup_timeout_seconds}s"
+        def _not_alive_message() -> str:
+            tail = "\n".join(self.log_lines()[-20:])
+            return f"❌ whisper-server exited before becoming ready.\nLast output:\n{tail}"
+
+        wait_until_ready(
+            still_alive=lambda: self._proc is not None and self._proc.poll() is None,
+            is_reachable=self.is_reachable,
+            timeout_seconds=self.config.startup_timeout_seconds,
+            poll_interval_seconds=self.config.poll_interval_seconds,
+            not_alive_message=_not_alive_message,
+            timeout_message=(
+                f"❌ whisper-server did not become ready within "
+                f"{self.config.startup_timeout_seconds}s"
+            ),
         )
+        logger.info(f"✅ Whisper server ready at {self.config.base_url}")
 
     def _write_pid_file(self, pid: int) -> None:
         try:

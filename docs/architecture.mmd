@@ -87,8 +87,11 @@ flowchart TB
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
     WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
+    PROCSUP["process_supervisor.py\nshared adopt-or-spawn primitives: TCP probe,\nstop ladder, readiness poll — WHISPERMGR + WEBAPPMGR compose it"]
   end
   WHISPERMGR --> WHISPERYAML
+  WHISPERMGR --> PROCSUP
+  WEBAPPMGR --> PROCSUP
   VOCAB --> HOTRELOAD
   SNIPPETS --> HOTRELOAD
   SPEAKERLABEL --> HOTRELOAD

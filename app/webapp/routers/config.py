@@ -15,7 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 from src.app_config import resolve_iso
 from src.polish import PolishClient
 from src.polish_prompts import load_polish_prompts
-from src.webapp_config import WebappConfig, update_webapp_config
+from src.webapp_config import WebappConfig, config_to_client_dict, update_webapp_config
 from src.whisper_server import WhisperServerManager
 
 from app.webapp.audio import find_ffmpeg
@@ -29,43 +29,35 @@ async def get_config(request: Request) -> Dict[str, Any]:
     cfg: WebappConfig = request.app.state.webapp_config
     app_cfg = request.app.state.app_config
     prompts = load_polish_prompts()
-    return {
-        "polish_model_default": cfg.polish_model_default,
-        "polish_models_available": cfg.polish_models_available,
-        "polish_prompt_default": cfg.polish_prompt_default,
-        "polish_prompts": [
-            {
-                "id": p.id,
-                "label": p.label,
-                "description": p.description,
-                "system": p.system,
-            }
-            for p in prompts
-        ],
-        "history_retention_days": cfg.history_retention_days,
-        "force_builtin_mic_default": cfg.force_builtin_mic_default,
-        "preferred_mic_id": cfg.preferred_mic_id,
-        # Latency-collapse knobs exposed read-only to the client so
-        # the JS can decide whether to subscribe to SSE partials and
-        # arm the client-side VAD auto-stop.
-        "partial_interval_seconds": cfg.partial_interval_seconds,
-        "rolling_transcription_enabled": cfg.partial_interval_seconds > 0,
-        "vad_auto_stop_enabled": cfg.vad_auto_stop_enabled,
-        "auto_stop_silence_ms": cfg.auto_stop_silence_ms,
-        "gain_boost_enabled": cfg.gain_boost_enabled,
-        "gain_boost_db": cfg.gain_boost_db,
-        # Languages exposed in the picker — narrowed by
-        # AppConfig.enabled_languages when set, otherwise the full
-        # 99-language Whisper list. Sorted alphabetically by label so
-        # the dropdown reads naturally. Each entry carries both the ISO
-        # code (sent to the server) and the display label.
-        "languages": sorted(
-            [{"iso": iso, "label": label}
-             for iso, label in app_cfg.enabled_language_map().items()],
-            key=lambda e: e["label"],
-        ),
-        "language_default": resolve_iso(app_cfg.language) or "en",
-    }
+    data = config_to_client_dict(cfg)
+    data.update(
+        {
+            "polish_prompts": [
+                {
+                    "id": p.id,
+                    "label": p.label,
+                    "description": p.description,
+                    "system": p.system,
+                }
+                for p in prompts
+            ],
+            # Latency-collapse knob exposed read-only to the client so
+            # the JS can decide whether to subscribe to SSE partials.
+            "rolling_transcription_enabled": cfg.partial_interval_seconds > 0,
+            # Languages exposed in the picker — narrowed by
+            # AppConfig.enabled_languages when set, otherwise the full
+            # 99-language Whisper list. Sorted alphabetically by label so
+            # the dropdown reads naturally. Each entry carries both the ISO
+            # code (sent to the server) and the display label.
+            "languages": sorted(
+                [{"iso": iso, "label": label}
+                 for iso, label in app_cfg.enabled_language_map().items()],
+                key=lambda e: e["label"],
+            ),
+            "language_default": resolve_iso(app_cfg.language) or "en",
+        }
+    )
+    return data
 
 
 @router.post("/api/config")
@@ -88,7 +80,7 @@ async def patch_config(request: Request) -> Dict[str, Any]:
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     request.app.state.webapp_config = new_cfg
-    return {"ok": True, "config": _config_dict(new_cfg)}
+    return {"ok": True, "config": config_to_client_dict(new_cfg)}
 
 
 @router.get("/api/status")
@@ -108,15 +100,4 @@ async def status(request: Request) -> Dict[str, Any]:
             "base_url": polish.base_url,
         },
         "ffmpeg_present": find_ffmpeg(PROJECT_ROOT) is not None,
-    }
-
-
-def _config_dict(cfg: WebappConfig) -> Dict[str, Any]:
-    return {
-        "polish_model_default": cfg.polish_model_default,
-        "polish_models_available": cfg.polish_models_available,
-        "polish_prompt_default": cfg.polish_prompt_default,
-        "history_retention_days": cfg.history_retention_days,
-        "force_builtin_mic_default": cfg.force_builtin_mic_default,
-        "preferred_mic_id": cfg.preferred_mic_id,
     }

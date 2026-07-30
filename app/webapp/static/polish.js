@@ -6,7 +6,7 @@
 
 import { els, state } from './state.js';
 import { authFetch, readErrorMessage } from './api.js';
-import { showToast, truncate, tryAutoCopy } from './ui.js';
+import { renderTranscript, showToast, truncate, tryAutoCopy } from './ui.js';
 import { refreshHistory } from './history.js';
 import { cleanupIncognitoSession, closePartialStream, hideResumeButton } from './recorder.js';
 
@@ -74,16 +74,9 @@ export function onReset() {
   hideResumeButton();
   state.forceAppend = false;
   state.sessionId = null;
-  state.transcript = '';
-  state.polished = '';
+  renderTranscript('');
   state.partialVersion = 0;
   state.partialBaseTranscript = '';
-  els.transcript.value = '';
-  els.polished.value = '';
-  els.copyTranscript.disabled = true;
-  els.copyPolished.disabled = true;
-  els.polishBtn.disabled = true;
-  els.saveTranscript.disabled = true;
   els.recordStatus.textContent = 'Tap to start';
   els.levelFill.style.width = '0%';
 }

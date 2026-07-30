@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from app.webapp.event_loop import LOOP_FACTORY, selector_loop_factory
-from app.webapp.manager import WebappManager, WebappRuntimeConfig
+from app.webapp.manager import WebappManager, WebappRuntimeConfig, build_uvicorn_command
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -93,12 +93,28 @@ def test_webapp_bat_wires_proxy_headers():
     assert src.count("--forwarded-allow-ips 127.0.0.1") == 2
 
 
-def test_run_named_tunnel_spawn_wires_proxy_headers():
-    """Regression pin for issue #117 -- scripts/run_named_tunnel.py's
-    _spawn_uvicorn is the other uvicorn invocation cloudflared fronts."""
+def test_build_uvicorn_command_wires_proxy_headers_and_loop():
+    """Regression pin for issue #117 (proxy headers) and #113 (the loop
+    shim) at their single source: WebappManager._build_command and
+    scripts/run_named_tunnel.py's _spawn_uvicorn both delegate to this
+    function (voice-transcriber#160) instead of each carrying their own
+    copy of the uvicorn flag list."""
+    cmd = build_uvicorn_command("127.0.0.1", 18443, None)
+    assert "--proxy-headers" in cmd
+    assert "--forwarded-allow-ips" in cmd
+    assert cmd[cmd.index("--forwarded-allow-ips") + 1] == "127.0.0.1"
+    assert cmd[cmd.index("--loop") + 1] == LOOP_FACTORY
+
+
+def test_run_named_tunnel_spawn_delegates_to_shared_command_builder():
+    """Pin the *wiring*, not a duplicated flag list: this used to be a
+    hand-rolled second copy of the uvicorn command that had already
+    drifted (missing --loop) by the time this issue was filed
+    (voice-transcriber#160) -- assert it now sources the command from
+    the same place WebappManager does, so a flag can't go missing again."""
     src = (_REPO_ROOT / "scripts" / "run_named_tunnel.py").read_text(encoding="utf-8")
-    assert '"--proxy-headers",' in src
-    assert '"--forwarded-allow-ips",' in src
+    assert "from app.webapp.manager import build_uvicorn_command, cert_paths" in src
+    assert "build_uvicorn_command(" in src
 
 
 async def _noop_handler(reader, writer):

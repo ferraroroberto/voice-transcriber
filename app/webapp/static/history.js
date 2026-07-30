@@ -8,7 +8,7 @@ import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
 import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
-import { copyText, flashDanger, showToast } from './ui.js';
+import { copyText, flashDanger, renderTranscript, showToast } from './ui.js';
 import { mergeForAppend } from './recorder.js';
 
 const HISTORY_PAGE_SIZE = 10;
@@ -175,14 +175,7 @@ async function retranscribe(id) {
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
     state.sessionId = id;
-    state.transcript = mergeForAppend(state.transcript, data.transcript || '');
-    state.polished = '';
-    els.transcript.value = state.transcript;
-    els.polished.value = '';
-    els.copyTranscript.disabled = !state.transcript;
-    els.copyPolished.disabled = true;
-    els.polishBtn.disabled = !state.transcript;
-    els.saveTranscript.disabled = true;
+    renderTranscript(mergeForAppend(state.transcript, data.transcript || ''));
     refreshHistory();
     showToast('Done', 'success');
   } catch (err) {
