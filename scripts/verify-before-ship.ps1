@@ -6,8 +6,8 @@
 # the script boots itself on a free port.
 #
 # Usage:
-#   pwsh -File scripts/verify-before-ship.ps1
-#   powershell -File scripts\verify-before-ship.ps1   # Windows PowerShell 5.1 works too
+#   C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1
+#   (never bare pwsh -- it's a 0-byte WindowsApps reparse stub on this machine that fails non-interactively)
 #
 # A tray on :8443 may be running or not — autoboot picks a free port for
 # its own disposable webapp and tears it down on exit, so the running tray
