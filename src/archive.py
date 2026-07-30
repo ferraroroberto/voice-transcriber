@@ -272,7 +272,7 @@ class SessionArchive:
         # How many matches we must gather before slicing off ``offset``.
         needed = offset + limit if limit is not None else None
         collected: List[Session] = []
-        for folder in self._iter_session_folders_sorted():
+        for folder in self._iter_session_folders(sorted_=True):
             if since is not None:
                 folder_day = _folder_date(folder)
                 # Newest-first: once a whole day sits before the window,
@@ -303,7 +303,7 @@ class SessionArchive:
         ``/api/sessions`` endpoint derives from an incognito-aware lazy
         fetch, so pagination stays correct despite the small over-count.
         """
-        return sum(1 for _ in self._iter_session_folders_sorted())
+        return sum(1 for _ in self._iter_session_folders(sorted_=True))
 
     def delete_session(self, session_id: str) -> bool:
         """Remove one session folder. Returns True iff it existed."""
@@ -346,71 +346,56 @@ class SessionArchive:
 
     # ---------------------------------------------------------------- helpers
 
-    def _iter_session_folders(self) -> Iterator[Path]:
-        if not self.root.exists():
-            return
-        for year in self.root.iterdir():
-            if not year.is_dir():
-                continue
-            for month in year.iterdir():
-                if not month.is_dir():
-                    continue
-                for day in month.iterdir():
-                    if not day.is_dir():
-                        continue
-                    for session in day.iterdir():
-                        if session.is_dir():
-                            yield session
+    def _iter_dirs(self, parent: Path, *, sorted_: bool) -> List[Path]:
+        """List ``parent``'s subdirectories.
 
-    def _iter_session_folders_sorted(self) -> Iterator[Path]:
-        """Yield session folders newest-first by name, without hydrating.
+        ``sorted_=True`` orders them reverse-lexically by name — folder
+        names encode the timestamp (``YYYY/MM/DD/HH-MM-SS-<id>``), so this
+        is chronological newest-first without hydrating anything. Shared by
+        every YYYY/MM/DD/session walk in this class (session listing,
+        counting, cleanup, and prune) so the four-level layout is declared
+        exactly once.
+        """
+        dirs = [p for p in parent.iterdir() if p.is_dir()]
+        if sorted_:
+            dirs.sort(key=lambda p: p.name, reverse=True)
+        return dirs
 
-        Folder names encode the timestamp (``YYYY/MM/DD/HH-MM-SS-<id>``),
-        so a reverse lexical sort at each level is chronological
-        newest-first. This lets ``list_sessions``/``count_sessions`` page
-        and window without reading any ``meta.json`` up front — the
-        foundation of the #139 fix. Sub-second ties (same ``HH-MM-SS``,
+    def _iter_session_folders(self, *, sorted_: bool = False) -> Iterator[Path]:
+        """Walk YYYY/MM/DD/<session> and yield each session folder.
+
+        ``sorted_=True`` yields newest-first (see :meth:`_iter_dirs`) — the
+        foundation of the #139 fix that lets ``list_sessions``/
+        ``count_sessions`` page and window without reading any
+        ``meta.json`` up front. Sub-second ties (same ``HH-MM-SS``,
         different id suffix) order arbitrarily, exactly as the previous
         ``created_at`` sort did (``created_at`` is second-resolution).
         """
         if not self.root.exists():
             return
-
-        def _sorted_dirs(parent: Path) -> List[Path]:
-            return sorted(
-                (p for p in parent.iterdir() if p.is_dir()),
-                key=lambda p: p.name,
-                reverse=True,
-            )
-
-        for year in _sorted_dirs(self.root):
-            for month in _sorted_dirs(year):
-                for day in _sorted_dirs(month):
-                    for session in _sorted_dirs(day):
-                        yield session
+        for year in self._iter_dirs(self.root, sorted_=sorted_):
+            for month in self._iter_dirs(year, sorted_=sorted_):
+                for day in self._iter_dirs(month, sorted_=sorted_):
+                    yield from self._iter_dirs(day, sorted_=sorted_)
 
     def _prune_empty_date_folders(self) -> None:
         """Tidy up YYYY/MM/DD folders that no longer contain sessions."""
         if not self.root.exists():
             return
-        for year in list(self.root.iterdir()):
-            if not year.is_dir():
-                continue
-            for month in list(year.iterdir()):
-                if not month.is_dir():
-                    continue
-                for day in list(month.iterdir()):
-                    if day.is_dir() and not any(day.iterdir()):
+        for year in self._iter_dirs(self.root, sorted_=False):
+            for month in self._iter_dirs(year, sorted_=False):
+                for day in self._iter_dirs(month, sorted_=False):
+                    if not any(day.iterdir()):
                         try:
                             day.rmdir()
                         except OSError:
                             pass
-                if month.is_dir() and not any(month.iterdir()):
+                if not any(month.iterdir()):
                     try:
                         month.rmdir()
                     except OSError:
                         pass
-            if year.is_dir() and not any(year.iterdir()):
+            if not any(year.iterdir()):
                 try:
                     year.rmdir()
                 except OSError:

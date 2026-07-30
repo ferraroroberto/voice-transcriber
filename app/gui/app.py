@@ -36,7 +36,7 @@ from src.polish_prompts import (
     get_prompt,
     load_polish_prompts,
 )
-from src.recording_pipeline import SilentTake, process_recording
+from src.recording_pipeline import SilentTake, finalize_transcript, process_recording
 from src.webapp_config import load_webapp_config, update_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .diagnostics_window import DiagnosticsWindow
@@ -789,25 +789,23 @@ class TranscriberApp:
     def _post_transcription(self, text: str) -> None:
         """Shared post-transcription tail used by both mic and file workers.
 
-        Strips the text, merges in append-mode, writes the tray-aware slot,
-        copies to clipboard when auto_copy is set, then schedules the result
-        window on the main thread.
+        Strip/append-merge/clipboard-copy is delegated to
+        ``recording_pipeline.finalize_transcript`` (voice-transcriber#160)
+        so the tray and this window can't drift on that ordering again;
+        this method owns only the tray-aware slot write and result window.
         """
-        text = text.strip()
-        if text:
-            last = self._current_last_transcription()
-            if self._is_append_mode() and last:
-                text = last.rstrip() + "\n\n" + text
+        finalized = finalize_transcript(
+            text,
+            last_transcription=self._current_last_transcription(),
+            append_mode=self._is_append_mode(),
+            auto_copy=self.config.auto_copy,
+        )
+        if finalized is not None:
             if self.tray is not None:
-                self.tray.last_transcription = text
+                self.tray.last_transcription = finalized
             else:
-                self._last_transcription = text
-        if self.config.auto_copy:
-            try:
-                pyperclip.copy(text)
-            except Exception as exc:
-                logger.warning(f"⚠️  Clipboard copy failed: {exc}")
-        self.root.after(0, lambda: self._show_result(text))
+                self._last_transcription = finalized
+        self.root.after(0, lambda t=(finalized or ""): self._show_result(t))
 
     # ---------------------------------------------------------- file flow
 

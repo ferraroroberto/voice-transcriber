@@ -33,7 +33,7 @@ import sqlite3
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 logger = logging.getLogger("activity_log")
 
@@ -151,15 +151,16 @@ def record_event(
         logger.warning(f"⚠️  Could not record activity event {event_type!r}: {exc}")
 
 
-def read_events(
-    *,
-    event_type: Optional[str] = None,
-    since: Optional[int] = None,
-    until: Optional[int] = None,
-    limit: int = 200,
-    path: Optional[Path] = None,
-) -> List[Dict[str, Any]]:
-    """Return events matching the (optional) filters, newest first."""
+def _where(
+    event_type: Optional[str], since: Optional[int], until: Optional[int]
+) -> Tuple[str, List[Any]]:
+    """Build the shared ``event_type``/``since``/``until`` filter clause.
+
+    Returns ``(" WHERE ..." | "", params)`` — the clause is empty and
+    ``params`` is ``[]`` when no filter is given. Shared by
+    :func:`read_events` and :func:`count_events` so the filter semantics
+    (and column names) live in exactly one place.
+    """
     clauses: List[str] = []
     params: List[Any] = []
     if event_type is not None:
@@ -172,6 +173,19 @@ def read_events(
         clauses.append("ts < ?")
         params.append(int(until))
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    return where, params
+
+
+def read_events(
+    *,
+    event_type: Optional[str] = None,
+    since: Optional[int] = None,
+    until: Optional[int] = None,
+    limit: int = 200,
+    path: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
+    """Return events matching the (optional) filters, newest first."""
+    where, params = _where(event_type, since, until)
     params.append(max(1, int(limit)))
     query = f"SELECT * FROM events{where} ORDER BY ts DESC LIMIT ?"
     with _connect(path) as conn:
@@ -200,18 +214,7 @@ def count_events(
     path: Optional[Path] = None,
 ) -> int:
     """Count events matching the (optional) filters — avoids fetching rows."""
-    clauses: List[str] = []
-    params: List[Any] = []
-    if event_type is not None:
-        clauses.append("event_type = ?")
-        params.append(event_type)
-    if since is not None:
-        clauses.append("ts >= ?")
-        params.append(int(since))
-    if until is not None:
-        clauses.append("ts < ?")
-        params.append(int(until))
-    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    where, params = _where(event_type, since, until)
     query = f"SELECT COUNT(*) AS n FROM events{where}"
     with _connect(path) as conn:
         row = conn.execute(query, params).fetchone()

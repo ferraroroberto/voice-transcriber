@@ -9,9 +9,6 @@ import sys
 import threading
 from typing import Optional
 
-# Third-party imports
-import pyperclip
-
 from src import (
     AudioRecorder,
     RecordingError,
@@ -19,7 +16,6 @@ from src import (
     build_transcription_client,
 )
 from src.app_config import LANGUAGE_MODES
-from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .base import BaseCommand
 
 logger = logging.getLogger(__name__)
@@ -55,23 +51,10 @@ class RecordCommand(BaseCommand):
         iso_lang = self.config.whisper_language
         max_seconds = args.max_seconds or self.config.max_record_seconds
 
-        manager = WhisperServerManager()
-        spawned_here = False
-        status = manager.status()
-        if not status.running:
-            if not (args.start_server or self.config.auto_start_server):
-                logger.error(
-                    f"❌ Whisper server is not running at {status.base_url}. "
-                    "Pass --start-server or set auto_start_server:true in config."
-                )
-                return 2
-            try:
-                manager.start()
-                spawned_here = True
-            except RuntimeError as e:
-                logger.error(str(e))
-                return 2
-            status = manager.status()
+        ensured = self._ensure_server(args)
+        if ensured is None:
+            return 2
+        manager, spawned_here, status = ensured
 
         try:
             text = _record_and_transcribe(
@@ -81,23 +64,13 @@ class RecordCommand(BaseCommand):
             logger.error(f"❌ {e}")
             return 1
         finally:
-            if spawned_here and manager.status().ownership == OWNERSHIP_OURS:
-                manager.stop()
+            self._release_server(manager, spawned_here)
 
         if not text:
             logger.warning("⚠️  Empty transcription")
             return 1
 
-        sys.stdout.write(text + "\n")
-        sys.stdout.flush()
-
-        if not args.no_copy and self.config.auto_copy:
-            try:
-                pyperclip.copy(text)
-                logger.info("📋 Copied to clipboard")
-            except Exception as e:
-                logger.warning(f"⚠️  Clipboard copy failed: {e}")
-
+        self._emit(text, args)
         return 0
 
 

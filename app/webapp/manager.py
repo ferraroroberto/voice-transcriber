@@ -18,11 +18,8 @@ from __future__ import annotations
 # Standard library imports
 import logging
 import os
-import signal
-import socket
 import subprocess
 import sys
-import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -32,12 +29,16 @@ import requests
 
 from app.tray.single_instance import cross_process_lock
 from app.webapp.event_loop import LOOP_FACTORY
+from src.process_supervisor import (
+    OWNERSHIP_EXTERNAL,
+    OWNERSHIP_NONE,
+    OWNERSHIP_OURS,
+    is_port_in_use,
+    stop_popen,
+    wait_until_ready,
+)
 
 logger = logging.getLogger(__name__)
-
-OWNERSHIP_NONE = "none"
-OWNERSHIP_OURS = "ours"
-OWNERSHIP_EXTERNAL = "external"
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -95,6 +96,52 @@ def _probe_url(scheme: str, host: str, port: int) -> str:
     return f"{scheme}://{host if host != '0.0.0.0' else '127.0.0.1'}:{port}"
 
 
+def build_uvicorn_command(
+    host: str, port: int, certs: Optional[tuple[Path, Path]] = None
+) -> List[str]:
+    """Build the ``-m uvicorn ...`` argv (everything after the python
+    executable) for spawning the webapp.
+
+    Shared by :class:`WebappManager` (the tray-managed webapp) and
+    ``scripts/run_named_tunnel.py`` (the headless named-tunnel launcher)
+    so a flag added on one spawn path is never missing from the other
+    (voice-transcriber#160) — each caller prepends its own resolved
+    python executable.
+    """
+    cmd: List[str] = [
+        "-m",
+        "uvicorn",
+        "app.webapp.server:app",
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--log-level",
+        "warning",
+        "--loop",
+        LOOP_FACTORY,
+        # The tray's Cloudflare tunnel (cloudflared) connects to this
+        # uvicorn over loopback (webapp/cloudflared.yml points at
+        # https://localhost:8443) -- trust only that immediate peer to
+        # set X-Forwarded-For so request.client.host reflects the real
+        # tunnel caller, not 127.0.0.1 (issue #117). uvicorn already
+        # defaults to this; pinned explicitly so it can't silently
+        # regress on an upstream default change.
+        "--proxy-headers",
+        "--forwarded-allow-ips",
+        "127.0.0.1",
+    ]
+    if certs is not None:
+        cert, key = certs
+        cmd.extend([
+            "--ssl-keyfile",
+            str(key),
+            "--ssl-certfile",
+            str(cert),
+        ])
+    return cmd
+
+
 class WebappManager:
     """Start / stop / health-check the webapp uvicorn process."""
 
@@ -132,10 +179,7 @@ class WebappManager:
         return False
 
     def is_port_in_use(self) -> bool:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.2)
-            host = self.config.host if self.config.host != "0.0.0.0" else "127.0.0.1"
-            return s.connect_ex((host, self.config.port)) == 0
+        return is_port_in_use(self.config.host, self.config.port)
 
     def status(self) -> WebappStatus:
         running_here = self._proc is not None and self._proc.poll() is None
@@ -231,19 +275,8 @@ class WebappManager:
             return status
 
         p = self._proc
-        logger.info(f"🛑 Stopping webapp (pid={p.pid})")
         try:
-            if sys.platform == "win32":
-                try:
-                    p.send_signal(signal.CTRL_BREAK_EVENT)
-                except Exception as exc:
-                    logger.debug(f"CTRL_BREAK_EVENT failed: {exc}")
-            p.terminate()
-            try:
-                p.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                p.kill()
-                p.wait(timeout=3)
+            stop_popen(p, name="webapp", terminate_timeout=5, kill_timeout=3)
         finally:
             self._proc = None
 
@@ -260,51 +293,18 @@ class WebappManager:
 
     def _build_command(self) -> List[str]:
         py = sys.executable  # the venv that launched the tray
-        cmd: List[str] = [
-            py,
-            "-m",
-            "uvicorn",
-            "app.webapp.server:app",
-            "--host",
-            self.config.host,
-            "--port",
-            str(self.config.port),
-            "--log-level",
-            "warning",
-            "--loop",
-            LOOP_FACTORY,
-            # The tray's Cloudflare tunnel (cloudflared) connects to this
-            # uvicorn over loopback (webapp/cloudflared.yml points at
-            # https://localhost:8443) -- trust only that immediate peer to
-            # set X-Forwarded-For so request.client.host reflects the real
-            # tunnel caller, not 127.0.0.1 (issue #117). uvicorn already
-            # defaults to this; pinned explicitly so it can't silently
-            # regress on an upstream default change.
-            "--proxy-headers",
-            "--forwarded-allow-ips",
-            "127.0.0.1",
-        ]
-        certs = cert_paths()
-        if certs is not None:
-            cert, key = certs
-            cmd.extend([
-                "--ssl-keyfile",
-                str(key),
-                "--ssl-certfile",
-                str(cert),
-            ])
-        return cmd
+        return [py] + build_uvicorn_command(self.config.host, self.config.port, cert_paths())
 
     def _wait_until_ready(self) -> None:
-        deadline = time.time() + self.config.startup_timeout_seconds
-        while time.time() < deadline:
-            if self._proc is None or self._proc.poll() is not None:
-                raise RuntimeError("❌ webapp uvicorn exited before becoming ready")
-            if self.is_reachable():
-                logger.info(f"✅ Webapp ready at {self.base_url}")
-                return
-            time.sleep(self.config.poll_interval_seconds)
-        raise RuntimeError(
-            f"❌ webapp did not become ready within "
-            f"{self.config.startup_timeout_seconds}s"
+        wait_until_ready(
+            still_alive=lambda: self._proc is not None and self._proc.poll() is None,
+            is_reachable=self.is_reachable,
+            timeout_seconds=self.config.startup_timeout_seconds,
+            poll_interval_seconds=self.config.poll_interval_seconds,
+            not_alive_message=lambda: "❌ webapp uvicorn exited before becoming ready",
+            timeout_message=(
+                f"❌ webapp did not become ready within "
+                f"{self.config.startup_timeout_seconds}s"
+            ),
         )
+        logger.info(f"✅ Webapp ready at {self.base_url}")
