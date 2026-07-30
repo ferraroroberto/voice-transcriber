@@ -8,8 +8,7 @@ import logging
 from pathlib import Path
 
 from src import TranscriptionError, build_transcription_client
-from src.app_config import LANGUAGE_MODES
-from .base import BaseCommand
+from .base import BaseCommand, language_type
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +22,9 @@ class TranscribeCommand(BaseCommand):
         )
         parser.add_argument("file", type=Path, help="Path to an audio file (wav/mp3/m4a/...)")
         parser.add_argument(
-            "--language", type=str, choices=LANGUAGE_MODES, default=None,
-            help="Dictation mode (overrides config)",
+            "--language", type=language_type, default=None,
+            help="Dictation mode: a Whisper ISO code (en, es, haw, yue, "
+            "...) or English name (overrides config)",
         )
         parser.add_argument("--no-copy", action="store_true", help="Do not copy to clipboard")
         parser.add_argument("--start-server", action="store_true")

@@ -15,8 +15,7 @@ from src import (
     TranscriptionError,
     build_transcription_client,
 )
-from src.app_config import LANGUAGE_MODES
-from .base import BaseCommand
+from .base import BaseCommand, language_type
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +28,9 @@ class RecordCommand(BaseCommand):
             help="Record from mic, transcribe, copy to clipboard, exit",
         )
         parser.add_argument(
-            "--language", type=str, choices=LANGUAGE_MODES, default=None,
-            help="Dictation mode (overrides config)",
+            "--language", type=language_type, default=None,
+            help="Dictation mode: a Whisper ISO code (en, es, haw, yue, "
+            "...) or English name (overrides config)",
         )
         parser.add_argument(
             "--max-seconds", type=int, default=None,
