@@ -75,7 +75,8 @@ Two config files live under the repo: one for the app, one for the server.
 
 `language` accepts any of the 100 Whisper-supported languages, either as a
 Whisper ISO code (`en`, `es`, `haw`, `yue`) or as the lowercase English
-name (`english`, `spanish`, `italian`, …). Common values:
+name (`english`, `spanish`, `italian`, …) — narrowed to whatever
+`enabled_languages` allows (see below). Common values:
 
 | value                | dictate in | clipboard output |
 |----------------------|------------|------------------|
@@ -111,6 +112,15 @@ Other knobs:
   🌐 Translate toggle is on. Defaults to the local-llm-hub's `:8091`
   contract. (Translate keeps its own proven whisper endpoint — it does not
   route through the hub role.) See "Translation" below.
+- `suppress_hotkey` — when `true` (default), the tray consumes the global
+  hotkey via a pynput low-level hook so the focused window never sees the
+  keystroke. Tray menu has a 🚫 Suppress hotkey toggle.
+- `show_notifications` — when `true`, the tray shows a toast on record/
+  transcribe events. Defaults to `false` in the committed config. Tray menu
+  has a 🔔 Show notifications toggle.
+- `enabled_languages` — narrows the language picker to this list of Whisper
+  ISO codes (default `["en", "es", "it"]` in the committed config), out of
+  the full 100 Whisper supports (see the `language` note above).
 
 Three optional companion files (all gitignored, sample-tracked):
 
@@ -240,7 +250,20 @@ voice-transcriber/
 │   ├── polish.py                  # local-llm-hub client (system-prompt-driven polish)
 │   ├── polish_prompts.py          # loader for the polish-style library
 │   ├── archive.py                 # dated session folders + 30-day cleanup
+│   ├── activity_log.py            # SQLite events log, 365-day retention
+│   ├── analytics.py               # today's take count / wpm / time-saved
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
+│   ├── vocabulary.py              # per-language vocab prompts + hot-reload
+│   ├── snippets.py                # word-boundary keyword expansion + hot-reload
+│   ├── silence.py                 # RMS dBFS gate
+│   ├── gain.py                    # quiet-env gain boost — post-silence-gate
+│   ├── speaker_label.py           # strip fabricated leading speaker labels
+│   ├── static_versioning.py       # content-hash asset URLs
+│   ├── recording_pipeline.py      # silence-gate -> gain-boost -> transcribe
+│   ├── hot_reload_json.py         # shared mtime-cached JSON loader
+│   ├── inject.py                  # clipboard + caret paste
+│   ├── mic_glyph.py               # runtime state-tinted tray renderer
+│   ├── tunnel.py                  # cloudflared spawn/persist/stop
 │   └── whisper_server/
 │       ├── manager.py             # spawn / kill / health / PID / describe
 │       └── whisper_server.yaml    # mode, paths, port, CLI args
@@ -253,9 +276,17 @@ voice-transcriber/
 │   ├── cli/
 │   │   ├── main.py                # argparse dispatcher
 │   │   └── commands/              # record, transcribe, gui, tray, server
+│   ├── tray/
+│   │   └── single_instance.py     # Windows mutex — one tray at a time
 │   └── webapp/                    # FastAPI mobile-first web UI
-│       ├── server.py              # routes + lifespan (cleanup on boot)
+│       ├── server.py              # wiring: create_app(), lifespan, static mount
 │       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
+│       ├── middleware.py          # bearer-token auth, loopback bypass
+│       ├── audio.py               # ffmpeg webm->wav transcode
+│       ├── partial_worker.py      # rolling ~2s partial transcription
+│       ├── event_loop.py          # selector event-loop shim (Windows :8443 wedge fix)
+│       ├── routers/               # sessions · auth · config · misc · activity · analytics
+│       │   └── _helpers.py        # shared router helpers
 │       └── static/
 │           ├── index.html         # tabbed SPA (Record · History · Settings), big-button mobile-first
 │           ├── app.js             # module wiring / boot sequence
@@ -276,6 +307,8 @@ voice-transcriber/
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
 │   ├── webapp-architecture.md     # webapp design & architecture record
+│   ├── architecture.mmd           # hand-authored internal-structure diagram
+│   ├── consuming-the-session-api.md  # session API integration guide
 │   ├── iphone-debugging.md        # iOS PWA / cert troubleshooting
 │   └── market-scan/               # market research notes
 ├── scripts/
@@ -609,8 +642,9 @@ subscription. The polish client allocates a generous `max_tokens`
 (`<think>…</think>`); the hub strips the reasoning server-side before
 returning. Other options surfaced in the dropdown:
 `claude_haiku`, `claude_sonnet`, `claude_opus` (Claude subscription
-via the `claude` CLI), and `gemini_lite`, `gemini_pro` (the other two
-Gemini tiers). All six are stable version-free aliases — when the hub
+via the `claude` CLI), `gemini_lite`, `gemini_pro` (the other two
+Gemini tiers), and `agentic_light`, `agentic_heavy` (agentic-mode
+tiers). These are stable version-free aliases — when the hub
 points an alias at a newer display_name nothing in this repo needs
 to change. Both surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
@@ -992,17 +1026,32 @@ still covers the same logic via the parity port in
 | `tests\test_silence.py` | RMS dBFS gate (int16, float, 8-bit, stereo WAV) |
 | `tests\test_gain.py` | Quiet-environment gain boost — amplitude math, int16 clipping, in-place WAV boost, fail-open on unsupported sample width |
 | `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
+| `tests\test_activity_log.py` | Persistent SQLite events log — record, read, count, prune-older-than |
+| `tests\test_analytics.py` | Today's usage summary — take count / wpm / time-saved, derived from the activity log |
+| `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows (issue #147) |
+| `tests\test_event_loop.py` | Selector event-loop shim wiring + accept-loop resilience — root cause of the :8443 wedge (issue #113) |
+| `tests\test_e2e_live_guard.py` | Live-tray adoption guard — free-port autoboot vs. refuse-without-opt-in |
+| `tests\test_recorder.py` | PortAudio device hot-plug recovery — device-table refresh + retry-once on stream-open failure |
+| `tests\test_single_instance.py` | Named-mutex primitive (`app/tray/single_instance.py`) — importable contract + in-process behaviour |
 | `tests\test_vocabulary.py` | Per-language vocab prompts + hot-reload on mtime |
 | `tests\test_snippets.py` | Word-boundary keyword expansion + hot-reload |
 | `tests\test_speaker_label.py` | Strip fabricated leading speaker labels (titled + assistant-name family + blocklist) |
 | `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
 | `tests\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` |
 | `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
+| `tests\test_webapp_api_activity.py` | `GET /api/activity` — persistent activity log API |
+| `tests\test_webapp_api_analytics.py` | `GET /api/analytics/summary` — usage analytics API |
 | `tests\test_webapp_api_polish.py` | `/api/polish-text`, `/api/save-text`, `_resolve_model`, `_preview` |
 | `tests\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
 | `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins across the static/ JS module graph |
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
-| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; requires live tray on :8443) |
+| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; boots its own disposable instance by default, or adopts a live tray via `VT_E2E_LIVE=1`) |
+| `tests\e2e\test_background_finalize.py` | Backgrounding mid-record finalises the in-flight take instead of dropping it (issue #12, `desktop_only`) |
+| `tests\e2e\test_cache_busting.py` | Cache hygiene — `/` always revalidated, `/static/*` immutable, `?v=<hash>` matches on-disk content, `/api/version` shape (issue #13) |
+| `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag (issue #139) |
+| `tests\e2e\test_resume_take.py` | ▶ Resume after backgrounding restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
+| `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load (issue #87) |
+| `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor (issue #31) |
 
 ## 🔗 See also
 
