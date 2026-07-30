@@ -108,7 +108,7 @@ def _record_and_transcribe(
         sample_rate=config.sample_rate,
         preferred_mics=config.resolve_preferred_mics(),
     )
-    stop_thread = _install_enter_to_stop(recorder)
+    stop_thread = _EnterToStopWatcher(recorder)
     logger.info(f"🎤 Recording (max {max_seconds}s) — press Enter or Ctrl+C to stop")
     try:
         result = recorder.record(max_seconds=max_seconds)
@@ -125,7 +125,7 @@ def _record_and_transcribe(
     )
 
 
-class _install_enter_to_stop:
+class _EnterToStopWatcher:
     """Background thread that stops recording on Enter (best-effort)."""
 
     def __init__(self, recorder: AudioRecorder) -> None:
