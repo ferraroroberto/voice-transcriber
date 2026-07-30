@@ -12,10 +12,31 @@ from typing import Optional, Tuple
 # Third-party imports
 import pyperclip
 
-from src import AppConfig
+from src import AppConfig, resolve_iso
 from src.whisper_server import OWNERSHIP_OURS, ServerStatus, WhisperServerManager
 
 logger = logging.getLogger(__name__)
+
+
+def language_type(value: str) -> str:
+    """``argparse`` ``type=`` for ``--language`` — accepts anything
+    :func:`src.resolve_iso` accepts (any of the 100 Whisper ISO codes,
+    an English-name spelling, or a legacy mode name) and raises
+    ``ArgumentTypeError`` naming the accepted forms otherwise.
+
+    Shared by the ``record``/``transcribe`` subcommands in place of a
+    ``choices=LANGUAGE_MODES`` allowlist, which rejected every language
+    but the legacy three — ``resolve_iso`` (used downstream via
+    ``AppConfig.whisper_language``) already accepts the full set
+    (voice-transcriber#164).
+    """
+    if resolve_iso(value) is None:
+        raise argparse.ArgumentTypeError(
+            f"{value!r} is not a recognized language — pass a Whisper ISO "
+            "code (e.g. 'en', 'es', 'haw', 'yue') or an English name "
+            "(e.g. 'english', 'german')"
+        )
+    return value
 
 
 class BaseCommand(ABC):
