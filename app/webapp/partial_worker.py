@@ -24,9 +24,9 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
-# A pass that completes in under this many seconds against an empty
-# audio file is treated as a "no speech yet" signal — whisper still
-# emits an empty string but we shouldn't broadcast that as a partial.
+# Skip a partial pass until the take has accumulated at least this many
+# bytes of raw audio — running whisper against a near-empty file just
+# burns CPU for a partial that would be discarded anyway.
 _MIN_RAW_BYTES_FOR_PASS = 4096
 
 
@@ -36,7 +36,6 @@ class _Event:
 
     kind: str  # "partial" | "final"
     payload: Dict[str, Any]
-    version: int = 0
 
 
 @dataclass
@@ -110,7 +109,6 @@ class PartialWorker:
                         "version": self.partial_version,
                         "transcript": self.partial_text,
                     },
-                    version=self.partial_version,
                 )
             if self.finalised:
                 yield _Event(kind="final", payload={"transcript": self.partial_text})
@@ -223,7 +221,6 @@ class PartialWorker:
         await self._broadcast(_Event(
             kind="partial",
             payload={"version": self.partial_version, "transcript": text},
-            version=self.partial_version,
         ))
 
     # ------------------------------------------------------------ finalise

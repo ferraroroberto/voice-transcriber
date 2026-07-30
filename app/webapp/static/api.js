@@ -22,23 +22,6 @@ export function authFetch(input, init) {
   return fetch(input, opts);
 }
 
-export async function fetchJsonWithRetry(url, init, attempts) {
-  let lastErr;
-  for (let i = 0; i < (attempts || 2); i++) {
-    try {
-      const r = await authFetch(url, init || {});
-      if (!r.ok) throw new Error(`${url} → ${r.status}`);
-      return await r.json();
-    } catch (err) {
-      lastErr = err;
-      if (i + 1 < (attempts || 2)) {
-        await new Promise(res => setTimeout(res, 600));
-      }
-    }
-  }
-  throw lastErr;
-}
-
 // The auth gate is a native <dialog> (fleet modal contract) — Esc must not
 // dismiss it: a closed gate is not an unlocked app. One listener, module-wide.
 if (els.loginOverlay) {

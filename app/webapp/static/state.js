@@ -46,7 +46,6 @@ export const els = {
   loginPassword:    document.getElementById('loginPassword'),
   loginError:       document.getElementById('loginError'),
 
-  settingsPanel:    document.getElementById('settingsPanel'),
   languageSelect:   document.getElementById('languageSelect'),
   translateToggle:  document.getElementById('translateToggle'),
   micSelect:        document.getElementById('micSelect'),
@@ -73,7 +72,6 @@ export const state = {
   recorder:    null,
   stream:      null,
   streamKey:   '',          // constraints fingerprint for the cached stream
-  chunks:      [],          // queued chunks awaiting upload
   uploadChain: Promise.resolve(),  // serializes uploads so server appends in order
   pendingUploads: 0,
   bytesSent:   0,           // running total of chunk bytes uploaded
