@@ -35,21 +35,23 @@ flowchart TB
 
   subgraph tray["app/tray/ — tray plumbing"]
     SINGLEINST["single_instance.py\nWindows mutex — one tray at a time"]
-    LIFECYCLE["tray_lifecycle.ps1\nsubtree kill + port reclaim (tray.bat --restart)"]
   end
   TRAYPY --> SINGLEINST
   TRAYPY -->|boots + owns lifecycle of| WHISPERMGR
   TRAYPY -->|boots + owns lifecycle of| WEBAPPMGR
   TRAYPY --> TUNNEL
   TUNNEL -->|spawns if cloudflared.yml present| CLOUDFLARED["cloudflared tunnel"]
+  LIFECYCLE["tray_lifecycle.ps1\nsubtree kill + port reclaim — %USERPROFILE%/.claude/tray/,\nowned by fleet-config (project-scaffolding#153), not this repo"]
+  TRAYBAT -->|--restart| LIFECYCLE
 
   subgraph webapp["app/webapp/ — FastAPI mobile PWA"]
-    WEBSERVER["server.py\nroutes + lifespan (archive cleanup on boot)"]
+    WEBSERVER["server.py\nwiring: create_app(), lifespan (archive cleanup on boot), static mount"]
     WEBAPPMGR["manager.py\nadopt-or-spawn uvicorn on :8443"]
     ROUTERS["routers/\nsessions · auth · config · misc · activity · analytics"]
     MIDDLEWARE["middleware.py\nbearer-token auth, loopback bypass"]
     AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
+    EVENTLOOP["event_loop.py\nselector event-loop shim — every uvicorn spawn of\napp.webapp.server:app picks it (fixes the :8443 wedge, issue #113)"]
     STATIC["static/\nindex.html (Record · History · Settings tabs) · app.js ·\nrecorder.js · api.js · state.js · ui.js · history.js ·\npolish.js · styles.css (fleet tokens, light+dark)"]
     VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nnav · icons · card · switch · modal · empty-state"]
   end
@@ -57,6 +59,7 @@ flowchart TB
   WEBSERVER --> MIDDLEWARE
   ROUTERS --> AUDIOPY
   ROUTERS --> PARTIALW
+  WEBAPPMGR --> EVENTLOOP
   WEBSERVER --> STATIC
   STATIC --> VENDORED
 
