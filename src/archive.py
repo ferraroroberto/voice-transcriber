@@ -28,7 +28,7 @@ import logging
 import shutil
 import time
 import uuid
-from dataclasses import asdict, dataclass, field
+from dataclasses import MISSING, asdict, dataclass, field, fields
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Iterator, List, Optional
@@ -101,6 +101,20 @@ class SessionMeta:
     incognito: bool = False  # filtered out of list_sessions when True
     source: Optional[str] = None  # who created it: "webapp", "api", caller label
     extra: dict = field(default_factory=dict)
+
+
+# Per-field type coercion applied when rebuilding a SessionMeta from decoded
+# JSON in SessionArchive._hydrate() — fields absent here are passed through
+# raw (their Optional[...] type accepts the JSON-native value untouched).
+_META_COERCERS = {
+    "session_id": str,
+    "created_at": str,
+    "raw_format": str,
+    "raw_bytes": int,
+    "transcript_chars": int,
+    "incognito": bool,
+    "extra": lambda v: dict(v or {}),
+}
 
 
 @dataclass
@@ -239,7 +253,18 @@ class SessionArchive:
         return session
 
     def get(self, session_id: str) -> Optional[Session]:
-        for folder in self._iter_session_folders():
+        """Look up one session by id.
+
+        Sorted newest-first (#139's walker) rather than an unordered
+        walk: this sits on the hottest path in the app — once a second
+        for the whole duration of every recording via
+        ``POST /api/sessions/{id}/chunk``, plus once each for
+        ``/events``/``/finish``/``/polish``/``/text``/``/retranscribe``
+        — and a live session is always one of the newest folders, so the
+        match lands in the first few entries instead of scanning the
+        whole retention window (voice-transcriber#163).
+        """
+        for folder in self._iter_session_folders(sorted_=True):
             if folder.name == session_id:
                 return self._hydrate(folder)
         return None
@@ -402,34 +427,44 @@ class SessionArchive:
                     pass
 
     def _hydrate(self, folder: Path) -> Session:
+        """Rebuild a ``Session`` from a folder's ``meta.json``.
+
+        Driven off ``dataclasses.fields(SessionMeta)`` instead of a
+        hand-listed rebuild: the write side (``write_meta``) already
+        derives from the dataclass via ``asdict``, so a field added
+        there previously required a matching manual line here too, and
+        forgetting it silently dropped the field on every reload
+        (voice-transcriber#163). ``session_id``/``created_at`` fall back
+        to values derived from the folder itself rather than the
+        dataclass's own defaults; the rest fall back to whatever
+        ``SessionMeta`` already declares.
+        """
+        fallback_created_at = datetime.fromtimestamp(
+            folder.stat().st_mtime
+        ).isoformat(timespec="seconds")
+        folder_defaults = {"session_id": folder.name, "created_at": fallback_created_at}
+
+        raw: dict = {}
         meta_path = folder / META_FILENAME
-        meta = SessionMeta(
-            session_id=folder.name,
-            created_at=datetime.fromtimestamp(folder.stat().st_mtime).isoformat(
-                timespec="seconds"
-            ),
-        )
         if meta_path.exists():
             try:
                 raw = json.loads(meta_path.read_text(encoding="utf-8"))
-                meta = SessionMeta(
-                    session_id=str(raw.get("session_id", folder.name)),
-                    created_at=str(raw.get("created_at", meta.created_at)),
-                    language=raw.get("language"),
-                    sample_rate=raw.get("sample_rate"),
-                    raw_format=str(raw.get("raw_format", "audio/webm;codecs=opus")),
-                    raw_bytes=int(raw.get("raw_bytes", 0)),
-                    duration_seconds=raw.get("duration_seconds"),
-                    transcript_chars=int(raw.get("transcript_chars", 0)),
-                    polish_model=raw.get("polish_model"),
-                    polish_prompt_id=raw.get("polish_prompt_id"),
-                    polish_succeeded=raw.get("polish_succeeded"),
-                    error=raw.get("error"),
-                    incognito=bool(raw.get("incognito", False)),
-                    source=raw.get("source"),
-                    extra=dict(raw.get("extra") or {}),
-                )
             except (OSError, json.JSONDecodeError, TypeError) as exc:
                 logger.warning(f"⚠️  Stale meta for {folder.name}: {exc}")
+                raw = {}
 
-        return Session(session_id=folder.name, folder=folder, meta=meta)
+        kwargs = {}
+        for f in fields(SessionMeta):
+            if f.name in folder_defaults:
+                default = folder_defaults[f.name]
+            elif f.default is not MISSING:
+                default = f.default
+            elif f.default_factory is not MISSING:  # type: ignore[misc]
+                default = f.default_factory()
+            else:
+                default = None
+            value = raw.get(f.name, default)
+            coerce = _META_COERCERS.get(f.name)
+            kwargs[f.name] = coerce(value) if coerce else value
+
+        return Session(session_id=folder.name, folder=folder, meta=SessionMeta(**kwargs))

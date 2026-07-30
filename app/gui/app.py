@@ -458,22 +458,31 @@ class TranscriberApp:
             return bool(self.tray.append_mode)
         return bool(self.append_var.get())
 
+    def _set_transcript_buttons(self, enabled: bool) -> None:
+        """Enable/disable the Copy last / Reset / Polish trio together.
+
+        The three always move as one — there is a transcript to act on,
+        or there isn't — but were previously three hand-written
+        `.state([...])` blocks across the refresh/edit/reset call sites,
+        already subtly inconsistent about which buttons they touched
+        (voice-transcriber#163). Owning the derived state here means a
+        future button added to the group only needs to change one place.
+        """
+        state = ["!disabled"] if enabled else ["disabled"]
+        self.copy_last_btn.state(state)
+        self.reset_btn.state(state)
+        self.polish_btn.state(state)
+
     def _refresh_last_transcription(self) -> None:
         text = self._current_last_transcription()
         if text == self._displayed_last_transcription:
             return
         self._displayed_last_transcription = text
         self.last_text.delete("1.0", tk.END)
+        self._set_transcript_buttons(bool(text))
         if text:
             self.last_text.insert(tk.END, text)
-            self.copy_last_btn.state(["!disabled"])
             self.copy_last_btn.config(text="📋 Copy")
-            self.reset_btn.state(["!disabled"])
-            self.polish_btn.state(["!disabled"])
-        else:
-            self.copy_last_btn.state(["disabled"])
-            self.reset_btn.state(["disabled"])
-            self.polish_btn.state(["disabled"])
         # Source transcript changed → drop any stale polished output.
         self._last_polished = None
         self._render_polished("")
@@ -490,14 +499,7 @@ class TranscriberApp:
         else:
             self._last_transcription = text
         self._displayed_last_transcription = text
-        if text:
-            self.copy_last_btn.state(["!disabled"])
-            self.reset_btn.state(["!disabled"])
-            self.polish_btn.state(["!disabled"])
-        else:
-            self.copy_last_btn.state(["disabled"])
-            self.reset_btn.state(["disabled"])
-            self.polish_btn.state(["disabled"])
+        self._set_transcript_buttons(bool(text))
 
     def _reset_session(self) -> None:
         """Clear the transcript + polished panels and the underlying slot
@@ -511,9 +513,7 @@ class TranscriberApp:
         self._displayed_last_transcription = None
         self.last_text.delete("1.0", tk.END)
         self._render_polished("")
-        self.copy_last_btn.state(["disabled"])
-        self.reset_btn.state(["disabled"])
-        self.polish_btn.state(["disabled"])
+        self._set_transcript_buttons(False)
         self.copy_polished_btn.state(["disabled"])
 
     def _render_polished(self, text: str) -> None:
