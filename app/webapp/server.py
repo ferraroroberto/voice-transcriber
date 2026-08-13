@@ -202,6 +202,10 @@ def create_app() -> FastAPI:
     app.state.transcription_client = transcription_client
     app.state.polish_client = polish_client
     app.state.build_info = BUILD_INFO
+    # Bounds the rate at which the un-gated /api/login route can be
+    # exercised. Lives on app.state (not module level) so each app built
+    # in a test gets its own clean counter.
+    app.state.login_limiter = auth.AttemptLimiter()
     # Per-session rolling-transcription workers. Keyed by session_id;
     # populated lazily on the first chunk and cleaned up on /finish or
     # session delete.

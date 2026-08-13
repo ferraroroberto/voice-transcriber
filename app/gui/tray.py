@@ -51,6 +51,7 @@ from src.recording_pipeline import SilentTake, finalize_transcript, process_reco
 from src.tunnel import (
     CloudflaredNotFoundError,
     persist_tunnel_url,
+    publish_refusal_reason,
     read_tunnel_hostname,
     remove_tunnel_url_file,
     spawn_cloudflared,
@@ -575,6 +576,11 @@ class TrayApp:
         persistent public URL comes up alongside everything else.
         Best-effort — a missing cloudflared binary or a failed launch
         is logged but doesn't take the tray down."""
+        refusal = publish_refusal_reason(self._current_auth_token())
+        if refusal is not None:
+            logger.warning(f"⚠️  Cloudflare tunnel not started: {refusal}")
+            self._notify("Cloudflare tunnel", f"Not started — {refusal}")
+            return
         try:
             self._cloudflared_proc = spawn_cloudflared(TUNNEL_CONFIG_PATH, PROJECT_ROOT)
         except CloudflaredNotFoundError:

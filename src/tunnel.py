@@ -50,6 +50,24 @@ def read_tunnel_hostname(config_path: Path) -> Optional[str]:
     return None
 
 
+def publish_refusal_reason(auth_token: str) -> Optional[str]:
+    """Return why the tunnel must not be published, or ``None`` to proceed.
+
+    The bearer middleware treats an empty ``auth_token`` as "gate off" and
+    lets every caller through. That is the right default for a loopback-only
+    app, but publishing the same origin on a stable public hostname turns it
+    into an open one — so the two settings have to be decided together rather
+    than independently. Callers refuse the spawn and surface the reason.
+    """
+    if not (auth_token or "").strip():
+        return (
+            "no auth_token configured — refusing to publish the webapp on a "
+            "public hostname without one. Run scripts/gen_token.py, then "
+            "restart the tray."
+        )
+    return None
+
+
 def spawn_cloudflared(
     config_path: Path, cwd: Path, *, capture_output: bool = False
 ) -> subprocess.Popen:

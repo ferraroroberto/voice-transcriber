@@ -50,6 +50,11 @@ from src.webapp_config import (  # noqa: E402  — sys.path tweak above
     save_webapp_config,
 )
 
+# Floor on what this script will accept. The webapp exposes the same
+# value on a public hostname when the tunnel is up, so a value short
+# enough to be enumerated is not a reasonable default to allow silently.
+MIN_PASSWORD_LENGTH = 10
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
@@ -84,6 +89,17 @@ def main() -> int:
             "ℹ️  No auth_token is set yet — the password by itself does\n"
             "   nothing because /api/login hands back the bearer token.\n"
             "   Run `python scripts/gen_token.py` first, then re-run this."
+        )
+        return 1
+
+    if len(args.password) < MIN_PASSWORD_LENGTH:
+        log.error(
+            "❌ Too short — this value is reachable from the public tunnel,\n"
+            "   so it needs at least %d characters (got %d). A short\n"
+            "   passphrase of a few words types easily on a phone and is\n"
+            "   comfortably above the floor.",
+            MIN_PASSWORD_LENGTH,
+            len(args.password),
         )
         return 1
 
