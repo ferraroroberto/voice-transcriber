@@ -49,7 +49,7 @@ REM  Mutex-shared ports (a port another app may legitimately own) must NOT go in
 REM  the OWNED_PORTS reclaim list -- reclaiming one would kill the sibling.
 REM
 REM  IMPORTANT: ports :8090 and :8091 are SHARED with the sibling
-REM  claude-local-calls hub (whisper-server and translate-server). They are
+REM  local-llm-hub (whisper-server and translate-server). They are
 REM  deliberately NOT in OWNED_PORTS below, to avoid killing a running hub.
 REM  Only the webapp port :8443, which this tray definitively owns, is reclaimed.
 REM ============================================================================

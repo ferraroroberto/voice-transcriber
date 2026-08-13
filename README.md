@@ -158,7 +158,7 @@ The key knob is **`mode`**:
 | `mode`     | Behaviour on startup                                                             |
 |------------|----------------------------------------------------------------------------------|
 | `local`    | **This project owns the server.** If `host:port` is already in use by something else, refuse to start and surface a clear error. Otherwise spawn the bundled `whisper-server`. Stop it on exit. |
-| `external` | **Reuse an already-running server if present** (e.g. one started by the sibling [`claude-local-calls`](https://github.com/ferraroroberto/claude-local-calls) hub). If nothing is listening, spawn our own binary. Never stops a server it didn't start. |
+| `external` | **Reuse an already-running server if present** (e.g. one started by the sibling [`local-llm-hub`](https://github.com/ferraroroberto/local-llm-hub) hub). If nothing is listening, spawn our own binary. Never stops a server it didn't start. |
 
 Switch by editing the top of `src/whisper_server/whisper_server.yaml`:
 
@@ -264,6 +264,7 @@ voice-transcriber/
 │   ├── inject.py                  # clipboard + caret paste
 │   ├── mic_glyph.py               # runtime state-tinted tray renderer
 │   ├── tunnel.py                  # cloudflared spawn/persist/stop
+│   ├── process_supervisor.py      # shared adopt-or-spawn primitives (whisper + webapp managers)
 │   └── whisper_server/
 │       ├── manager.py             # spawn / kill / health / PID / describe
 │       └── whisper_server.yaml    # mode, paths, port, CLI args
@@ -314,7 +315,13 @@ voice-transcriber/
 ├── scripts/
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF
-│   └── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
+│   ├── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
+│   ├── gen_token.py               # generate/rotate/clear the bearer auth token
+│   ├── set_password.py            # set/clear the login-overlay password
+│   ├── gen_app_icons.py           # regenerate PWA/favicon/Stream Deck icons from the fleet brand SVG
+│   ├── run_named_tunnel.py        # headless uvicorn + named cloudflared tunnel (no tray)
+│   ├── run-e2e.ps1                # Playwright e2e suite against the live tray
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, pytest, disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
@@ -619,7 +626,7 @@ The fix is two whisper-server instances side-by-side:
   `whisper_server.yaml` configures.
 - `:8091` — a non-turbo, translate-capable model (e.g.
   `ggml-medium.bin`, CPU). Run by the sibling
-  [`claude-local-calls`](#-see-also) hub as a lazy-spawn proxy: idle most
+  [`local-llm-hub`](#-see-also) hub as a lazy-spawn proxy: idle most
   of the time, cold-starts in 3–8 s on the first translate request after
   idle, then unloads after 5 min of inactivity.
 
@@ -835,7 +842,7 @@ The webapp's session API (`POST /api/sessions` → `/chunk` → `/events`
 robust, never-lose-it recording + transcription by calling this app over
 loopback instead of re-implementing the `MediaRecorder` → whisper
 plumbing — the voice-transcriber is the canonical local audio service
-the way `claude-local-calls` is the canonical LLM hub.
+the way `local-llm-hub` is the canonical LLM hub.
 
 Same-host callers bypass auth and only need `verify=False` for the
 loopback cert. See **[docs/consuming-the-session-api.md](docs/consuming-the-session-api.md)**
@@ -1057,7 +1064,7 @@ still covers the same logic via the parity port in
 
 ## 🔗 See also
 
-- [ferraroroberto/claude-local-calls](https://github.com/ferraroroberto/claude-local-calls)
+- [ferraroroberto/local-llm-hub](https://github.com/ferraroroberto/local-llm-hub)
   — the sibling hub for local LLMs. When it's running it already owns
   port 8090 with a whisper-server; set `mode: external` here to reuse
   that instance instead of spawning your own.

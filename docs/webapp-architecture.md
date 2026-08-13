@@ -168,7 +168,10 @@ path — but a built-in, dormant-by-default token gate covers it.
   the simpler mental model.
 - **Page boot is exempt.** `/`, `/static/*`, `/healthz`, `/install-ca`
   remain reachable so the JS can load and pick up the token from
-  `?token=…` before any API call fires.
+  `?token=…` before any API call fires. `/api/login` is also exempt — a
+  device with no token yet has to be able to reach it to trade a
+  password for one — and `/api/version` is exempt so the build line
+  renders before the visitor has authenticated.
 - **Token accepted from header or query string.** Header is the steady
   state (`Authorization: Bearer <token>`). Query string is the bootstrap
   path: a phone navigating to `…/?token=…` for the very first time. The
@@ -178,3 +181,30 @@ path — but a built-in, dormant-by-default token gate covers it.
 
 `scripts/gen_token.py` generates / rotates / clears the token
 (`secrets.token_urlsafe(32)` → `webapp_config.json`).
+
+### Password gate (companion to the token)
+
+A long tokenised URL is awkward to paste on every fresh device, and on
+iOS PWAs whose `localStorage` is partitioned from Safari's main jar the
+token sometimes doesn't carry over. `scripts/set_password.py` sets or
+clears a short password (`config/webapp_config.json`'s `auth_password`)
+that lets a device trade it for the bearer token instead of needing the
+tokenised URL:
+
+- **`POST /api/login` swaps a password for the bearer token.** It is
+  deliberately outside the bearer gate (`app/webapp/routers/auth.py`) —
+  a device with no token has to be able to reach it — so it is the one
+  endpoint a caller can exercise repeatedly without presenting a
+  credential.
+- **`AttemptLimiter` bounds that exposure.** A small free allowance
+  (5 attempts) covers a fat-fingered human on a phone keyboard; past
+  that, each further rejected attempt from the same client waits out a
+  doubling delay (2s → 300s ceiling), so an unbounded guess rate never
+  materialises without ever locking the owner out permanently.
+- **Failed and throttled attempts are logged** with the requesting
+  client IP to `webapp/auth.log`, in addition to the normal server log,
+  so suspicious access is visible without scrolling full server logs.
+- **The password is a UX wrapper, not a second secret store.** The
+  bearer token must already be set (`gen_token.py`) for the password to
+  do anything — login just hands the existing token back once the
+  password checks out via `hmac.compare_digest`.

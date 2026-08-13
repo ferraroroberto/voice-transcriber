@@ -1,6 +1,6 @@
 """Download a prebuilt whisper.cpp release into `vendor/whisper.cpp/`.
 
-Mirrors what `ferraroroberto/claude-local-calls` does for its `whisper`
+Mirrors what `ferraroroberto/local-llm-hub` does for its `whisper`
 backend, trimmed to a single-purpose installer: one binary, one model
 location. On Windows we auto-detect whether an NVIDIA/CUDA GPU is present:
 if yes, we grab the cuBLAS build (CUDA DLLs bundled, no Toolkit needed);
