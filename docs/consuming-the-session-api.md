@@ -7,7 +7,7 @@ session API instead.
 
 This is a **supported, consumable integration surface**. The
 voice-transcriber is the canonical local audio service in the fleet,
-the way [`claude-local-calls`](https://github.com/ferraroroberto/claude-local-calls)
+the way [`local-llm-hub`](https://github.com/ferraroroberto/local-llm-hub)
 is the canonical LLM hub — downstream apps proxy to it over loopback
 rather than duplicating the capture/transcribe stack.
 

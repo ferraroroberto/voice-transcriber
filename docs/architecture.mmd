@@ -130,7 +130,7 @@ flowchart TB
   TRANSCLIENT -.->|fallback: hub unreachable → direct :8090| WHISPERBIN
 
   subgraph ext["External dependencies"]
-    LLMHUB["claude-local-calls\nlocal-llm-hub :8000 — polish models,\ntranscribe role (parakeet + whisper failover),\ntranslate whisper :8091"]
+    LLMHUB["local-llm-hub :8000 — polish models,\ntranscribe role (parakeet + whisper failover),\ntranslate whisper :8091"]
     CLOUDFLAREACCESS["Cloudflare Access + named tunnel"]
   end
   POLISH -->|POST /v1/messages| LLMHUB

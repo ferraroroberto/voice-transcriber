@@ -1,4 +1,4 @@
-"""Whisper-server process manager — mirrors `claude-local-calls/src/llama_process.py`.
+"""Whisper-server process manager — mirrors `local-llm-hub/src/backend_process.py`.
 
 One singleton process per project, keyed by the sibling `whisper_server.yaml`.
 The port is fixed, so the OS guarantees mutual exclusion: if another project
