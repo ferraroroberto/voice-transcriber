@@ -44,13 +44,13 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from app.webapp.manager import build_uvicorn_command, cert_paths  # noqa: E402
+from src.process_supervisor import stop_popen  # noqa: E402
 from src.tunnel import (  # noqa: E402
     CloudflaredNotFoundError,
     persist_tunnel_url,
     read_tunnel_hostname,
     remove_tunnel_url_file,
     spawn_cloudflared,
-    stop_process,
 )
 from _no_window import no_window_kwargs  # noqa: E402
 from _utf8 import reconfigure_utf8_streams  # noqa: E402
@@ -170,7 +170,7 @@ def main() -> int:
     finally:
         for proc, name in ((cloudflared, "cloudflared"), (uvicorn_proc, "uvicorn")):
             if proc is not None:
-                stop_process(proc, name)
+                stop_popen(proc, name=name)
         remove_tunnel_url_file(TUNNEL_URL_FILE)
 
     return 0

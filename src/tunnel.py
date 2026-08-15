@@ -1,20 +1,21 @@
 """Shared Cloudflare named-tunnel lifecycle: read the configured hostname,
-spawn ``cloudflared``, persist the public URL, and tear it down cleanly.
+spawn ``cloudflared``, and persist the public URL.
 
 Both the tray (``app/gui/tray.py``, auto-spawned as part of normal
 ``tray.bat`` startup) and the headless ``scripts/run_named_tunnel.py``
 front the same webapp through the same ``cloudflared tunnel --config …
-run`` process, the same ``webapp/last_tunnel_url.txt`` persistence (with
-``?token=…`` appended when an ``auth_token`` is configured), and the same
-CTRL_BREAK/terminate/kill teardown — this module is the one place that
-sequence lives so a fix lands once instead of twice.
+run`` process and the same ``webapp/last_tunnel_url.txt`` persistence
+(with ``?token=…`` appended when an ``auth_token`` is configured) — this
+module is the one place that lives so a fix lands once instead of twice.
+Teardown of the spawned process goes through
+``src.process_supervisor.stop_popen``, the single owner of the
+CTRL_BREAK/terminate/kill ladder (voice-transcriber#160).
 """
 
 from __future__ import annotations
 
 import logging
 import shutil
-import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -128,24 +129,6 @@ def persist_tunnel_url(hostname: str, url_file: Path) -> None:
             )
     except OSError as exc:
         logger.warning(f"⚠️  Could not write {url_file}: {exc}")
-
-
-def stop_process(proc: subprocess.Popen, name: str) -> None:
-    """CTRL_BREAK_EVENT (Windows) → terminate → kill-on-timeout teardown."""
-    try:
-        logger.info(f"🛑 Stopping {name} (pid={proc.pid})")
-        if sys.platform == "win32":
-            try:
-                proc.send_signal(signal.CTRL_BREAK_EVENT)
-            except Exception:
-                pass
-        proc.terminate()
-        try:
-            proc.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            proc.kill()
-    except Exception as exc:
-        logger.debug(f"{name} stop failed: {exc}")
 
 
 def remove_tunnel_url_file(url_file: Path) -> None:

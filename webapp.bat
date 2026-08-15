@@ -18,17 +18,9 @@ if not exist "%VENV_PY%" (
 
 cd /d "%SCRIPT_DIR%" || exit /b 1
 
-set "CERT_DIR=%SCRIPT_DIR%webapp\certificates"
-set "CERT=%CERT_DIR%\cert.pem"
-set "KEY=%CERT_DIR%\key.pem"
-
-if not exist "%CERT%" (
-    echo [INFO] No HTTPS cert found, running HTTP-only on :8443.
-    echo        Run scripts\gen_ssl_cert.py to enable HTTPS ^(required for mobile mics^).
-    "%VENV_PY%" -m uvicorn app.webapp.server:app --host 0.0.0.0 --port 8443 --loop app.webapp.event_loop:selector_loop_factory --proxy-headers --forwarded-allow-ips 127.0.0.1
-) else (
-    echo [INFO] HTTPS via %CERT%
-    "%VENV_PY%" -m uvicorn app.webapp.server:app --host 0.0.0.0 --port 8443 --ssl-keyfile "%KEY%" --ssl-certfile "%CERT%" --loop app.webapp.event_loop:selector_loop_factory --proxy-headers --forwarded-allow-ips 127.0.0.1
-)
+REM Argv construction (host/port/certs/uvicorn flags) lives in one place --
+REM app.webapp.manager.build_uvicorn_command, via scripts\run_webapp.py --
+REM so this bat can't drift from the tray's spawn path (voice-transcriber#174).
+"%VENV_PY%" scripts\run_webapp.py
 
 exit /b %ERRORLEVEL%

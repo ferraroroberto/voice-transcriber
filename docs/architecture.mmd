@@ -12,7 +12,7 @@ flowchart TB
   subgraph entry["Entry points"]
     LAUNCHER["launcher.py\nputs repo root on sys.path, dispatches to app.cli.main"]
     TRAYBAT["tray.bat"]
-    WEBAPPBAT["webapp.bat / webapp_tunnel_named.bat"]
+    WEBAPPBAT["webapp.bat -> scripts/run_webapp.py\n/ webapp_tunnel_named.bat -> scripts/run_named_tunnel.py\nboth source uvicorn argv from WEBAPPMGR's\nbuild_uvicorn_command (issue #160, #174)"]
     SERVERBAT["server.bat"]
   end
   TRAYBAT --> LAUNCHER
@@ -82,8 +82,8 @@ flowchart TB
     INJECT["inject.py\nclipboard + caret paste"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
     MICGLYPH["mic_glyph.py\nruntime state-tinted tray renderer —\nsame mic.svg silhouette as brand_gen"]
-    RECPIPE["recording_pipeline.py\nsilence-gate -> gain-boost -> transcribe,\nshared by app.py + tray.py"]
-    TUNNEL["tunnel.py\ncloudflared spawn/persist/stop,\nshared by tray.py + scripts/run_named_tunnel.py"]
+    RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py (issue #174)"]
+    TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by tray.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen (issue #174)"]
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
     WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
@@ -92,6 +92,7 @@ flowchart TB
   WHISPERMGR --> WHISPERYAML
   WHISPERMGR --> PROCSUP
   WEBAPPMGR --> PROCSUP
+  TRAYPY -.->|stop_popen(cloudflared)| PROCSUP
   VOCAB --> HOTRELOAD
   SNIPPETS --> HOTRELOAD
   SPEAKERLABEL --> HOTRELOAD

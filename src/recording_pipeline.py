@@ -1,14 +1,17 @@
 """Shared mic-recording take-processing pipeline: silence gate -> gain
-boost -> whisper transcription.
+boost -> whisper transcription -> finalize.
 
 Both the tk main window (``app/gui/app.py``) and the tray
 (``app/gui/tray.py``) run this exact sequence on every Record-button /
 hotkey take: a near-silent recording never reaches whisper (it would
 otherwise hallucinate text on empty audio), a configured gain boost is
 applied for quiet environments, then the samples go to
-``TranscriptionClient``. One implementation here means a fix to the
-silence-threshold fallback or the gain-boost ordering lands once instead
-of twice.
+``TranscriptionClient``, then the result is finalized (strip / append-mode
+merge / clipboard copy). ``handle_take`` is the single owner of that whole
+sequence (voice-transcriber#174) — each surface gets back one
+``TakeResult`` and renders it (toast vs messagebox) plus writes its own
+last-transcription slot; the workflow itself can't drift between the two
+surfaces again.
 """
 
 from __future__ import annotations
@@ -23,7 +26,7 @@ from .app_config import AppConfig
 from .gain import apply_gain_db
 from .recorder import Recording
 from .silence import DEFAULT_SILENCE_DBFS, is_silent_samples
-from .transcription_client import TranscriptionClient
+from .transcription_client import TranscriptionClient, TranscriptionError
 from .webapp_config import WebappConfig
 
 logger = logging.getLogger(__name__)
@@ -109,3 +112,59 @@ def finalize_transcript(
         except Exception as exc:
             logger.warning(f"⚠️  Clipboard copy failed: {exc}")
     return text
+
+
+@dataclass
+class TakeResult:
+    """Outcome of ``handle_take``. Exactly one of the three fields is set;
+    the caller switches on which and renders it — a messagebox for the tk
+    window, a toast for the tray. ``text is None`` with ``error`` and
+    ``silent`` both ``None`` means the transcription came back empty after
+    finalizing (whitespace-only)."""
+
+    text: Optional[str] = None
+    error: Optional[str] = None
+    silent: Optional[SilentTake] = None
+
+
+def handle_take(
+    recording: Recording,
+    config: AppConfig,
+    webapp_cfg: Optional[WebappConfig],
+    client: TranscriptionClient,
+    *,
+    last_transcription: Optional[str],
+    append_mode: bool,
+    auto_copy: bool,
+    translate: bool = False,
+) -> TakeResult:
+    """Run the full take-processing workflow: ``process_recording`` ->
+    TranscriptionError arm -> SilentTake arm -> ``finalize_transcript``.
+
+    Both the tray and the tk main window ran hand-written copies of this
+    sequence that had already drifted (voice-transcriber#174); this is the
+    single implementation. Callers only render the result and write their
+    own last-transcription slot.
+    """
+    try:
+        result = process_recording(
+            recording, config, webapp_cfg, client, translate=translate,
+        )
+    except TranscriptionError as e:
+        msg = str(e)
+        logger.error(f"❌ {msg}")
+        return TakeResult(error=msg)
+
+    if isinstance(result, SilentTake):
+        logger.info(
+            f"🤫 Skipping whisper: {result.dbfs:.1f} dBFS < {result.threshold} dBFS"
+        )
+        return TakeResult(silent=result)
+
+    text = finalize_transcript(
+        result,
+        last_transcription=last_transcription,
+        append_mode=append_mode,
+        auto_copy=auto_copy,
+    )
+    return TakeResult(text=text)
