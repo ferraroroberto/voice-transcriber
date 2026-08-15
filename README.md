@@ -270,8 +270,13 @@ voice-transcriber/
 │       └── whisper_server.yaml    # mode, paths, port, CLI args
 ├── app/                           # ── UI surfaces ──
 │   ├── gui/
-│   │   ├── app.py                 # tkinter main window (with polish row)
-│   │   ├── tray.py                # pystray + pynput hotkey + webapp lifecycle
+│   │   ├── app.py                 # tkinter main window: composition + window lifecycle
+│   │   ├── server_panel.py        # status traffic light, model line, start/stop
+│   │   ├── transcript_panel.py    # last-transcription box, Copy/Reset/Append
+│   │   ├── polish_panel.py        # polish row: style/model pickers, polished text
+│   │   ├── tray.py                # pystray icon/menu, event pump, record->transcribe->notify
+│   │   ├── hotkey_controller.py   # PTT tap/hold state machine, pynput listener
+│   │   ├── service_supervisor.py  # whisper-server + webapp + cloudflared lifecycles
 │   │   ├── recording_popup.py     # compact VU popup
 │   │   └── diagnostics_window.py
 │   ├── cli/
@@ -291,7 +296,10 @@ voice-transcriber/
 │       └── static/
 │           ├── index.html         # tabbed SPA (Record · History · Settings), big-button mobile-first
 │           ├── app.js             # module wiring / boot sequence
-│           ├── recorder.js        # MediaRecorder + chunked upload logic
+│           ├── recorder.js        # MediaRecorder record/upload/finish state machine
+│           ├── level.js           # VU meter + VAD auto-stop
+│           ├── partials.js        # rolling-transcription SSE stream
+│           ├── wakelock.js        # screen wake lock during recording
 │           ├── api.js             # fetch wrappers for server endpoints
 │           ├── state.js           # shared runtime state
 │           ├── ui.js              # DOM helpers and rendering

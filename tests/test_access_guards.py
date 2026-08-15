@@ -54,19 +54,19 @@ class TestTrayConsultsTheGuard:
     """The predicate is only useful if the spawn path actually calls it."""
 
     def test_tunnel_worker_returns_before_spawning(self, monkeypatch):
-        from app.gui import tray as tray_mod
+        from app.gui import service_supervisor as svc_mod
 
         spawned = []
         monkeypatch.setattr(
-            tray_mod, "spawn_cloudflared",
+            svc_mod, "spawn_cloudflared",
             lambda *a, **k: spawned.append(a) or object(),
         )
-        monkeypatch.setattr(tray_mod.TrayApp, "_current_auth_token", staticmethod(lambda: ""))
+        monkeypatch.setattr(svc_mod, "current_auth_token", lambda: "")
 
         notes = []
-        fake = object.__new__(tray_mod.TrayApp)
+        fake = object.__new__(svc_mod.ServiceSupervisor)
         fake._notify = lambda *a: notes.append(a)  # type: ignore[attr-defined]
-        tray_mod.TrayApp._start_tunnel_worker(fake)
+        svc_mod.ServiceSupervisor.start_tunnel(fake)
 
         assert spawned == [], "cloudflared must not be spawned without a token"
         assert notes, "the refusal must be surfaced to the user, not swallowed"
