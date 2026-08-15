@@ -8,7 +8,7 @@ import logging
 import platform
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +53,6 @@ _LEGACY_MODE_TO_ISO: Dict[str, str] = {
     # Pass-through for any other label spelled out in lowercase.
     **{label.lower(): iso for iso, label in WHISPER_LANGUAGES.items()},
 }
-
-# Legacy 3-language tuple — the original mode names, from the era before
-# the picker grew to the full 99-language table. Kept for
-# backward-compat config.json files and tests; the CLI's `--language`
-# validates via resolve_iso() (voice-transcriber#164) rather than this
-# tuple, so any of the 100 ISO codes or English names works everywhere
-# the tk window and webapp's enabled_language_map() already do.
-LANGUAGE_MODES: Tuple[str, ...] = ("english", "spanish", "italian")
 
 VALID_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
 

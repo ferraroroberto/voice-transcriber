@@ -41,8 +41,6 @@ SAMPLE_CONFIG_PATH = (
 # domain modules — polish_prompts.py, silence.py, gain.py — rather than
 # re-declared here, so each literal has exactly one source.
 DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
-DEFAULT_HOST = "0.0.0.0"
-DEFAULT_PORT = 8443
 DEFAULT_RETENTION_DAYS = 30
 # Quiet-environment gain boost — amplifies captured audio before whisper,
 # orthogonal to the silence gate above (see src/gain.py). Off by default;
@@ -91,12 +89,6 @@ class WebappConfig:
     )
     polish_prompt_default: str = DEFAULT_POLISH_PROMPT_ID
     llm_hub_url: str = DEFAULT_LLM_HUB_URL
-    # Persisted for reference/UI only — the authoritative bind host/port
-    # the tray spawns uvicorn on lives in config/config.json's `webapp`
-    # section (see app.webapp.manager.WebappRuntimeConfig). These are not
-    # read for binding.
-    host: str = DEFAULT_HOST
-    port: int = DEFAULT_PORT
     history_retention_days: int = DEFAULT_RETENTION_DAYS
     force_builtin_mic_default: bool = False
     preferred_mic_id: Optional[str] = None
@@ -225,10 +217,10 @@ def append_auth_token(url: str, token: Optional[str]) -> str:
 
 
 # Fields never sent to the client: secrets (auth_token/auth_password), and
-# host/port/llm_hub_url/silence_dbfs_threshold which are server-internal
-# (see the field comments above on WebappConfig).
+# llm_hub_url/silence_dbfs_threshold which are server-internal (see the
+# field comments above on WebappConfig).
 CLIENT_HIDDEN_FIELDS = frozenset(
-    {"auth_token", "auth_password", "host", "port", "llm_hub_url", "silence_dbfs_threshold"}
+    {"auth_token", "auth_password", "llm_hub_url", "silence_dbfs_threshold"}
 )
 
 
@@ -255,8 +247,6 @@ def _validate(cfg: WebappConfig) -> None:
         )
     if cfg.history_retention_days < 1:
         raise ValueError("history_retention_days must be >= 1")
-    if not (1 <= cfg.port <= 65535):
-        raise ValueError(f"port out of range: {cfg.port}")
     if cfg.partial_interval_seconds < 0:
         raise ValueError("partial_interval_seconds must be >= 0 (0 disables)")
     if cfg.auto_stop_silence_ms < 200:
