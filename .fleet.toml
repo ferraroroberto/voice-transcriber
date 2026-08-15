@@ -10,3 +10,60 @@ chips       = ["whisper :8090"]
 
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "727dfe8b9e4e625993c0e0286836e510015411cc", dest = "tests/e2e/_e2e_live_guard.py" }
+
+# Diff-proportionate e2e routing (project-scaffolding docs/e2e-routing.md).
+# Rules are evaluated top-to-bottom; first match wins. Unmatched paths fall
+# through to `full` by design — see the doc before narrowing this table.
+[e2e]
+static_pytest_target = "tests/e2e/test_smoke.py"
+static_browsers       = ["chromium"]
+full_pytest_target    = "tests/e2e"
+
+[[e2e.rule]]              # inert assets under the webapp static tree -> static
+tier       = "static"
+prefix     = "app/webapp/static/"
+extensions = ["svg", "png", "jpg", "ico", "woff2", "webmanifest"]
+
+[[e2e.rule]]             # the webapp (routers + static css/js/html) -> full
+tier   = "full"
+prefix = "app/webapp/"
+
+[[e2e.rule]]             # tray/gui, cli, and shared logic -> no browser impact -> none
+tier       = "none"
+prefix     = "app/gui/"
+extensions = ["py"]
+
+[[e2e.rule]]             # cli entry points -> no browser impact -> none
+tier       = "none"
+prefix     = "app/cli/"
+extensions = ["py"]
+
+[[e2e.rule]]             # shared logic layer -> no browser impact -> none
+tier       = "none"
+prefix     = "src/"
+extensions = ["py"]
+
+[[e2e.rule]]             # the e2e suite itself + its boot conftest -> full
+tier       = "full"
+prefix     = "tests/e2e/"
+
+[[e2e.rule]]             # unit/integration tests (not the e2e suite itself) -> none
+tier       = "none"
+prefix     = "tests/"
+extensions = ["py"]
+
+[[e2e.rule]]             # tooling scripts (incl. this classifier) -> none
+tier       = "none"
+prefix     = "scripts/"
+
+[[e2e.rule]]             # docs -> none
+tier       = "none"
+prefix     = "docs/"
+
+[[e2e.rule]]             # markdown anywhere -> none
+tier       = "none"
+extensions = ["md"]
+
+[[e2e.rule]]             # this file itself -> none
+tier = "none"
+path = ".fleet.toml"
