@@ -49,6 +49,13 @@ from cryptography.x509.oid import NameOID
 
 logger = logging.getLogger("gen_ssl_cert")
 
+# `python scripts/gen_ssl_cert.py` already puts this script's own directory
+# on sys.path[0]; the explicit insert covers loading by path (e.g. a test
+# using importlib.util.spec_from_file_location), which doesn't.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _no_window import no_window_kwargs  # noqa: E402
+from _utf8 import reconfigure_utf8_streams  # noqa: E402
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CERT_DIR = PROJECT_ROOT / "webapp" / "certificates"
 STATIC_DIR = PROJECT_ROOT / "app" / "webapp" / "static"
@@ -84,6 +91,7 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    reconfigure_utf8_streams()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
@@ -168,6 +176,7 @@ def _local_hostnames() -> Set[str]:
             text=True,
             timeout=4,
             check=False,
+            **no_window_kwargs(),
         )
         if result.returncode == 0:
             import json
@@ -218,6 +227,7 @@ def _local_ip_addresses() -> Set[ipaddress.IPv4Address]:
             text=True,
             timeout=4,
             check=False,
+            **no_window_kwargs(),
         )
         for line in result.stdout.splitlines():
             line = line.strip()
@@ -430,6 +440,7 @@ def _install_windows_trust(ca_pem: Path) -> None:
             capture_output=True,
             text=True,
             check=False,
+            **no_window_kwargs(),
         )
         if result.returncode == 0:
             logger.info(f"🛡️  Installed CA into Windows CurrentUser\\Root")

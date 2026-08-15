@@ -29,6 +29,12 @@ import zipfile
 from pathlib import Path
 from typing import Iterable, List, Optional
 
+# `python scripts/install_whisper_cpp.py` already puts this script's own
+# directory on sys.path[0]; the explicit insert covers loading by path
+# (e.g. a test using importlib.util.spec_from_file_location), which doesn't.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _no_window import no_window_kwargs  # noqa: E402
+
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -54,6 +60,7 @@ def _has_cuda_gpu() -> bool:
             ["nvidia-smi", "--query-gpu=name", "--format=csv,noheader"],
             capture_output=True,
             timeout=5,
+            **no_window_kwargs(),
         )
         if result.returncode == 0 and result.stdout.strip():
             return True
@@ -117,7 +124,10 @@ def _already_installed() -> bool:
         return False
     try:
         result = subprocess.run(
-            [str(bin_path), "--help"], timeout=10, capture_output=True
+            [str(bin_path), "--help"],
+            timeout=10,
+            capture_output=True,
+            **no_window_kwargs(),
         )
     except (OSError, subprocess.SubprocessError):
         return False
