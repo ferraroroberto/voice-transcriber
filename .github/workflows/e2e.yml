@@ -56,7 +56,7 @@ jobs:
         run: Copy-Item config/webapp_config.sample.json config/webapp_config.json
 
       - name: Run pre-ship gate
-        run: pwsh -File scripts/verify-before-ship.ps1
+        run: powershell -File scripts/verify-before-ship.ps1
 
       - name: Upload e2e diagnostic log
         # Runs even when the gate fails — the autoboot webapp output makes any

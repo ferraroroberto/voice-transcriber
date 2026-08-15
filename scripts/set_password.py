@@ -34,11 +34,10 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 # Make sure emoji in log output survive a cp1252 PowerShell.
-if hasattr(sys.stdout, "reconfigure"):
-    try:
-        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-    except Exception:
-        pass
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _utf8 import reconfigure_utf8_streams  # noqa: E402  — sys.path tweak above
+
+reconfigure_utf8_streams()
 
 # Local imports
 PROJECT_ROOT = Path(__file__).resolve().parent.parent

@@ -52,6 +52,8 @@ from src.tunnel import (  # noqa: E402
     spawn_cloudflared,
     stop_process,
 )
+from _no_window import no_window_kwargs  # noqa: E402
+from _utf8 import reconfigure_utf8_streams  # noqa: E402
 
 logger = logging.getLogger("run_named_tunnel")
 
@@ -87,11 +89,9 @@ def _spawn_uvicorn(port: int) -> subprocess.Popen:
         "127.0.0.1", port, cert_paths(PROJECT_ROOT)
     )
     logger.info(f"🚀 Starting uvicorn: {' '.join(cmd)}")
-    kw: dict = dict(cwd=str(PROJECT_ROOT))
+    kw: dict = dict(cwd=str(PROJECT_ROOT), **no_window_kwargs())
     if sys.platform == "win32":
-        kw["creationflags"] = (
-            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
-        )
+        kw["creationflags"] |= subprocess.CREATE_NEW_PROCESS_GROUP
     return subprocess.Popen(cmd, **kw)
 
 
@@ -111,6 +111,7 @@ def _stream(proc: subprocess.Popen) -> None:
 
 
 def main() -> int:
+    reconfigure_utf8_streams()
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
