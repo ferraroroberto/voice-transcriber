@@ -1,15 +1,22 @@
-/* Recording lifecycle — mic capture, chunked upload, VU meter, VAD
- * auto-stop, rolling-transcription SSE, background-finalise / resume.
+/* Recording lifecycle — mic capture, chunked upload, background-finalise
+ * / resume. The record → upload → finish state machine: idle → recording
+ * → uploading → transcribing → idle.
  *
- * State machine: idle → recording → uploading → transcribing → idle.
+ * The VU meter + VAD auto-stop live in level.js, the rolling-transcription
+ * SSE stream lives in partials.js, and the screen wake lock lives in
+ * wakelock.js — this module owns only the state-machine transitions and
+ * wires those three in at the right points.
  */
 
 'use strict';
 
-import { els, state, getStoredToken } from './state.js';
+import { els, state } from './state.js';
 import { authFetch } from './api.js';
-import { isOn, renderTranscript, showToast, tryAutoCopy, truncate } from './ui.js';
+import { formatBytes, isOn, renderTranscript, showToast, tryAutoCopy, truncate } from './ui.js';
 import { refreshHistory } from './history.js';
+import { setupLevelMeter, teardownLevelMeter } from './level.js';
+import { openPartialStream, closePartialStream } from './partials.js';
+import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
 
 function setMode(m) { state.mode = m; }
 
@@ -167,7 +174,7 @@ async function startRecording() {
   state.vadStopFired = false;
   state.backgroundFinalized = false;
 
-  setupLevelMeter(stream);
+  setupLevelMeter(stream, stopRecording);
   acquireWakeLock();
   startTimer();
   openPartialStream(state.sessionId);
@@ -372,7 +379,7 @@ function pickMimeType() {
   return null;
 }
 
-// ----------------------------------------------------- timer + VU
+// ----------------------------------------------------- timer
 
 function startTimer() {
   state.timer = setInterval(() => {
@@ -401,12 +408,6 @@ function updateModelRoute(servedModel, servedHost) {
   els.modelRoute.hidden = false;
 }
 
-function formatBytes(n) {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(2)} MB`;
-}
-
 function formatDuration(sec) {
   if (sec < 60) return `${sec.toFixed(1)} s`;
   const m = Math.floor(sec / 60);
@@ -417,214 +418,6 @@ function formatDuration(sec) {
 function stopTimer() {
   if (state.timer) clearInterval(state.timer);
   state.timer = null;
-}
-
-function setupLevelMeter(stream) {
-  try {
-    state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const src = state.audioCtx.createMediaStreamSource(stream);
-    const analyser = state.audioCtx.createAnalyser();
-    analyser.fftSize = 512;
-    src.connect(analyser);
-    state.analyser = analyser;
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    // VAD threshold: byte-time-domain values are 0..255 centred on
-    // 128, so |sample-128| is the analyser's peak deviation per
-    // ~10 ms frame. Threshold tuning notes:
-    //   ~3-8  → typical quiet-room floor with mic AGC engaged.
-    //          (Bug found 2026-05-13: 6 was too tight, silence
-    //          accumulator never advanced because room noise kept
-    //          tripping it.)
-    //   ~15   → "barely audible" — fits speech pauses and tail
-    //          silence; matches roughly 23% on the level bar.
-    //   ~25+  → "actually quiet" — risk of late triggering when
-    //          a quiet mumble follows a strong sentence.
-    // 15 is a deliberate compromise; expose as a config knob later
-    // if it needs per-mic tuning.
-    const VAD_LOUDNESS_THRESHOLD = 15;
-    state.levelTimer = setInterval(() => {
-      analyser.getByteTimeDomainData(data);
-      let max = 0;
-      for (let i = 0; i < data.length; i++) {
-        const v = Math.abs(data[i] - 128);
-        if (v > max) max = v;
-      }
-      const pct = Math.min(100, (max / 128) * 200);
-      els.levelFill.style.width = pct + '%';
-      maybeFireAutoStop(max, VAD_LOUDNESS_THRESHOLD);
-    }, 80);
-  } catch (err) {
-    console.warn('VU meter setup failed', err);
-  }
-}
-
-function maybeFireAutoStop(loudness, threshold) {
-  // Pillar 3 — client-side VAD auto-stop. The toggle in the Settings
-  // panel is the live source of truth (like the existing Translate /
-  // Append / Incognito toggles): flip it and the next take honours
-  // it without tapping Save. Save persists the choice as the default
-  // for fresh page loads.
-  const enabled = isOn(els.vadAutoStopToggle);
-  if (!enabled) return;
-  if (state.mode !== 'recording' || state.vadStopFired) return;
-  const now = Date.now();
-  // Ignore the first ~600 ms — the AnalyserNode warms up and a fresh
-  // mic stream can flat-line briefly before audio reaches it.
-  if (now - state.startedAt < 600) return;
-  const trigger = parseInt(
-    (els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10,
-  ) || 1500;
-  if (loudness > threshold) {
-    if (state.vadSilenceSince) state.vadSilenceSince = 0;
-    // Live peak readout — once a second so the user can see the mic
-    // floor and pick a sensible threshold. Held for 250 ms so the
-    // recording-byte-counter writer doesn't immediately stamp on it.
-    if (now - state.vadStatusOwnedUntil > 800) {
-      els.recordStatus.textContent =
-        `VAD peak=${loudness} (silence trips ≤ ${threshold}) · ${formatBytes(state.bytesSent)}`;
-      state.vadStatusOwnedUntil = now + 250;
-    }
-    return;
-  }
-  if (!state.vadSilenceSince) {
-    state.vadSilenceSince = now;
-    return;
-  }
-  const silentFor = now - state.vadSilenceSince;
-  // Live indicator so the user can see the detector working — hold
-  // status-line ownership for 250 ms so the byte-counter writer
-  // doesn't immediately overwrite it.
-  els.recordStatus.textContent =
-    `Silence ${silentFor} ms / ${trigger} ms`;
-  state.vadStatusOwnedUntil = now + 250;
-  if (silentFor >= trigger) {
-    state.vadStopFired = true;
-    els.recordStatus.textContent =
-      'Auto-stop on silence — keep talking to cancel…';
-    // 500 ms grace before actually stopping; if the user resumes
-    // talking the next tick clears state.vadStopFired's effect.
-    setTimeout(() => {
-      if (!state.vadStopFired || state.mode !== 'recording') return;
-      // One last loudness probe — if the user resumed talking during
-      // the grace window, abort the stop.
-      if (state.analyser) {
-        const probe = new Uint8Array(state.analyser.frequencyBinCount);
-        state.analyser.getByteTimeDomainData(probe);
-        let pmax = 0;
-        for (let i = 0; i < probe.length; i++) {
-          const v = Math.abs(probe[i] - 128);
-          if (v > pmax) pmax = v;
-        }
-        if (pmax > threshold) {
-          state.vadStopFired = false;
-          state.vadSilenceSince = 0;
-          els.recordStatus.textContent = 'Recording…';
-          return;
-        }
-      }
-      stopRecording();
-    }, 500);
-  }
-}
-
-function openPartialStream(sessionId) {
-  closePartialStream();
-  // Subscribe unless the server *explicitly* reports rolling transcription
-  // disabled. A missing flag — e.g. a transient /api/config failure that
-  // fell back to client defaults, common on a cold-waking Tailscale link —
-  // must NOT silently kill live partials: chunk upload + /finish still
-  // deliver the final transcript, which masks the loss. See issue #87.
-  if (state.config && state.config.rolling_transcription_enabled === false) return;
-  if (!('EventSource' in window)) return;
-  const tok = getStoredToken();
-  let url = `/api/sessions/${sessionId}/events`;
-  if (tok) url += `?token=${encodeURIComponent(tok)}`;
-  let es;
-  try {
-    es = new EventSource(url);
-  } catch (err) {
-    console.warn('EventSource open failed', err);
-    return;
-  }
-  state.eventSource = es;
-  es.addEventListener('partial', (e) => {
-    try {
-      const data = JSON.parse(e.data);
-      applyPartial(data);
-    } catch (_) {}
-  });
-  es.addEventListener('final', (e) => {
-    // Final transcript arrived via SSE — leave the user-facing
-    // settling to onRecorderStopped which also handles status, history
-    // refresh, and the auto-copy. Close the stream so we don't hold
-    // the connection open after the take ends.
-    closePartialStream();
-  });
-  es.onerror = () => {
-    // Browser will auto-retry; we just leave the handle in place so
-    // the next reconnect drops its events in.
-  };
-}
-
-export function closePartialStream() {
-  if (state.eventSource) {
-    try { state.eventSource.close(); } catch (_) {}
-    state.eventSource = null;
-  }
-}
-
-function applyPartial(data) {
-  if (!data || typeof data.transcript !== 'string') return;
-  if (typeof data.version === 'number') {
-    if (data.version < state.partialVersion) return; // stale
-    state.partialVersion = data.version;
-  }
-  const merged = state.partialBaseTranscript
-    ? state.partialBaseTranscript + '\n\n' + data.transcript
-    : data.transcript;
-  state.transcript = merged;
-  els.transcript.value = merged;
-  els.copyTranscript.disabled = !merged;
-  els.polishBtn.disabled = !merged;
-  els.saveTranscript.disabled = true;
-  if (state.mode === 'recording' && Date.now() >= state.vadStatusOwnedUntil) {
-    els.recordStatus.textContent =
-      `Recording · partial v${state.partialVersion} · ${formatBytes(state.bytesSent)} streamed`;
-  }
-}
-
-function teardownLevelMeter() {
-  if (state.levelTimer) clearInterval(state.levelTimer);
-  state.levelTimer = null;
-  if (state.audioCtx) {
-    try { state.audioCtx.close(); } catch (err) {}
-    state.audioCtx = null;
-  }
-}
-
-// ----------------------------------------------------- screen wake lock
-
-// iOS auto-locks the screen during long records, which backgrounds the
-// page and revokes the mic. Hold a screen wake lock for the duration of
-// the take. The platform auto-releases the sentinel whenever the page is
-// hidden (and on low battery), so app.js re-acquires on
-// visibilitychange→visible while still recording; the `release` listener
-// clears our handle so that re-acquire isn't blocked by a stale sentinel.
-export async function acquireWakeLock() {
-  if (!('wakeLock' in navigator) || state.wakeLock) return;
-  try {
-    const sentinel = await navigator.wakeLock.request('screen');
-    sentinel.addEventListener('release', () => { state.wakeLock = null; });
-    state.wakeLock = sentinel;
-  } catch (_) {
-    state.wakeLock = null;
-  }
-}
-
-export function releaseWakeLock() {
-  if (!state.wakeLock) return;
-  try { state.wakeLock.release(); } catch (_) {}
-  state.wakeLock = null;
 }
 
 export async function cleanupIncognitoSession() {

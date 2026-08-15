@@ -8,7 +8,8 @@ import { els, state } from './state.js';
 import { authFetch, readErrorMessage } from './api.js';
 import { renderTranscript, showToast, truncate, tryAutoCopy } from './ui.js';
 import { refreshHistory } from './history.js';
-import { cleanupIncognitoSession, closePartialStream, hideResumeButton } from './recorder.js';
+import { cleanupIncognitoSession, hideResumeButton } from './recorder.js';
+import { closePartialStream } from './partials.js';
 
 export async function onPolish() {
   if (!state.transcript) return;

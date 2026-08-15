@@ -25,11 +25,21 @@ flowchart TB
   LAUNCHER --> CLIMAIN
 
   subgraph gui["app/gui/ — desktop UI + tray"]
-    TKAPP["app.py\ntkinter main window + polish row"]
+    TKAPP["app.py\ntkinter main window: composition + window lifecycle,\nlanguage/mic/gain-boost settings, record/file flow"]
+    SERVERPANEL["server_panel.py\nstatus traffic light, model line, start/stop"]
+    TRANSCRIPTPANEL["transcript_panel.py\nlast-transcription box, Copy/Reset/Append"]
+    POLISHPANEL["polish_panel.py\npolish row: style/model pickers, polished text"]
     RECPOPUP["recording_popup.py\ncompact VU popup"]
     DIAGWIN["diagnostics_window.py"]
-    TRAYPY["tray.py\npystray icon + pynput global hotkey (F8)"]
+    TRAYPY["tray.py\npystray icon + menu, tkinter event pump,\nrecord -> transcribe -> notify pipeline"]
+    HOTKEYCTRL["hotkey_controller.py\nPTT tap/hold state machine, pynput listener"]
+    SVCSUP["service_supervisor.py\nwhisper-server + webapp + cloudflared\nlifecycles, status/labels"]
   end
+  TKAPP --> SERVERPANEL
+  TKAPP --> TRANSCRIPTPANEL
+  TKAPP --> POLISHPANEL
+  TRAYPY --> HOTKEYCTRL
+  TRAYPY --> SVCSUP
   CLICMDS -->|gui, record| gui
   CLICMDS -->|tray| TRAYPY
 
@@ -37,9 +47,9 @@ flowchart TB
     SINGLEINST["single_instance.py\nWindows mutex — one tray at a time"]
   end
   TRAYPY --> SINGLEINST
-  TRAYPY -->|boots + owns lifecycle of| WHISPERMGR
-  TRAYPY -->|boots + owns lifecycle of| WEBAPPMGR
-  TRAYPY --> TUNNEL
+  SVCSUP -->|boots + owns lifecycle of| WHISPERMGR
+  SVCSUP -->|boots + owns lifecycle of| WEBAPPMGR
+  SVCSUP --> TUNNEL
   TUNNEL -->|spawns if cloudflared.yml present| CLOUDFLARED["cloudflared tunnel"]
   LIFECYCLE["tray_lifecycle.ps1\nsubtree kill + port reclaim — %USERPROFILE%/.claude/tray/,\nowned by fleet-config (project-scaffolding#153), not this repo"]
   TRAYBAT -->|--restart| LIFECYCLE
@@ -52,7 +62,7 @@ flowchart TB
     AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
     EVENTLOOP["event_loop.py\nselector event-loop shim — every uvicorn spawn of\napp.webapp.server:app picks it (fixes the :8443 wedge, issue #113)"]
-    STATIC["static/\nindex.html (Record · History · Settings tabs) · app.js ·\nrecorder.js · api.js · state.js · ui.js · history.js ·\npolish.js · styles.css (fleet tokens, light+dark)"]
+    STATIC["static/\nindex.html (Record · History · Settings tabs) · app.js ·\nrecorder.js (record/upload/finish) · level.js (VU+VAD) ·\npartials.js (rolling SSE) · wakelock.js · api.js · state.js ·\nui.js · history.js · polish.js · styles.css (fleet tokens, light+dark)"]
     VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nnav · icons · card · switch · modal · empty-state"]
   end
   WEBSERVER --> ROUTERS
@@ -83,7 +93,7 @@ flowchart TB
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
     MICGLYPH["mic_glyph.py\nruntime state-tinted tray renderer —\nsame mic.svg silhouette as brand_gen"]
     RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py (issue #174)"]
-    TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by tray.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen (issue #174)"]
+    TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by service_supervisor.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen (issue #174)"]
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
     WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
@@ -92,7 +102,7 @@ flowchart TB
   WHISPERMGR --> WHISPERYAML
   WHISPERMGR --> PROCSUP
   WEBAPPMGR --> PROCSUP
-  TRAYPY -.->|stop_popen(cloudflared)| PROCSUP
+  SVCSUP -.->|stop_popen(cloudflared)| PROCSUP
   VOCAB --> HOTRELOAD
   SNIPPETS --> HOTRELOAD
   SPEAKERLABEL --> HOTRELOAD

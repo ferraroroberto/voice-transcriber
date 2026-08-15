@@ -18,7 +18,7 @@ disabled, and carries the rolling default in the fallback config — so a
 transient config blip can no longer disable live partials.
 
 To watch this fail meaningfully: revert the ``openPartialStream`` gate in
-``recorder.js`` to ``!state.config.rolling_transcription_enabled`` — the
+``partials.js`` to ``!state.config.rolling_transcription_enabled`` — the
 ``/events`` request never fires and the assertion below trips.
 
 ``desktop_only`` — WebKit can't fake a media stream.

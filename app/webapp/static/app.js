@@ -22,14 +22,14 @@ import {
   refreshStatus,
 } from './config.js';
 import {
-  acquireWakeLock,
-  closePartialStream,
   finalizeForBackground,
   onRecordToggle,
   populateMics,
   releaseCachedStream,
   resumeRecording,
 } from './recorder.js';
+import { closePartialStream } from './partials.js';
+import { acquireWakeLock } from './wakelock.js';
 import {
   loadMoreHistory,
   onCleanAll,
