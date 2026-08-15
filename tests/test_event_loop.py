@@ -79,18 +79,28 @@ def test_e2e_autoboot_wires_loop_factory():
     assert '"--loop",\n            LOOP_FACTORY,' in src
 
 
-def test_webapp_bat_wires_loop_factory():
+def test_webapp_bat_delegates_to_run_webapp_module():
+    """webapp.bat (voice-transcriber#174) carries no uvicorn flag list of
+    its own — it shells out to scripts/run_webapp.py, which sources the
+    argv from build_uvicorn_command (see
+    test_run_webapp_delegates_to_shared_command_builder for the loop/proxy-
+    headers wiring pin at that single source)."""
     src = (_REPO_ROOT / "webapp.bat").read_text(encoding="utf-8")
-    assert "app.webapp.event_loop:selector_loop_factory" in src
-    assert "--loop" in src
+    assert "scripts\\run_webapp.py" in src
+    assert "-m uvicorn" not in src
 
 
-def test_webapp_bat_wires_proxy_headers():
-    """Regression pin for issue #117 (see
-    test_manager_build_command_trusts_loopback_proxy_headers)."""
-    src = (_REPO_ROOT / "webapp.bat").read_text(encoding="utf-8")
-    assert src.count("--proxy-headers") == 2
-    assert src.count("--forwarded-allow-ips 127.0.0.1") == 2
+def test_run_webapp_delegates_to_shared_command_builder():
+    """Pin the *wiring*, not a duplicated flag list: webapp.bat used to
+    hand-write the uvicorn argv twice (HTTP/HTTPS branches) and had already
+    drifted from WebappManager's spawn (missing --log-level warning) by the
+    time this issue was filed (voice-transcriber#174) -- assert
+    scripts/run_webapp.py now sources the command from the same place
+    WebappManager and run_named_tunnel.py do, so a flag can't go missing
+    again."""
+    src = (_REPO_ROOT / "scripts" / "run_webapp.py").read_text(encoding="utf-8")
+    assert "from app.webapp.manager import build_uvicorn_command, cert_paths" in src
+    assert "build_uvicorn_command(" in src
 
 
 def test_build_uvicorn_command_wires_proxy_headers_and_loop():

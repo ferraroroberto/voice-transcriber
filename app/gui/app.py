@@ -36,7 +36,7 @@ from src.polish_prompts import (
     get_prompt,
     load_polish_prompts,
 )
-from src.recording_pipeline import SilentTake, finalize_transcript, process_recording
+from src.recording_pipeline import finalize_transcript, handle_take
 from src.webapp_config import load_webapp_config, update_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 from .diagnostics_window import DiagnosticsWindow
@@ -737,33 +737,35 @@ class TranscriberApp:
         status = self.server.status()
         client = build_transcription_client(self.config, status.base_url)
         translate = bool(self.translate_var.get())
-        try:
-            result = process_recording(
-                recording, self.config, self.webapp_config, client,
-                translate=translate,
+
+        result = handle_take(
+            recording, self.config, self.webapp_config, client,
+            last_transcription=self._current_last_transcription(),
+            append_mode=self._is_append_mode(),
+            auto_copy=self.config.auto_copy,
+            translate=translate,
+        )
+
+        if result.error is not None:
+            self.root.after(
+                0, lambda m=result.error: messagebox.showerror("Transcription failed", m)
             )
-        except TranscriptionError as e:
-            msg = str(e)
-            logger.error(f"❌ {msg}")
-            self.root.after(0, lambda m=msg: messagebox.showerror("Transcription failed", m))
             return
 
-        if isinstance(result, SilentTake):
+        if result.silent is not None:
             # Silence gate — skip whisper on near-silent takes so it can't
             # hallucinate "Thanks for watching" on an empty recording.
-            logger.info(
-                f"🤫 Skipping whisper: {result.dbfs:.1f} dBFS < {result.threshold} dBFS"
-            )
+            dbfs = result.silent.dbfs
             self.root.after(
                 0,
-                lambda d=result.dbfs: messagebox.showinfo(
+                lambda d=dbfs: messagebox.showinfo(
                     "Empty audio",
                     f"Recording was silent ({d:.1f} dBFS) — nothing transcribed.",
                 ),
             )
             return
 
-        self._post_transcription(result)
+        self._show_finalized(result.text)
 
     def _show_result(self, text: str) -> None:
         win = tk.Toplevel(self.root)
@@ -787,12 +789,12 @@ class TranscriberApp:
         ttk.Button(btns, text="Close", command=win.destroy).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(4, 0))
 
     def _post_transcription(self, text: str) -> None:
-        """Shared post-transcription tail used by both mic and file workers.
+        """File-flow post-transcription tail: finalize raw whisper text,
+        then hand off to ``_show_finalized``.
 
-        Strip/append-merge/clipboard-copy is delegated to
-        ``recording_pipeline.finalize_transcript`` (voice-transcriber#160)
-        so the tray and this window can't drift on that ordering again;
-        this method owns only the tray-aware slot write and result window.
+        The mic flow doesn't call this — ``handle_take`` already ran
+        ``finalize_transcript`` (voice-transcriber#174), so it goes straight
+        to ``_show_finalized`` with the already-finalized text instead.
         """
         finalized = finalize_transcript(
             text,
@@ -800,6 +802,13 @@ class TranscriberApp:
             append_mode=self._is_append_mode(),
             auto_copy=self.config.auto_copy,
         )
+        self._show_finalized(finalized)
+
+    def _show_finalized(self, finalized: Optional[str]) -> None:
+        """Write already-finalized text into the tray-aware last-
+        transcription slot and show the result window. Shared tail for
+        both the mic flow (via ``handle_take``) and the file flow (via
+        ``_post_transcription``)."""
         if finalized is not None:
             if self.tray is not None:
                 self.tray.last_transcription = finalized

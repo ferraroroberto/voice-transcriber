@@ -41,13 +41,13 @@ from src import (
     AppConfig,
     AudioRecorder,
     TranscriptionClient,
-    TranscriptionError,
     build_transcription_client,
 )
 from src.inject import parse_simple_hotkey, paste_at_caret
 from src.mic_glyph import draw_mic
+from src.process_supervisor import stop_popen
 from src.recorder import Recording
-from src.recording_pipeline import SilentTake, finalize_transcript, process_recording
+from src.recording_pipeline import handle_take
 from src.tunnel import (
     CloudflaredNotFoundError,
     persist_tunnel_url,
@@ -55,7 +55,6 @@ from src.tunnel import (
     read_tunnel_hostname,
     remove_tunnel_url_file,
     spawn_cloudflared,
-    stop_process,
 )
 from src.webapp_config import append_auth_token, load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
@@ -609,7 +608,7 @@ class TrayApp:
         if proc is None:
             return
         self._cloudflared_proc = None
-        stop_process(proc, "cloudflared")
+        stop_popen(proc, name="cloudflared")
         remove_tunnel_url_file(TUNNEL_URL_FILE)
 
     def _show_model_info(self) -> None:
@@ -688,37 +687,35 @@ class TrayApp:
                 self.config, status.base_url,
             )
         client = self._transcription_client
-        try:
-            result = process_recording(recording, self.config, webapp_cfg, client)
-        except TranscriptionError as e:
-            self._notify("Transcription failed", str(e))
-            return
 
-        if isinstance(result, SilentTake):
-            logger.info(
-                f"🤫 Skipping whisper: {result.dbfs:.1f} dBFS < {result.threshold} dBFS"
-            )
-            self._notify(
-                "🤫 Empty audio", f"Silent take ({result.dbfs:.1f} dBFS) — skipped"
-            )
-            return
-
-        text = finalize_transcript(
-            result,
+        result = handle_take(
+            recording, self.config, webapp_cfg, client,
             last_transcription=self.last_transcription,
             append_mode=self.append_mode,
             auto_copy=self.config.auto_copy,
         )
-        if text is None:
+
+        if result.error is not None:
+            self._notify("Transcription failed", result.error)
+            return
+
+        if result.silent is not None:
+            self._notify(
+                "🤫 Empty audio",
+                f"Silent take ({result.silent.dbfs:.1f} dBFS) — skipped",
+            )
+            return
+
+        if result.text is None:
             self._notify("Empty transcription", "The server returned no text.")
             return
-        self.last_transcription = text
+        self.last_transcription = result.text
 
         pasted = False
         if from_hotkey and self.config.auto_paste_after_hotkey:
             pasted = paste_at_caret()
 
-        preview = text if len(text) <= 80 else text[:77] + "…"
+        preview = result.text if len(result.text) <= 80 else result.text[:77] + "…"
         title = "📌 Pasted at caret" if pasted else "📋 Copied to clipboard"
         self._notify(title, preview)
 
