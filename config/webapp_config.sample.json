@@ -16,8 +16,6 @@
   "_comment_polish_prompts": "polish_prompt_default picks one of the entries in config/polish_prompts.json (committed). Add new entries there to expose more polish styles in the webapp + tk window — no code change needed.",
   "polish_prompt_default": "filler-words",
   "llm_hub_url": "http://127.0.0.1:8000",
-  "host": "0.0.0.0",
-  "port": 8443,
   "history_retention_days": 30,
   "force_builtin_mic_default": false,
   "preferred_mic_id": null,

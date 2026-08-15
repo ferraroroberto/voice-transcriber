@@ -12,7 +12,6 @@ import pytest
 # Local imports
 from src.app_config import (
     AppConfig,
-    LANGUAGE_MODES,
     VALID_LOG_LEVELS,
     WHISPER_LANGUAGES,
     load_app_config,
@@ -40,10 +39,6 @@ class TestResolveIso:
     @pytest.mark.parametrize("inp", [None, "", "   ", "klingon", "zz"])
     def test_unknown_values(self, inp):
         assert resolve_iso(inp) is None
-
-    def test_legacy_mode_names_resolve(self):
-        for mode in LANGUAGE_MODES:
-            assert resolve_iso(mode) is not None
 
 
 # ---------------------------------------------------------------------------

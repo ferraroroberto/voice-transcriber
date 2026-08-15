@@ -386,10 +386,6 @@ html, body {
   font-size: var(--font-body);
   line-height: 1.45;
 }
-.text-out:empty::before {
-  content: attr(placeholder);
-  color: var(--muted);
-}
 textarea.text-out.editable {
   display: block;
   width: 100%;
@@ -410,8 +406,7 @@ textarea.text-out.editable::placeholder {
 
 /* ---------- buttons ---------- */
 .big-btn,
-.copy-btn,
-.danger-btn {
+.copy-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -427,12 +422,11 @@ textarea.text-out.editable::placeholder {
   touch-action: manipulation;
 }
 .big-btn .icon,
-.copy-btn .icon,
-.danger-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.copy-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* Accent-tinted ghost recipe — home-automation's canonical .big-btn
    (accent tint + accent text + soft accent border), applied to every
    accent button in the app. Status-colored controls (.record-btn,
-   .resume-btn, .danger-btn, the .copied / .danger-flash flashes) keep
+   .resume-btn, the .copied / .danger-flash flashes) keep
    their state colors. */
 .big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent); flex: 1; }
 .big-btn:active { transform: scale(0.98); }
@@ -479,12 +473,6 @@ textarea.text-out.editable::placeholder {
   color: var(--accent-fg);
   border-color: var(--danger);
 }
-
-.danger-btn {
-  background: var(--danger);
-  color: var(--accent-fg);
-}
-.danger-btn:active { background: color-mix(in srgb, var(--danger) 82%, #000); }
 
 .row {
   display: flex;

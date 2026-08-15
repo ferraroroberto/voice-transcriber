@@ -19,9 +19,7 @@ import pytest
 from src.webapp_config import (
     DEFAULT_GAIN_BOOST_DB,
     DEFAULT_GAIN_BOOST_ENABLED,
-    DEFAULT_HOST,
     DEFAULT_LLM_HUB_URL,
-    DEFAULT_PORT,
     DEFAULT_POLISH_PROMPT_ID,
     DEFAULT_RETENTION_DAYS,
     DEFAULT_SILENCE_DBFS_THRESHOLD,
@@ -125,8 +123,6 @@ class TestDefaultWebappConfig:
         assert cfg.polish_models_available == sample_polish_payload["polish_models_available"]
         assert cfg.polish_prompt_default == DEFAULT_POLISH_PROMPT_ID
         assert cfg.llm_hub_url == DEFAULT_LLM_HUB_URL
-        assert cfg.host == DEFAULT_HOST
-        assert cfg.port == DEFAULT_PORT
         assert cfg.history_retention_days == DEFAULT_RETENTION_DAYS
         assert cfg.silence_dbfs_threshold == DEFAULT_SILENCE_DBFS_THRESHOLD
         assert cfg.gain_boost_enabled == DEFAULT_GAIN_BOOST_ENABLED
@@ -171,8 +167,6 @@ class TestLoadWebappConfig:
             "polish_models_available": sample_polish_payload["polish_models_available"],
             "polish_prompt_default": "custom-style",
             "llm_hub_url": "http://example.invalid:9999",
-            "host": "127.0.0.1",
-            "port": 9000,
             "history_retention_days": 7,
             "force_builtin_mic_default": True,
             "preferred_mic_id": "mic-xyz",
@@ -187,8 +181,6 @@ class TestLoadWebappConfig:
         assert cfg.polish_model_default == payload["polish_model_default"]
         assert cfg.polish_prompt_default == "custom-style"
         assert cfg.llm_hub_url == "http://example.invalid:9999"
-        assert cfg.host == "127.0.0.1"
-        assert cfg.port == 9000
         assert cfg.history_retention_days == 7
         assert cfg.force_builtin_mic_default is True
         assert cfg.preferred_mic_id == "mic-xyz"
@@ -204,9 +196,9 @@ class TestLoadWebappConfig:
         """User's config might be partial — keys not present should
         bootstrap from the sample, not from a Python literal."""
         target = tmp_path / "partial.json"
-        target.write_text(json.dumps({"port": 4444}), encoding="utf-8")
+        target.write_text(json.dumps({"history_retention_days": 4}), encoding="utf-8")
         cfg = load_webapp_config(target)
-        assert cfg.port == 4444
+        assert cfg.history_retention_days == 4
         assert cfg.polish_model_default == sample_polish_payload["polish_model_default"]
         assert cfg.polish_models_available == sample_polish_payload["polish_models_available"]
 
@@ -251,12 +243,12 @@ class TestSaveWebappConfig:
             polish_model_default=sample_polish_payload["polish_model_default"],
             polish_models_available=list(sample_polish_payload["polish_models_available"]),
             auth_token="abc123",
-            port=8888,
+            history_retention_days=45,
         )
         save_webapp_config(cfg, target)
         loaded = load_webapp_config(target)
         assert loaded.auth_token == "abc123"
-        assert loaded.port == 8888
+        assert loaded.history_retention_days == cfg.history_retention_days
         assert loaded.polish_model_default == cfg.polish_model_default
 
     def test_creates_parent_dir(self, tmp_path, sample_polish_payload):
@@ -295,10 +287,10 @@ class TestUpdateWebappConfig:
         save_webapp_config(seed, target)
         monkeypatch.setattr("src.webapp_config.DEFAULT_CONFIG_PATH", target)
 
-        patched = update_webapp_config(port=7777)
-        assert patched.port == 7777
+        patched = update_webapp_config(history_retention_days=14)
+        assert patched.history_retention_days == 14
         reloaded = load_webapp_config(target)
-        assert reloaded.port == 7777
+        assert reloaded.history_retention_days == 14
 
 
 # ---------------------------------------------------------------------------
@@ -322,16 +314,6 @@ class TestValidate:
         )
         with pytest.raises(ValueError, match="history_retention_days"):
             _validate(bad)
-
-    def test_port_must_be_in_range(self, sample_polish_payload):
-        for bad_port in (0, -1, 70000):
-            cfg = WebappConfig(
-                polish_model_default=sample_polish_payload["polish_model_default"],
-                polish_models_available=list(sample_polish_payload["polish_models_available"]),
-                port=bad_port,
-            )
-            with pytest.raises(ValueError, match="port"):
-                _validate(cfg)
 
     def test_gain_boost_db_must_be_in_range(self, sample_polish_payload):
         for bad_db in (-1.0, 25.0):
