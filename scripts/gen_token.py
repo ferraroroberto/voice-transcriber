@@ -115,22 +115,7 @@ def main() -> int:
     log.info("Token (also saved above — no need to copy):")
     log.info("   %s", token)
     log.info("")
-    log.info("What happens next")
-    log.info("─────────────────")
-    log.info("• The webapp's auth gate is now ON. Restart the tray or the")
-    log.info("  webapp process so the new config is picked up.")
-    log.info("• Loopback callers (the tk main window) keep working without")
-    log.info("  the token — local UX is unchanged.")
-    log.info("• Remote (tunnel) callers must present the token. They pick")
-    log.info("  it up automatically the first time they open a tokenised URL:")
-    log.info("    – Tray menu → 📋 Copy Cloudflare URL (URL already includes")
-    log.info("      ?token=…). Paste into the phone's browser, open it,")
-    log.info("      done. The page strips ?token=… from the visible URL")
-    log.info("      after stashing it in localStorage.")
-    log.info("• Rotation: re-run with --force, then re-open the new")
-    log.info("  tokenised URL once on each device that should keep")
-    log.info("  working. Other devices stop working immediately.")
-    log.info("")
+    log.info("See --help (or this script's module docstring) for what happens next.")
     return 0
 
 

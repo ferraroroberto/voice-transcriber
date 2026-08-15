@@ -52,8 +52,6 @@ class ServiceSupervisor:
     """Starts, stops, and reports status for whisper-server, the webapp,
     and the cloudflared tunnel — the tray's three background subsystems."""
 
-    _MODEL_LABEL_TTL = 2.0
-
     def __init__(
         self,
         config: AppConfig,
@@ -74,9 +72,6 @@ class ServiceSupervisor:
         # so a single launch ('tray.bat') brings everything up. Hostname is
         # read from webapp/cloudflared.yml; missing config skips the tunnel.
         self.tunnel_hostname: Optional[str] = read_tunnel_hostname(tunnel_config_path)
-        # Model label is queried by pystray on every menu draw; cache so the
-        # TCP probe + psutil lookup don't fire on each open.
-        self._model_label_cache: tuple[float, str] = (0.0, "🧠 model: ?")
 
     # ------------------------------------------------------------- lifecycle
 
@@ -122,17 +117,11 @@ class ServiceSupervisor:
         self.server.stop()
 
     def model_label(self) -> str:
-        now = time.monotonic()
-        cached_at, label = self._model_label_cache
-        if now - cached_at < self._MODEL_LABEL_TTL:
-            return label
         try:
             desc = self.server.describe()
-            label = f"🧠 {desc.model_display_name}"
+            return f"🧠 {desc.model_display_name}"
         except Exception:
-            label = "🧠 model: ?"
-        self._model_label_cache = (now, label)
-        return label
+            return "🧠 model: ?"
 
     # ------------------------------------------------------------- webapp
 
