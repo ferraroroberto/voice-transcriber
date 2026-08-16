@@ -83,20 +83,24 @@ _TITLED_LABEL = re.compile(
 )
 
 # Built-in committed heuristic for the recurring assistant-name family
-# (issue #79). The root is the misheard "Claude" — ``Cl[ao]ud…`` (``Cloud``,
-# ``Claude``, ``Claudio``, ``Claudius``, …) — Title-Cased by whisper because
-# it emits the phantom as a proper-name label. It may carry up to two more
-# Title-Case name words (a surname, ``Code``, or an initial like ``C``); a
-# trailing period is *not* folded into a name word so the period that glues a
-# ``Claudius C.`` phantom to the real words reads as the separator, not part of
-# the name. The repetition is non-greedy so the fewest name words are taken,
-# leaving a Title-Case real first word (``Claudius C. Okay …`` → ``Okay …``)
-# intact. Two leading forms: the name + an invented separator run, or — for a
-# multi-word name only — the name + whitespace alone (a multi-word, all-Title-
-# Case opener is the phantom's signature; normal sentence-case dictation that
-# merely starts with a ``Cl[ao]ud`` word has a lowercase second word and is
-# never matched here).
-_FAMILY_ROOT = r"Cl[ao]ud\w*"
+# (issue #79). The root is the misheard "Claude" — ``Cloud``, ``Claude``,
+# ``Claudio``, ``Claudius`` (bare "Claud" too, e.g. mid-``Cloud Code``) —
+# Title-Cased by whisper because it emits the phantom as a proper-name label.
+# The root is bound to that exact suffix set + a trailing word boundary
+# (issue #178) rather than an unbounded ``\w*`` — the old unbounded root let
+# ordinary words sharing the prefix (``Cloudflare``, ``Cloudy``, …) match as
+# the phantom and eat the real words that followed. It may carry up to two
+# more Title-Case name words (a surname, ``Code``, or an initial like ``C``);
+# a trailing period is *not* folded into a name word so the period that
+# glues a ``Claudius C.`` phantom to the real words reads as the separator,
+# not part of the name. The repetition is non-greedy so the fewest name
+# words are taken, leaving a Title-Case real first word (``Claudius C.
+# Okay …`` → ``Okay …``) intact. Two leading forms: the name + an invented
+# separator run, or — for a multi-word name only — the name + whitespace
+# alone (a multi-word, all-Title-Case opener is the phantom's signature;
+# normal sentence-case dictation that merely starts with a ``Cl[ao]ud`` word
+# has a lowercase second word and is never matched here).
+_FAMILY_ROOT = r"Cl[ao]ud(?:e|io|ius|)\b"
 _NAME_WORD = r"[A-ZÀ-Þ][\w'’\-]*"
 _ASSISTANT_FAMILY = re.compile(
     # (a) family name (bare root or +1–2 words) + invented separator run + ws

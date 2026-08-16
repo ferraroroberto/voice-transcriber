@@ -28,8 +28,17 @@ if (els.loginOverlay) {
   els.loginOverlay.addEventListener('cancel', (e) => e.preventDefault());
 }
 
+// The in-flight prompt promise, shared across every re-entrant caller
+// while the gate is open. Without this, each 401 (one per `loadConfig()`
+// call — e.g. a `visibilitychange` re-check on iOS PWA app-switch) would
+// open a fresh dialog listener on top of the one still attached from the
+// last unresolved prompt, so a single Unlock tap fired one `/api/login`
+// POST per stacked listener (voice-transcriber#178).
+let _pendingPrompt = null;
+
 export function promptForPassword() {
-  return new Promise((resolve) => {
+  if (_pendingPrompt) return _pendingPrompt;
+  _pendingPrompt = new Promise((resolve) => {
     if (!els.loginOverlay.open) els.loginOverlay.showModal();
     els.loginPassword.value = '';
     els.loginError.hidden = true;
@@ -81,6 +90,7 @@ export function promptForPassword() {
         try { localStorage.setItem(TOKEN_KEY, data.token); } catch (_) {}
         els.loginOverlay.close();
         els.loginForm.removeEventListener('submit', onSubmit);
+        _pendingPrompt = null;
         resolve(true);
       } catch (err) {
         els.loginError.textContent = 'Login failed: ' + (err.message || err);
@@ -93,6 +103,7 @@ export function promptForPassword() {
 
     els.loginForm.addEventListener('submit', onSubmit);
   });
+  return _pendingPrompt;
 }
 
 // Turn a non-2xx fetch Response into a short, readable error message.

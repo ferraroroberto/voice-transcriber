@@ -110,6 +110,12 @@ class TrayApp:
         # checkbox so toggling either surface stays in sync.
         self.append_mode: bool = False
         self._append_listeners: list = []
+        # Translate-to-English toggle — mirrored from the tk window's
+        # translate_var (voice-transcriber#178) so a mic take routed through
+        # the tray (the default whenever the window was opened from it)
+        # honours the checkbox instead of silently ignoring it. Ephemeral,
+        # off on every launch, same as append_mode.
+        self.translate: bool = False
 
         # PTT hotkey state machine (voice-transcriber#177).
         self._hotkeys = HotkeyController(
@@ -275,9 +281,19 @@ class TrayApp:
             self.set_append_mode(not self.append_mode)
         elif event == EVT_TOGGLE_AUTO_PASTE:
             self.config.auto_paste_after_hotkey = not self.config.auto_paste_after_hotkey
+            if self._icon is not None:
+                try:
+                    self._icon.update_menu()
+                except Exception:
+                    pass
         elif event == EVT_TOGGLE_SUPPRESS_HOTKEY:
             self.config.suppress_hotkey = not self.config.suppress_hotkey
             self._hotkeys.restart()
+            if self._icon is not None:
+                try:
+                    self._icon.update_menu()
+                except Exception:
+                    pass
         elif event == EVT_TOGGLE_NOTIFICATIONS:
             self.config.show_notifications = not self.config.show_notifications
             if self._icon is not None:
@@ -420,6 +436,7 @@ class TrayApp:
             last_transcription=self.last_transcription,
             append_mode=self.append_mode,
             auto_copy=self.config.auto_copy,
+            translate=self.translate,
         )
 
         if result.error is not None:
