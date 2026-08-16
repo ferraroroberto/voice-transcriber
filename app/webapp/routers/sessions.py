@@ -47,6 +47,12 @@ router = APIRouter()
 # can't bloat the row; an absent/blank value falls back to the generic
 # "api" tag (a consumer that didn't self-identify).
 _MAX_SOURCE_LEN = 40
+
+# How many idle partial-interval periods a rolling-transcription worker
+# tolerates before it reaps itself as abandoned (voice-transcriber#178) —
+# a take with no chunk for this long (phone screen locks, tab closed,
+# tunnel drops) is never coming back for a /finish or delete to clean it up.
+_PARTIAL_WORKER_STALE_MULTIPLIER = 15
 _DEFAULT_API_SOURCE = "api"
 
 
@@ -280,7 +286,7 @@ async def retranscribe(
     return await _transcribe_session_payload(request, session, language, translate=translate)
 
 
-def _polish_and_persist(
+async def _polish_and_persist(
     session: Any,
     text: str,
     model: str,
@@ -288,7 +294,9 @@ def _polish_and_persist(
     polish_client: PolishClient,
 ) -> Dict[str, Any]:
     try:
-        result = polish_client.polish(text, model=model, system=prompt.system)
+        result = await asyncio.to_thread(
+            polish_client.polish, text, model=model, system=prompt.system,
+        )
     except PolishError as exc:
         session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
         session.write_meta()
@@ -350,7 +358,7 @@ async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
         )
 
     polish_client: PolishClient = request.app.state.polish_client
-    return _polish_and_persist(session, transcript, model, prompt, polish_client)
+    return await _polish_and_persist(session, transcript, model, prompt, polish_client)
 
 
 @router.post("/api/polish-text")
@@ -380,7 +388,7 @@ async def polish_text(request: Request) -> Dict[str, Any]:
     session.write_meta()
 
     polish_client: PolishClient = request.app.state.polish_client
-    return _polish_and_persist(session, text, model, prompt, polish_client)
+    return await _polish_and_persist(session, text, model, prompt, polish_client)
 
 
 @router.post("/api/save-text")
@@ -588,7 +596,9 @@ async def _transcribe_session_payload(
     wav_path = session.wav_path()
 
     try:
-        transcode_to_wav(raw_path, wav_path, sample_rate=app_cfg.sample_rate)
+        await asyncio.to_thread(
+            transcode_to_wav, raw_path, wav_path, app_cfg.sample_rate,
+        )
     except AudioToolMissing as exc:
         activity_log.record_event(
             "transcribe_failed", session_id=session.session_id, outcome="error",
@@ -610,7 +620,9 @@ async def _transcribe_session_payload(
     # Silence gate — skip whisper entirely on near-silent audio so it
     # can't hallucinate "Thanks for watching" on an empty take.
     cfg: WebappConfig = request.app.state.webapp_config
-    silent, dbfs = is_silent_wav(wav_path, cfg.silence_dbfs_threshold)
+    silent, dbfs = await asyncio.to_thread(
+        is_silent_wav, wav_path, cfg.silence_dbfs_threshold,
+    )
     if silent:
         session.write_transcript("")
         session.meta.language = chosen_lang
@@ -635,11 +647,13 @@ async def _transcribe_session_payload(
     # Quiet-environment gain boost — amplifies the take before whisper sees
     # it. Runs after the silence gate so the gate's calibration is unaffected.
     if cfg.gain_boost_enabled:
-        apply_gain_to_wav(wav_path, cfg.gain_boost_db)
+        await asyncio.to_thread(apply_gain_to_wav, wav_path, cfg.gain_boost_db)
 
     client: TranscriptionClient = request.app.state.transcription_client
     try:
-        text = client.transcribe_file(wav_path, language=iso, translate=translate)
+        text = await asyncio.to_thread(
+            client.transcribe_file, wav_path, iso, translate,
+        )
     except TranscriptionError as exc:
         session.meta.error = str(exc)
         session.write_meta()
@@ -757,11 +771,17 @@ def _ensure_partial_worker(app: FastAPI, session) -> PartialWorker:
             transcode_to_wav, src, dst, app_cfg.sample_rate,
         )
 
+    effective_interval = interval if interval > 0 else 2.0
     worker = PartialWorker(
         session=session,
-        interval_seconds=interval if interval > 0 else 2.0,
+        interval_seconds=effective_interval,
         transcribe=_transcribe,
         transcode=_transcode,
+        # Only worth reaping a worker whose loop is actually running.
+        stale_after_seconds=(
+            effective_interval * _PARTIAL_WORKER_STALE_MULTIPLIER if interval > 0 else 0.0
+        ),
+        on_stale=lambda: workers.pop(session.session_id, None),
     )
     workers[session.session_id] = worker
     if interval > 0:

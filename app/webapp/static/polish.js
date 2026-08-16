@@ -70,6 +70,12 @@ export async function onPolish() {
 }
 
 export function onReset() {
+  // A tap mid-recording/upload/transcribe would null state.sessionId (and,
+  // in incognito, DELETE the in-flight session) out from under the still-
+  // running MediaRecorder — every subsequent chunk then 404s against
+  // "null" and the eventual Stop loses the take (voice-transcriber#178).
+  // Reset is only meaningful once a take has settled back to idle.
+  if (state.mode !== 'idle') return;
   cleanupIncognitoSession();
   closePartialStream();
   hideResumeButton();
@@ -84,9 +90,11 @@ export function onReset() {
 
 export async function onSaveTranscript() {
   if (!state.transcript || state.sessionId) return;
-  const original = els.saveTranscript.textContent;
+  // innerHTML, not textContent — the idle label carries a leading <svg>
+  // sprite icon (ui.js's flashCopied does the same for the same reason).
+  const original = els.saveTranscript.innerHTML;
   els.saveTranscript.disabled = true;
-  els.saveTranscript.textContent = '…';
+  els.saveTranscript.innerHTML = '…';
   try {
     const r = await authFetch('/api/save-text', {
       method: 'POST',
@@ -106,6 +114,6 @@ export async function onSaveTranscript() {
     showToast('Save failed: ' + truncate(err.message || String(err), 80), 'error');
     els.saveTranscript.disabled = false;
   } finally {
-    els.saveTranscript.textContent = original;
+    els.saveTranscript.innerHTML = original;
   }
 }

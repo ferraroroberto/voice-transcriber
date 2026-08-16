@@ -112,6 +112,49 @@ class TestAppJsSourcePins:
         assert "updateModelRoute(data.served_model, data.served_host)" in app_js
         assert "els.modelRoute" in app_js
 
+    def test_save_transcript_preserves_icon_markup(self, app_js: str):
+        """`onSaveTranscript` must swap `innerHTML`, not `textContent` — the
+        idle label carries a leading `<svg>` sprite icon that `textContent`
+        would delete permanently on the first Save (issue #178)."""
+        match = re.search(
+            r"function onSaveTranscript\([^\)]*\)\s*\{(.*?)\n\}",
+            app_js,
+            re.DOTALL,
+        )
+        assert match is not None, "onSaveTranscript body not found"
+        body = match.group(1)
+        assert "saveTranscript.innerHTML" in body
+        assert "saveTranscript.textContent" not in body
+
+    def test_password_prompt_deduplicates_reentrant_calls(self, app_js: str):
+        """`promptForPassword` must return the same in-flight promise on a
+        re-entrant call while the gate is already open, instead of
+        attaching a second `submit` listener — an iOS PWA background/
+        foreground cycle re-runs `loadConfig()` on every `visibilitychange`,
+        each hitting a 401 while the dialog is still up (issue #178)."""
+        match = re.search(
+            r"function promptForPassword\([^\)]*\)\s*\{(.*?)\n\}",
+            app_js,
+            re.DOTALL,
+        )
+        assert match is not None, "promptForPassword body not found"
+        body = match.group(1)
+        assert "if (_pendingPrompt) return _pendingPrompt;" in body
+        assert "_pendingPrompt = null;" in body
+
+    def test_reset_guards_against_mid_recording_tap(self, app_js: str):
+        """`onReset` must bail out unless the session is idle — otherwise a
+        tap mid-recording nulls `state.sessionId` out from under the still-
+        running MediaRecorder (issue #178)."""
+        match = re.search(
+            r"function onReset\([^\)]*\)\s*\{(.*?)\n\}",
+            app_js,
+            re.DOTALL,
+        )
+        assert match is not None, "onReset body not found"
+        body = match.group(1)
+        assert "state.mode !== 'idle'" in body or 'state.mode !== "idle"' in body
+
     def test_no_hardcoded_alias_list_in_offline_fallback(self, app_js: str):
         """`applyConfigDefaults` should not hardcode the alias list — the
         offline fallback should be empty so the model list always comes

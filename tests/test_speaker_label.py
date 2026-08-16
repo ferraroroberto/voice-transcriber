@@ -281,3 +281,15 @@ class TestAssistantFamily:
         # whisper Title-Cases the phantom; a lowercase "claudio" is not a
         # built-in match (the blocklist path, case-insensitive, covers it).
         assert sl.strip_speaker_label("claudio couto: hi") == "claudio couto: hi"
+
+    def test_cloudflare_opener_untouched(self):
+        # issue #178: the unbounded root (`Cl[ao]ud\w*`) let "Cloudflare"
+        # match as the family name, eating the first two real words.
+        text = "Cloudflare Tunnel is broken again"
+        assert sl.strip_speaker_label(text) == text
+
+    def test_cloudy_opener_untouched(self):
+        # issue #178: same bug via "Cloudy" — an ordinary word, not a
+        # misheard-assistant-name phantom.
+        text = "Cloudy Tuesday morning walk"
+        assert sl.strip_speaker_label(text) == text

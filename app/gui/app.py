@@ -127,6 +127,11 @@ class TranscriberApp:
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
         self.language_var.trace_add("write", self._on_language_change)
+        # Mirror the translate toggle onto the tray (voice-transcriber#178) —
+        # when the tray owns the session, `_toggle_record` delegates straight
+        # to `tray.request_toggle_record()` and never reads this window's
+        # vars, so the tray needs its own copy to honour the checkbox.
+        self.translate_var.trace_add("write", self._on_translate_change)
 
         # Enumerate input devices once; used by the mic combobox.
         try:
@@ -165,6 +170,10 @@ class TranscriberApp:
             # up whatever the user picked here. Old code stored "english"
             # etc., AppConfig.whisper_language now resolves either form.
             self.config.language = iso
+
+    def _on_translate_change(self, *_: object) -> None:
+        if self.tray is not None:
+            self.tray.translate = bool(self.translate_var.get())
 
     def _apply_mic_selection(self, *_: object) -> None:
         """Combine the mic combo + force-built-in checkbox into a single

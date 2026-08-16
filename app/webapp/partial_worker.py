@@ -52,6 +52,15 @@ class PartialWorker:
     interval_seconds: float
     transcribe: Callable[[Path], Awaitable[str]]
     transcode: Callable[[Path, Path], Awaitable[None]]
+    # Reap this worker (self-stop the run loop) after this many seconds with
+    # no `mark_dirty()` call — a take abandoned mid-recording (phone screen
+    # locks, tab closed, tunnel drops) otherwise leaves the task parked on
+    # `_dirty.wait()` forever (voice-transcriber#178). ``0`` disables reaping.
+    stale_after_seconds: float = 0.0
+    # Called once, from inside `_run`, when this worker reaps itself for
+    # staleness — the owner uses it to drop the dict entry it can no longer
+    # reach directly (this dataclass has no back-reference to the registry).
+    on_stale: Optional[Callable[[], None]] = None
 
     # Mutable state (filled by start()/run()).
     _dirty: asyncio.Event = field(default_factory=asyncio.Event)
@@ -62,6 +71,7 @@ class PartialWorker:
     partial_text: str = ""
     last_bytes_at_partial: int = 0
     finalised: bool = False
+    _reaped: bool = False
 
     # ------------------------------------------------------------ lifecycle
 
@@ -138,11 +148,29 @@ class PartialWorker:
     async def _run(self) -> None:
         """Wait for dirty signal → debounce → run a pass → broadcast.
 
-        One pass at a time; no overlapping whisper calls per session.
+        One pass at a time; no overlapping whisper calls per session. A
+        session that goes quiet for ``stale_after_seconds`` (no chunk, so
+        no `mark_dirty()`) is treated as abandoned and reaps itself rather
+        than parking this task forever.
         """
         try:
             while not self._stop.is_set():
-                await self._dirty.wait()
+                if self.stale_after_seconds > 0:
+                    try:
+                        await asyncio.wait_for(
+                            self._dirty.wait(), timeout=self.stale_after_seconds,
+                        )
+                    except asyncio.TimeoutError:
+                        if self._stop.is_set():
+                            break
+                        logger.info(
+                            f"🧹 partial worker for {self.session.session_id} idle "
+                            f"> {self.stale_after_seconds:.0f}s — reaping abandoned session"
+                        )
+                        self._reaped = True
+                        break
+                else:
+                    await self._dirty.wait()
                 self._dirty.clear()
                 if self._stop.is_set():
                     break
@@ -159,6 +187,11 @@ class PartialWorker:
         except asyncio.CancelledError:
             pass
         finally:
+            if self._reaped and self.on_stale is not None:
+                try:
+                    self.on_stale()
+                except Exception as exc:  # noqa: BLE001
+                    logger.warning(f"⚠️  partial worker on_stale callback failed: {exc}")
             logger.debug(f"🛑 partial worker exited for {self.session.session_id}")
 
     async def _run_pass(self) -> None:
