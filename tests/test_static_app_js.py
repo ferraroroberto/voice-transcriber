@@ -217,6 +217,70 @@ class TestPolishModelLabelParity:
 
 
 # ---------------------------------------------------------------------------
+# Button-emphasis contract (issue #190).
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def styles_css() -> str:
+    return (STATIC_DIR / "styles.css").read_text(encoding="utf-8")
+
+
+@pytest.fixture
+def index_html() -> str:
+    return (STATIC_DIR / "index.html").read_text(encoding="utf-8")
+
+
+class TestHistoryButtonEmphasis:
+    """History reads like Record: ghost by default, accent-tinted only on
+    the contextually-next action (issue #190). The tiers are markup-level,
+    so a rename or a stray `button-tint` regresses it silently."""
+
+    def test_only_refresh_is_tinted_in_the_history_toolbar(self, index_html: str):
+        toolbar = re.search(
+            r'<div class="history-actions">(.*?)</div>', index_html, re.S
+        )
+        assert toolbar, "history-actions block not found"
+        assert 'id="refreshHistory" type="button" class="button-tint compact"' in toolbar.group(1)
+        for quiet in ("copySelection", "cleanAll"):
+            assert f'id="{quiet}" type="button" class="button-ghost compact"' in toolbar.group(1)
+        assert toolbar.group(1).count("button-tint") == 1
+
+    def test_load_more_is_ghost(self, index_html: str):
+        assert 'id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn"' in index_html
+
+    def test_history_rows_render_ghost_buttons(self, app_js: str):
+        """Every per-row action is ghost in the markup; only the newest
+        row's Copy is re-tinted, and that happens in CSS via :first-child
+        so it survives Load more / delete-refresh with no JS state."""
+        assert "copyBtn.className = 'button-ghost compact history-copy';" in app_js
+        assert "reBtn.className = 'button-ghost compact';" in app_js
+        assert "delBtn.className = 'button-ghost compact';" in app_js
+        assert "button-tint" not in app_js
+
+    def test_newest_row_copy_is_tinted_but_yields_to_the_copied_flash(
+        self, styles_css: str
+    ):
+        assert ".history-list li:first-child .history-copy:not(.copied)" in styles_css
+        # The green/red flashes must reach the ghost tier too.
+        assert ".button-ghost.compact.copied" in styles_css
+        assert ".button-ghost.compact.danger-flash" in styles_css
+
+    def test_source_badge_has_one_style_for_every_source(
+        self, styles_css: str, app_js: str
+    ):
+        """The accent is reserved for the next action, so no source
+        attribution badge competes with it."""
+        assert "source-badge.external" not in styles_css
+        assert "' external'" not in app_js
+
+    def test_settings_values_are_right_aligned_and_save_matches_load_more(
+        self, styles_css: str
+    ):
+        assert ".settings-card .select-native { text-align: right; }" in styles_css
+        assert ".settings-card .big-btn { padding: 10px var(--gap); min-height: 40px; }" in styles_css
+
+
+# ---------------------------------------------------------------------------
 # Optional: actually run Vitest when Node is available.
 # ---------------------------------------------------------------------------
 
