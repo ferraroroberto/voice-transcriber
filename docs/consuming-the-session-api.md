@@ -395,8 +395,8 @@ indistinguishable from a manual one:
 - A create with no `source` defaults to `"api"`.
 
 `source` is surfaced in `GET /api/sessions` (per-session field) and in
-the webapp's History panel as a small badge — externally sourced takes
-render in the accent colour so they stand out from `"webapp"` takes.
+the webapp's History panel as a small badge, one muted pill style for
+every source.
 
 The guarantee is **attribution, not retention exemption**: an
 attributed take still obeys the 30-day retention window and the

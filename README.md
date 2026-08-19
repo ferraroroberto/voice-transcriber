@@ -727,9 +727,12 @@ the page light even after weeks of daily use.
 
 Each row carries a small **source badge** next to its timestamp so
 you can tell where a take came from: `webapp` for ones dictated in
-this UI, or a consumer's own label (e.g. `app-launcher`, shown in the
-accent colour) for transcriptions triggered by another app through the
-[session API](docs/consuming-the-session-api.md). History is the
+this UI, or a consumer's own label (e.g. `app-launcher`) for
+transcriptions triggered by another app through the
+[session API](docs/consuming-the-session-api.md). Every source renders
+in the same muted pill — in History the accent colour is reserved for
+the contextually-next action (Refresh, and the newest take's Copy),
+the way the Record tab already reads. History is the
 single attributable source of truth for transcription across the
 fleet — externally triggered takes are captured *and* identifiable,
 not just recoverable on disk.

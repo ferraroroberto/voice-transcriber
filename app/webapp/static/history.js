@@ -109,12 +109,12 @@ function renderHistoryItem(s) {
   const when = document.createElement('div');
   when.className = 'when';
   when.textContent = s.created_at + (s.language ? ` · ${s.language}` : '');
-  // Attribution badge — who created the take. "webapp" gets a muted
-  // pill; an external consumer (e.g. "app-launcher") gets the accented
-  // variant so externally-sourced takes stand out in History.
+  // Attribution badge — who created the take. One muted pill for every
+  // source (issue #190): the accent is reserved for the contextually-next
+  // action, so a badge never competes with the newest take's Copy.
   if (s.source) {
     const badge = document.createElement('span');
-    badge.className = 'source-badge' + (s.source === 'webapp' ? '' : ' external');
+    badge.className = 'source-badge';
     badge.textContent = s.source;
     when.append(' ', badge);
   }
@@ -124,8 +124,11 @@ function renderHistoryItem(s) {
   const actions = document.createElement('div');
   actions.className = 'actions';
 
+  // Ghost by default; styles.css re-tints the newest row's Copy via
+  // :first-child, so the emphasis follows the list with no JS bookkeeping
+  // across Load more / delete-refresh (issue #190).
   const copyBtn = document.createElement('button');
-  copyBtn.className = 'copy-btn';
+  copyBtn.className = 'button-ghost compact history-copy';
   copyBtn.innerHTML = icon('clipboard') + ' Copy';
   copyBtn.addEventListener('click', async () => {
     // The list payload only carries 200-char previews; fetch the full
@@ -142,12 +145,12 @@ function renderHistoryItem(s) {
   });
 
   const reBtn = document.createElement('button');
-  reBtn.className = 'button-tint compact';
+  reBtn.className = 'button-ghost compact';
   reBtn.innerHTML = icon('rotate-cw') + ' Redo';
   reBtn.addEventListener('click', () => retranscribe(s.session_id));
 
   const delBtn = document.createElement('button');
-  delBtn.className = 'button-tint compact';
+  delBtn.className = 'button-ghost compact';
   delBtn.innerHTML = icon('trash-2') + ' Delete';
   delBtn.addEventListener('click', async () => {
     try {

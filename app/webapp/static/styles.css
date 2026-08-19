@@ -442,15 +442,16 @@ textarea.text-out.editable::placeholder {
 .copy-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 .copy-btn.copied { background: var(--on); border-color: var(--on); color: var(--accent-fg); }
 
-/* History toolbar's compact tint buttons (was .ghost-btn — fleet-config#296
-   settled ghost = transparent fill; this recipe was always the tint tier
-   wearing the ghost name, issue #111). Color/border/radius/cursor and the
-   :active scale come from the vendored .button-tint (_vendored/button/
+/* History's compact toolbar/row footprint, shared by both tiers it uses.
+   Color/border/radius/cursor come from the vendored tier (_vendored/button/
    button.css); this block only restates the smaller footprint these
-   toolbar/row buttons have always used (14px/48px group base and the
-   vendored tint's own 13px/48px/font-body/700 are both too large here),
-   so the rename is a pure rename with zero visual change. */
-.button-tint.compact {
+   toolbar/row buttons have always used (the 14px/48px group base and the
+   vendored tint's own 13px/48px/font-body/700 are both too large here).
+   History is ghost-by-default and tints only the contextually-next action
+   — Refresh, and the newest take's Copy — the way the Record tab already
+   reads (issue #190); before that every button here was a tint. */
+.button-tint.compact,
+.button-ghost.compact {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -462,13 +463,19 @@ textarea.text-out.editable::placeholder {
   min-height: 40px;
   touch-action: manipulation;
 }
-.button-tint.compact .icon { width: var(--icon-inline); height: var(--icon-inline); }
-.button-tint.compact.copied {
+.button-tint.compact .icon,
+.button-ghost.compact .icon { width: var(--icon-inline); height: var(--icon-inline); }
+/* The vendored ghost tier ships no :active; restate the tint's scale so a
+   ghost press feels the same as it did when these were all tints. */
+.button-ghost.compact:active { transform: scale(0.98); }
+.button-tint.compact.copied,
+.button-ghost.compact.copied {
   background: var(--on);
   color: var(--accent-fg);
   border-color: var(--on);
 }
-.button-tint.compact.danger-flash {
+.button-tint.compact.danger-flash,
+.button-ghost.compact.danger-flash {
   background: var(--danger);
   color: var(--accent-fg);
   border-color: var(--danger);
@@ -620,13 +627,6 @@ textarea.text-out.editable::placeholder {
   border: 1px solid var(--line-muted);
   vertical-align: middle;
 }
-/* Externally-sourced takes (anything but the webapp itself) pop in the
- * accent colour so the History list reads as a cross-fleet audit trail. */
-.history-list li .source-badge.external {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent-border-soft);
-}
 .history-list li .preview { margin-top: var(--space-xs); font-size: var(--font-label); color: var(--ink); }
 .history-list li .actions {
   display: flex;
@@ -636,9 +636,34 @@ textarea.text-out.editable::placeholder {
   flex-wrap: wrap;
 }
 .history-list li .actions button { font-size: var(--font-caption); min-height: var(--control-h); padding: 6px 10px; }
+/* The newest take is the one that actually gets copied — it is also the
+   row auto-checked on every refresh (history.js) — so its Copy is the
+   contextually-next action and wears the tint, while every other row's
+   stays ghost. Driven by :first-child, not JS state, so the emphasis
+   follows the list across Load more and delete-refresh with no bookkeeping.
+   `:not(.copied)` so the green copy flash still wins (issue #190). */
+.history-list li:first-child .history-copy:not(.copied) {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: var(--accent-border-soft);
+}
 
 /* ---------- settings panel ---------- */
 .settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
+/* Every Settings control is right-anchored in its row, so its value reads
+   from that same edge — a left-aligned value inside a right-anchored box
+   floats away from it. The select's chevron clearance (.select-native
+   padding-right) reserves 32px for a chevron this app never draws
+   (appearance:none, no replacement background-image), so drop it back to
+   the inputs' 10px inset here — otherwise the selects' values would stop
+   short of the edge the number inputs hug. Issue #190. */
+.settings-card .input-native,
+.settings-card .select-native { text-align: right; }
+.settings-card .select-native { padding-right: 10px; }
+/* Save is a full-width bottom-of-card action like History's `Load more`;
+   match that 40px compact height rather than the 48px group base, same
+   footprint override .card-header-actions already makes. Issue #190. */
+.settings-card .big-btn { padding: 10px var(--gap); min-height: 40px; }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
 
