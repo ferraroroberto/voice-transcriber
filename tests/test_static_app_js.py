@@ -84,6 +84,24 @@ class TestAppJsSourcePins:
         assert "showResumeButton" in app_js
         assert "hideResumeButton" in app_js
 
+    def test_chunk_upload_retries_before_dropping(self, app_js: str):
+        """A failed /chunk POST must be retried with backoff, not silently
+        dropped — the first chunk carries the WebM header, so losing it
+        makes the whole take unparseable by ffmpeg (issue #192)."""
+        assert "CHUNK_RETRY_DELAYS_MS" in app_js
+        match = re.search(
+            r"function enqueueChunkUpload\([^\)]*\)\s*\{(.*?\n\})",
+            app_js,
+            re.DOTALL,
+        )
+        assert match is not None, "enqueueChunkUpload body not found"
+        body = match.group(1)
+        assert "CHUNK_RETRY_DELAYS_MS" in body
+        # Exhausting every retry must flag the take and warn the user
+        # rather than discarding the chunk with no trace.
+        assert "state.hadDroppedChunk = true" in body
+        assert "showToast(" in body
+
     def test_build_version_line_wired(self, app_js: str):
         """The SPA must fetch /api/version on boot and render it into the
         #buildInfo line so the loaded build is glanceable (issue #13)."""

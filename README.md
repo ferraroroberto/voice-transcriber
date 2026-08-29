@@ -959,6 +959,7 @@ work in one foreground process.
 | Tray says `cloudflared not on PATH` | Binary missing | `winget install Cloudflare.cloudflared`, restart the tray |
 | Tray boots but no public URL | `webapp/cloudflared.yml` missing | Copy `webapp/cloudflared.sample.yml` to `webapp/cloudflared.yml`, fill in UUID + hostname, restart the tray. See "Persistent URL via Cloudflare tunnel" |
 | Webapp goes completely unresponsive (process alive, every request fails/hangs) until a tray restart | Windows' default asyncio proactor event loop closes its listening socket the moment `accept()` sees any `OSError` — a dropped Wi-Fi/Tailscale handoff or a browser tab closed mid-handshake surfaces as `WinError 64` on the accept side, and one such abort kills the listener for good (#113) | Fixed — every `app.webapp.server:app` uvicorn invocation now runs on the selector event loop instead (`app/webapp/event_loop.py`), whose accept path doesn't have this failure mode. If it recurs anyway, `tray.bat --restart` remains the manual recovery |
+| `Recording upload glitch — audio may be incomplete` toast | A `/chunk` POST failed 4 times in a row (network blip through the tunnel) — retried with backoff, then gave up on that one chunk (#192) | Check the transcript for a gap around when the toast fired. If it's the very first chunk of the take, the WebM header is lost and the take won't transcode — re-record |
 
 ## 🧪 Testing
 

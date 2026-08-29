@@ -75,6 +75,7 @@ export const state = {
   uploadChain: Promise.resolve(),  // serializes uploads so server appends in order
   pendingUploads: 0,
   bytesSent:   0,           // running total of chunk bytes uploaded
+  hadDroppedChunk: false,   // a /chunk POST exhausted its retries this take (#192)
   startedAt:   0,
   timer:       null,
   levelTimer:  null,

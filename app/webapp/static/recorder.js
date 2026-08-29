@@ -149,6 +149,7 @@ async function startRecording() {
   state.uploadChain = Promise.resolve();
   state.pendingUploads = 0;
   state.bytesSent = 0;
+  state.hadDroppedChunk = false;
   state.recorder = new MediaRecorder(stream, mimeType ? {mimeType} : undefined);
   state.stream = stream;
 
@@ -238,22 +239,52 @@ export function hideResumeButton() {
   if (els.resumeBtn) els.resumeBtn.hidden = true;
 }
 
+// Delays (ms) between retry attempts on a failed /chunk POST. A dropped
+// chunk isn't just missing audio — if it's the *first* chunk, the WebM
+// container loses its EBML/Segment/Tracks header and the whole take
+// becomes unrecoverable by ffmpeg (voice-transcriber#192). Retrying
+// in-place preserves upload order since chunks are chained.
+const CHUNK_RETRY_DELAYS_MS = [300, 800, 1500];
+
+async function uploadChunkOnce(chunk) {
+  const r = await authFetch(`/api/sessions/${state.sessionId}/chunk`, {
+    method: 'POST',
+    headers: { 'Content-Type': chunk.type || state.mimeType || 'audio/webm' },
+    body: chunk,
+  });
+  if (!r.ok) {
+    throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`);
+  }
+}
+
 function enqueueChunkUpload(chunk) {
   state.pendingUploads += 1;
   state.uploadChain = state.uploadChain.then(async () => {
     try {
-      const r = await authFetch(`/api/sessions/${state.sessionId}/chunk`, {
-        method: 'POST',
-        headers: { 'Content-Type': chunk.type || state.mimeType || 'audio/webm' },
-        body: chunk,
-      });
-      if (r.ok) {
-        state.bytesSent += chunk.size;
-      } else {
-        console.warn('chunk upload failed', r.status, await r.text().catch(() => ''));
+      let lastErr = null;
+      for (let attempt = 0; attempt <= CHUNK_RETRY_DELAYS_MS.length; attempt += 1) {
+        try {
+          await uploadChunkOnce(chunk);
+          state.bytesSent += chunk.size;
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+          const delay = CHUNK_RETRY_DELAYS_MS[attempt];
+          if (delay !== undefined) {
+            console.warn(`chunk upload failed, retrying in ${delay}ms`, err);
+            await new Promise(res => setTimeout(res, delay));
+          }
+        }
       }
-    } catch (err) {
-      console.warn('chunk upload errored', err);
+      if (lastErr) {
+        // Every retry exhausted — this chunk is permanently lost. Flag
+        // the take so the user knows the transcript may be corrupt
+        // instead of silently discarding it.
+        state.hadDroppedChunk = true;
+        console.error('chunk upload permanently failed after retries', lastErr);
+        showToast('Recording upload glitch — audio may be incomplete', 'error');
+      }
     } finally {
       state.pendingUploads -= 1;
     }
