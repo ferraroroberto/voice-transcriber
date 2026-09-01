@@ -20,6 +20,25 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
+@pytest.fixture(autouse=True)
+def _isolate_activity_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """Keep every test's activity-log writes off the real store.
+
+    `webapp_client` already redirects `DEFAULT_DB_PATH`, but it is opt-in, so
+    any test touching :mod:`src.activity_log` without requesting that fixture
+    wrote straight into the production database. That was invisible while the
+    default lived at `webapp/activity.sqlite3` next to the tests; relocating it
+    to the shared fleet runtime-data root makes a stray write land beside every
+    other app's live data, so the isolation has to be unconditional rather than
+    something each test remembers to ask for.
+    """
+    from src import activity_log as activity_log_mod
+
+    monkeypatch.setattr(
+        activity_log_mod, "DEFAULT_DB_PATH", tmp_path / "activity.sqlite3"
+    )
+
+
 @pytest.fixture
 def project_root() -> Path:
     """Absolute path to the repo root — useful when a test needs to
