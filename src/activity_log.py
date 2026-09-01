@@ -4,7 +4,7 @@
 configured retention window (default 30 days — see :mod:`src.archive`), so
 they are the wrong place to keep a durable trail of what the app did. This
 module is that trail: a single WAL-mode SQLite file in the fleet runtime-data
-root (``C:\sqlite\voice-transcriber\activity.sqlite3`` on Windows — see
+root (``<root>/voice-transcriber/activity.sqlite3`` — see
 :mod:`src.runtime_data`) holding one
 ``events`` table — one row per discrete thing that happened (a session was
 created, a transcription succeeded or failed, a polish call succeeded or
