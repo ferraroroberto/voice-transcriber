@@ -3,8 +3,9 @@
 ``archive/`` session folders (and their ``meta.json``) are pruned after the
 configured retention window (default 30 days — see :mod:`src.archive`), so
 they are the wrong place to keep a durable trail of what the app did. This
-module is that trail: a single WAL-mode SQLite file at ``webapp/activity.sqlite3``
-(gitignored, alongside ``webapp/auth.log`` and the TLS certs) holding one
+module is that trail: a single WAL-mode SQLite file in the fleet runtime-data
+root (``C:\sqlite\voice-transcriber\activity.sqlite3`` on Windows — see
+:mod:`src.runtime_data`) holding one
 ``events`` table — one row per discrete thing that happened (a session was
 created, a transcription succeeded or failed, a polish call succeeded or
 failed, a session was deleted). Modeled on the home-automation project's
@@ -35,14 +36,17 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+from src.runtime_data import runtime_db_path
+
 logger = logging.getLogger("activity_log")
 
-# Default DB location: the repo's gitignored webapp/ runtime area, next to
-# auth.log and the TLS certs. ``VT_ACTIVITY_DB_PATH`` (env) overrides it —
-# used by tests to keep a temp DB off the real one.
-DEFAULT_DB_PATH = Path(
-    os.getenv("VT_ACTIVITY_DB_PATH")
-    or (Path(__file__).resolve().parent.parent / "webapp" / "activity.sqlite3")
+# Default DB location: the fleet runtime-data root (``C:\sqlite\voice-transcriber\``
+# on Windows), not this repo's ``webapp/`` — the checkout drive here is a spinning
+# HDD, and this store is written by an always-on service (project-scaffolding#243).
+# ``VT_ACTIVITY_DB_PATH`` (env) still overrides it, and still outranks everything —
+# the tests set it to keep a temp DB off the real one.
+DEFAULT_DB_PATH = runtime_db_path(
+    "voice-transcriber", "activity.sqlite3", env_var="VT_ACTIVITY_DB_PATH"
 )
 
 DEFAULT_RETENTION_DAYS = 365

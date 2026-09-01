@@ -11,6 +11,7 @@ regressions).
 from __future__ import annotations
 
 # Standard library imports
+import os
 import socket
 import subprocess
 import sys
@@ -52,9 +53,15 @@ def uvicorn_proc(tmp_path: Path) -> Iterator[tuple[subprocess.Popen, int]]:
         "--port", str(port),
         "--log-level", "error",
     ]
+    # A subprocess inherits none of pytest's monkeypatching, so conftest's
+    # activity-log isolation cannot reach it — this boot would write into the
+    # real store. `VT_ACTIVITY_DB_PATH` is the highest-precedence override
+    # exactly for this case (see src/runtime_data.py).
+    env = {**os.environ, "VT_ACTIVITY_DB_PATH": str(tmp_path / "activity.sqlite3")}
     proc = subprocess.Popen(
         cmd,
         cwd=str(PROJECT_ROOT),
+        env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
