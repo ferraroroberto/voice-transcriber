@@ -74,6 +74,7 @@ _ORPHAN_PUNCT = ".,;:!?"
 _CAP_SKIP = " \t\n\r\"'“”‘’([{-–—…«»"
 
 _SPACE_BEFORE_PUNCT = re.compile(r"[ \t]+([,.;:!?])")
+_SPACE_BEFORE_NEWLINE = re.compile(r"[ \t]+(\r?\n)")
 _SPACE_RUN = re.compile(r"[ \t]{2,}")
 
 
@@ -99,7 +100,12 @@ def _compile_pattern(terms: List[str]) -> Optional["re.Pattern[str]"]:
     clean: List[str] = []
     seen = set()
     for raw in terms:
-        term = str(raw).strip().lower()
+        if not isinstance(raw, str):
+            # Coercing with str() would turn a JSON null into the word "none"
+            # and start stripping it — reject anything that isn't text.
+            logger.warning(f"⚠️  disfluencies.json: ignoring non-string filler {raw!r}")
+            continue
+        term = raw.strip().lower()
         if len(term) < 2 or not term.isalpha():
             if term:
                 logger.warning(f"⚠️  disfluencies.json: ignoring filler “{term}”")
@@ -201,12 +207,17 @@ def _strip(text: str, pattern: "re.Pattern[str]") -> Tuple[str, bool]:
         if _at_sentence_start(last_char):
             # The filler opened the sentence: swallow the punctuation it was
             # hiding behind ("Uh. Instead …" must not leave a stray period)
-            # and hand its capital to whatever word comes next.
+            # and hand its capital to whatever word comes next. The whole run
+            # goes, not one character — half an ellipsis ("Um... what") is a
+            # worse artefact than the filler was.
             probe = end
             while probe < len(text) and text[probe] in " \t":
                 probe += 1
-            if probe < len(text) and text[probe] in _ORPHAN_PUNCT:
-                end = probe + 1
+            run = probe
+            while run < len(text) and text[run] in _ORPHAN_PUNCT:
+                run += 1
+            if run > probe:
+                end = run
             if match.group(0)[:1].isupper():
                 owed_capital = True
         idx = end
@@ -236,5 +247,6 @@ def strip_disfluencies(text: str) -> str:
         return text
 
     out = _SPACE_BEFORE_PUNCT.sub(r"\1", out)
+    out = _SPACE_BEFORE_NEWLINE.sub(r"\1", out)
     out = _SPACE_RUN.sub(" ", out).strip()
     return out if out else text

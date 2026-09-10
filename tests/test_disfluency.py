@@ -104,6 +104,14 @@ class TestPunctuationAndCase:
     def test_fillers_only_take_is_never_emptied(self):
         assert df.strip_disfluencies("Uh, um, uh.") == "Uh, um, uh."
 
+    def test_sentence_opening_filler_takes_a_whole_ellipsis(self):
+        # Swallowing one dot of three would leave a worse artefact than the
+        # filler ("Um... what" -> ".. what").
+        assert df.strip_disfluencies("Um... what do you mean?") == "What do you mean?"
+
+    def test_no_space_left_dangling_before_a_newline(self):
+        assert df.strip_disfluencies("line one uh\nline two") == "line one\nline two"
+
 
 class TestConfig:
     def test_disabled_keeps_verbatim_text(self, isolate_config: Path):
@@ -135,6 +143,12 @@ class TestConfig:
     def test_wrong_shape_falls_back_to_defaults(self, isolate_config: Path):
         _write(isolate_config, ["uh", "um"])
         assert df.strip_disfluencies("well uh okay") == "well okay"
+
+    def test_null_in_the_list_does_not_become_the_word_none(self, isolate_config: Path):
+        # str(None) would pass the isalpha/length guards and start stripping
+        # the real word "none" — non-strings must be rejected outright.
+        _write(isolate_config, {"fillers": [None, "uh"]})
+        assert df.strip_disfluencies("none of them uh left") == "none of them left"
 
     def test_single_letter_terms_are_rejected(self, isolate_config: Path):
         # "a" would compile to `a+` and eat every article — must be ignored.
