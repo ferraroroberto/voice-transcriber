@@ -1,0 +1,6 @@
+{
+  "_comment": "Copy to disfluencies.json to override the filler-word filter (issue #198). The file is optional: with no disfluencies.json the built-in list below is used, on by default. 'fillers' REPLACES the built-in list (so [] strips nothing); each term also matches its elongations, because the final letter is allowed to repeat (uh -> uhh, uhhh). Set 'enabled' to false to turn the filter off entirely and keep verbatim transcripts.",
+  "_excluded_by_default": "oh, ah, eh, er and bare mm are NOT in the built-in list: they carry meaning in real dictation ('Oh, and by the way ...', 'he said, Oh thank you'), so removing them rewrites sentences. Add them here if you want them stripped anyway.",
+  "enabled": true,
+  "fillers": ["uh", "um", "uhm", "erm", "hmm", "mmm"]
+}

@@ -175,6 +175,25 @@ class TestTranscribeWavBytes:
         )
         assert c.transcribe_wav_bytes(b"x") == "talk to you later friend"
 
+    def test_response_text_goes_through_strip_disfluencies(self, mocker, tmp_path):
+        """The filler strip is part of the shared chain every surface
+        inherits (issue #198) — not something a caller opts into."""
+        # Point the filter's config loader at an absent file so this asserts
+        # the built-in defaults, not whatever config/disfluencies.json the
+        # developer happens to have — then put the real path back, since the
+        # loader is a module singleton shared with the rest of the suite.
+        import src.disfluency as df
+
+        real_path = df._loader.path
+        df._loader.reset(tmp_path / "disfluencies.json")
+        try:
+            c = TranscriptionClient("http://server:8090")
+            fake = mocker.patch.object(c, "_session")
+            fake.post.return_value = _ok_response("I want to make uh a plan")
+            assert c.transcribe_wav_bytes(b"x") == "I want to make a plan"
+        finally:
+            df._loader.reset(real_path)
+
     def test_network_error_wraps_as_transcription_error(self, mocker):
         c = TranscriptionClient("http://server:8090")
         fake = mocker.patch.object(c, "_session")

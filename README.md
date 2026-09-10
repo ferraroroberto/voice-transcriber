@@ -122,7 +122,7 @@ Other knobs:
   ISO codes (default `["en", "es", "it"]` in the committed config), out of
   the full 100 Whisper supports (see the `language` note above).
 
-Three optional companion files (all gitignored, sample-tracked):
+Four optional companion files (all gitignored, sample-tracked):
 
 - `config/vocabulary.json` — per-language buckets of proper nouns, brands,
   and jargon Whisper would otherwise mishear. Joined into the request's
@@ -145,8 +145,21 @@ Three optional companion files (all gitignored, sample-tracked):
   *other* recurring bare hallucination outside that family, stripped whatever
   separator whisper invents — colon, comma, dash, or period. See
   `config/speaker_blocklist.sample.json`.
+- `config/disfluencies.json` — overrides the **filler-word strip**, which runs
+  with **no config at all**. The ASR is a verbatim recogniser, so every `uh`
+  and `um` you actually said lands in the transcript (measured: ~23 per 1000
+  words). `src/disfluency.py` removes `uh`, `um`, `uhm`, `erm`, `hmm`, `mmm`
+  and their elongations (`uhh`, `ummm`, …) before the text hits clipboard /
+  caret paste — punctuation, spacing and sentence capitals repaired, and a
+  take that is *only* fillers left untouched. `oh`, `ah`, `eh`, `er` and bare
+  `mm` are **deliberately kept**: they carry meaning in real dictation ("Oh,
+  and by the way…"), so removing them would rewrite sentences. Write this file
+  to change that — `{"fillers": ["uh", "um", "oh"]}` replaces the built-in
+  list, `{"enabled": false}` restores fully verbatim transcripts. See
+  `config/disfluencies.sample.json`. For what a regex can't fix — false starts
+  and repetitions — use the LLM [polish](#polish-styles) pass.
 
-All three hot-reload on mtime change — no restart needed after editing.
+All four hot-reload on mtime change — no restart needed after editing.
 
 Hotkey uses [`pynput.keyboard.GlobalHotKeys`](https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys)
 syntax: angle-bracketed modifiers + a key, `+`-separated.
@@ -258,6 +271,7 @@ voice-transcriber/
 │   ├── silence.py                 # RMS dBFS gate
 │   ├── gain.py                    # quiet-env gain boost — post-silence-gate
 │   ├── speaker_label.py           # strip fabricated leading speaker labels
+│   ├── disfluency.py              # strip spoken filler words (uh/um) + hot-reload
 │   ├── static_versioning.py       # content-hash asset URLs
 │   ├── recording_pipeline.py      # silence-gate -> gain-boost -> transcribe
 │   ├── hot_reload_json.py         # shared mtime-cached JSON loader
@@ -1057,6 +1071,7 @@ still covers the same logic via the parity port in
 | `tests\test_vocabulary.py` | Per-language vocab prompts + hot-reload on mtime |
 | `tests\test_snippets.py` | Word-boundary keyword expansion + hot-reload |
 | `tests\test_speaker_label.py` | Strip fabricated leading speaker labels (titled + assistant-name family + blocklist) |
+| `tests\test_disfluency.py` | Spoken filler-word strip — built-in list, elongations, punctuation/case repair, config override + hot-reload (issue #198) |
 | `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
 | `tests\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` |
 | `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
