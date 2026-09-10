@@ -1,12 +1,12 @@
 """Shared mtime-cached JSON loader for the hot-reloadable, gitignored config
 files (``config/snippets.json``, ``config/vocabulary.json``,
-``config/speaker_blocklist.json``).
+``config/speaker_blocklist.json``, ``config/disfluencies.json``).
 
-Each of ``src/snippets.py``, ``src/vocabulary.py``, and
-``src/speaker_label.py`` loads a small user-editable JSON file and
+Each of ``src/snippets.py``, ``src/vocabulary.py``, ``src/speaker_label.py``
+and ``src/disfluency.py`` loads a small user-editable JSON file and
 hot-reloads it on mtime change so edits take effect without a restart. This
 module factors the stat → compare-to-cache → lock → parse → warn-and-fallback
-dance into one place so a correctness fix lands once instead of three times.
+dance into one place so a correctness fix lands once instead of four times.
 
 Callers own the file's shape: they pass a ``parse_fn`` that turns the decoded
 JSON value into whatever cached shape they want (a dict, a compiled regex, a

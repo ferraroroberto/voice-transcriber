@@ -89,12 +89,13 @@ flowchart TB
     SILENCE["silence.py\nRMS dBFS gate"]
     GAIN["gain.py\nquiet-env gain boost — post-silence-gate"]
     SPEAKERLABEL["speaker_label.py\nstrip fabricated leading speaker labels"]
+    DISFLUENCY["disfluency.py\nstrip spoken filler words (uh/um),\nconfig/disfluencies.json overrides"]
     INJECT["inject.py\nclipboard + caret paste"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
     MICGLYPH["mic_glyph.py\nruntime state-tinted tray renderer —\nsame mic.svg silhouette as brand_gen"]
     RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py (issue #174)"]
     TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by service_supervisor.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen (issue #174)"]
-    HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py"]
+    HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py, disfluency.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
     WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
     PROCSUP["process_supervisor.py\nshared adopt-or-spawn primitives: TCP probe,\nstop ladder, readiness poll — WHISPERMGR + WEBAPPMGR compose it"]
@@ -106,6 +107,7 @@ flowchart TB
   VOCAB --> HOTRELOAD
   SNIPPETS --> HOTRELOAD
   SPEAKERLABEL --> HOTRELOAD
+  DISFLUENCY --> HOTRELOAD
 
   CLICMDS --> RECORDER
   CLICMDS --> TRANSCLIENT
@@ -128,6 +130,9 @@ flowchart TB
   RECPIPE --> SILENCE
   RECPIPE --> GAIN
   TRANSCLIENT --> VOCAB
+  TRANSCLIENT -->|post-processing chain| SPEAKERLABEL
+  TRANSCLIENT -->|post-processing chain| DISFLUENCY
+  TRANSCLIENT -->|post-processing chain| SNIPPETS
   STATIC --> STATICVER
   RECORDER --> APPCONFIG
   TRAYPY --> APPCONFIG

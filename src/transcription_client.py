@@ -30,6 +30,7 @@ import numpy as np
 import requests
 
 from .app_config import AppConfig, resolve_iso
+from .disfluency import strip_disfluencies
 from .snippets import apply_snippets
 from .speaker_label import strip_speaker_label
 from .vocabulary import prompt_for_language
@@ -179,7 +180,15 @@ class TranscriptionClient:
             )
 
         self._record_served_from(response)
-        return apply_snippets(strip_speaker_label(_extract_text(response)))
+        # Shared post-processing chain — every surface (tray, tk GUI, webapp,
+        # CLI, /api/transcribe) inherits it from this one chokepoint. Order
+        # matters: drop a fabricated leading speaker label first (it is
+        # anchored to the head of the raw text), then the filler words, then
+        # expand snippets — so a snippet key can never be split by a filler
+        # removed after it.
+        return apply_snippets(
+            strip_disfluencies(strip_speaker_label(_extract_text(response)))
+        )
 
     def _record_served_from(self, response: requests.Response) -> None:
         """Stash who actually served this transcription (issue #156).

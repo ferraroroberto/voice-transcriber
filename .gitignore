@@ -37,6 +37,7 @@ config/webapp_config.json
 config/vocabulary.json
 config/snippets.json
 config/speaker_blocklist.json
+config/disfluencies.json
 
 # --- Webapp runtime data --------------------------------------------------
 archive/
