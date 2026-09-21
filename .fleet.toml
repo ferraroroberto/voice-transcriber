@@ -11,6 +11,9 @@ chips       = ["whisper :8090"]
 # Design-lint findings examined and accepted (schema: fleet-config's
 # architecture/README.md, "[[design.accepted]]"). `detail` is the finding's
 # exact string, so it goes stale if the dialog moves off index.html:339.
+# Not yet in effect: design_lint's modal-header row carries no evidence, so
+# this entry cannot match it (it reports an accepted-exception WARN) until
+# fleet-config#953 lands; after that the FAIL reports ACCEPTED.
 [[design.accepted]]
 check  = "modal-header"
 target = "app/webapp/static/index.html"
