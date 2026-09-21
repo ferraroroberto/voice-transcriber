@@ -335,7 +335,7 @@
        header contract assumes a dismissable box; this one can't be dismissed
        without authenticating, so a close button would either be a no-op or a
        security hole (letting an unauthenticated user "close" their way into
-       the app). .fleet.toml acceptance applies once fleet-config#953 lands. -->
+       the app). Accepted in .fleet.toml; design_lint reports it ACCEPTED. -->
   <dialog id="loginOverlay" class="detail-dialog login-dialog">
     <form id="loginForm" class="detail-card login-card" autocomplete="off">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg> Sign in</h2>
