@@ -8,6 +8,16 @@ port        = ":8443"
 description = "Always-on voice→text (F8). Owns whisper :8090."
 chips       = ["whisper :8090"]
 
+# Design-lint findings examined and accepted (schema: fleet-config's
+# architecture/README.md, "[[design.accepted]]"). `detail` is the finding's
+# exact string, so it goes stale if the dialog moves off index.html:339.
+[[design.accepted]]
+check  = "modal-header"
+target = "app/webapp/static/index.html"
+detail = "editor-modal header contract violated (design.md modal wants a heading-lg title + square x close, never a footer Cancel): app/webapp/static/index.html:339 no square x close button"
+reason = "#loginOverlay is a non-dismissable auth gate: a x close would be a no-op or a way past authentication"
+record = "https://github.com/ferraroroberto/voice-transcriber/issues/202"
+
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "727dfe8b9e4e625993c0e0286836e510015411cc", dest = "tests/e2e/_e2e_live_guard.py" }
 runtime_data = { src = "src/runtime_data.py", sha = "346765f7c14af0ec61e960333c055974e4e9e1db", dest = "src/runtime_data.py" }

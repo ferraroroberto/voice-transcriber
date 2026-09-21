@@ -32,7 +32,8 @@
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --accent-border-soft: color-mix(in srgb, var(--accent) 24%, transparent);
   --accent-border-strong: color-mix(in srgb, var(--accent) 28%, transparent);
-  /* radii (rounded scale) — adopted steps: {md, lg, pill, nav, 50%-circles} */
+  /* radii (rounded scale) — adopted steps: {sm, md, lg, pill, nav, 50%-circles} */
+  --radius-sm: 8px;
   --radius-md: 12px;
   --radius: 16px;           /* rounded.lg — cards */
   --radius-pill: 9999px;
@@ -607,13 +608,43 @@ textarea.text-out.editable::placeholder {
   padding-top: 2px;
   cursor: pointer;
 }
-.history-list li .select input[type="checkbox"] {
+/* The "include in Copy selection" tick is a multi-select control, not a
+   boolean setting (that one is the vendored switch). Modelled on shadcn's
+   Checkbox (design.md Base UI): a hairline square that fills with the accent
+   and draws a check when ticked. `appearance: none` takes only the paint —
+   it stays a real <input type=checkbox>, so :checked, Space and the label
+   pairing are still the platform's. Same recipe as task-os's `.check`. */
+.history-list li .select-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  display: inline-grid;
+  place-content: center;
   width: 20px;
   height: 20px;
   margin: 0;
-  accent-color: var(--accent);
+  border: 1px solid var(--line);
+  /* half the smallest fleet radius — a fully rounded tick reads as a radio */
+  border-radius: calc(var(--radius-sm) / 2);
+  background: var(--card);
   cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
+/* the check glyph: two borders of an empty box, rotated — no sprite lookup
+   in a control that repeats once per row */
+.history-list li .select-checkbox::before {
+  content: "";
+  width: 10px;
+  height: 5px;
+  border: 2px solid var(--accent-fg);
+  border-top: 0;
+  border-right: 0;
+  transform: translateY(-1px) rotate(-45deg);
+  opacity: 0;
+}
+.history-list li .select-checkbox:checked { background: var(--accent); border-color: var(--accent); }
+.history-list li .select-checkbox:checked::before { opacity: 1; }
+.history-list li .select-checkbox:hover:not(:checked) { border-color: var(--accent); }
 .history-list li .content { flex: 1; min-width: 0; }
 .history-list li .when { color: var(--muted); font-size: var(--font-caption); }
 .history-list li .source-badge {
