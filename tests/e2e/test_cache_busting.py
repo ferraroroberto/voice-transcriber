@@ -45,6 +45,7 @@ _STAMPED_ASSETS = (
     "_vendored/nav/nav-tabs.css",
     "_vendored/card/card.css",
     "_vendored/switch/switch.css",
+    "_vendored/select-native/select-native.css",
     "_vendored/modal/modal.css",
     "_vendored/empty-state/empty-state.css",
     "_vendored/button/button.css",

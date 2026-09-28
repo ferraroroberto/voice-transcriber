@@ -19,12 +19,19 @@
   /* colors — accent + status (status colors signal state only, never decoration) */
   --accent: #0969da;
   --accent-fg: #ffffff;     /* text/icon on an accent fill */
+  --accent-fill: #0969da;   /* solid primary fill (button-primary) */
+  --accent-text: #0550ae;   /* accent text on an accent-soft tint */
   --on: #1a7f37;            /* success */
   --danger: #cf222e;        /* danger — the record button's "recording" state */
+  --danger-text: #a40e26;   /* danger text on its own tint */
+  /* danger tint recipe the vendored button.css `.danger` reads (its `--deficit`
+     base is this app's --danger) */
+  --deficit-soft: color-mix(in srgb, var(--danger) 12%, transparent);
+  --deficit-border-soft: color-mix(in srgb, var(--danger) 30%, transparent);
   --attention: #9a6700;     /* attention — the resume affordance */
   /* derived surface roles (mapped onto the neutral tokens above) */
   --input-bg: var(--card-off);
-  --toggle-track: var(--line);
+  --control-border: #818b98; /* input/select boundary + switch off-track (3:1 vs card) */
   --toggle-knob: #ffffff;
   --close-bg: var(--card-off);
   /* the modal/login scrim is theme-invariant by design — it dims content */
@@ -53,8 +60,11 @@
   --font-heading-xl: 2rem;
   --font-heading-lg: 1.5rem;
   --font-body: 1rem;
-  --font-label: 0.92rem;
-  --font-caption: 0.78rem;
+  --font-label: 0.875rem;
+  --font-caption: 0.75rem;
+  /* row heights the vendored nav references (design.md rows: 44px hit-target floor, 60px rail tab) */
+  --row-sm: 44px;
+  --row-lg: 60px;
   /* icon-size steps (icons.size — the canonical 16/18/24 + nav 20) */
   --icon-inline: 16px;
   --icon-title: 18px;
@@ -86,11 +96,14 @@
   --line-muted: #21262d;    /* border-muted */
   --accent: #2f81f7;
   --accent-fg: #ffffff;
+  --accent-fill: #1f6feb;
+  --accent-text: #58a6ff;
   --on: #3fb950;            /* success */
   --danger: #f85149;
+  --danger-text: #ff7b72;
   --attention: #d29922;
   --input-bg: var(--bg);
-  --toggle-track: var(--line);
+  --control-border: #6e7681;
   --toggle-knob: var(--ink);
   --close-bg: var(--line);
   /* Depth on a near-black canvas comes from surface lightness, not shadow. */
@@ -104,12 +117,14 @@
 @media (color-gamut: p3) {
   :root {
     --accent: oklch(0.52 0.18 256);
+    --accent-fill: oklch(0.52 0.18 256);
     --on: oklch(0.55 0.14 150);
     --danger: oklch(0.55 0.20 25);
     --attention: oklch(0.55 0.11 80);
   }
   [data-theme="dark"] {
     --accent: oklch(0.64 0.18 256);
+    --accent-fill: oklch(0.57 0.21 260);
     --on: oklch(0.72 0.18 150);
     --danger: oklch(0.68 0.20 25);
     --attention: oklch(0.77 0.13 85);
@@ -516,7 +531,7 @@ textarea.text-out.editable::placeholder {
   resize: vertical;
 }
 
-/* The shared 36px inline control comes from the vendored modal.css; only the
+/* The shared 36px inline control comes from the vendored select-native.css; only the
    select's chevron-clearance is app-side. */
 .select-native { appearance: none; -webkit-appearance: none; padding-right: 32px; }
 

@@ -322,7 +322,7 @@ voice-transcriber/
 │           ├── polish.js          # polish-text UI flow
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (nav · icons · card · switch · modal · empty-state)
+│                                  #   (nav · icons · card · switch · select-native · modal · empty-state · button)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
