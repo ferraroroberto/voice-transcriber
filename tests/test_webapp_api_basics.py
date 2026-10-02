@@ -114,6 +114,34 @@ class TestBuildVersion:
         assert "max-age=86400" in cc
 
 
+class TestCompression:
+    """Entry document + static assets are gzipped for a phone on cellular
+    — perf-review finding, issue #212."""
+
+    def test_index_is_gzipped(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/", headers={"Accept-Encoding": "gzip"})
+        assert resp.status_code == 200
+        assert resp.headers.get("content-encoding") == "gzip"
+        # The client transparently inflates; the stamped document is intact.
+        assert re.search(r"/static/app\.js\?v=[0-9a-f]{8}", resp.text)
+
+    def test_static_js_is_gzipped(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/static/app.js", headers={"Accept-Encoding": "gzip"})
+        assert resp.headers.get("content-encoding") == "gzip"
+
+    def test_no_gzip_without_accept_encoding(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/", headers={"Accept-Encoding": "identity"})
+        assert "content-encoding" not in resp.headers
+
+    def test_tiny_responses_stay_uncompressed(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/healthz", headers={"Accept-Encoding": "gzip"})
+        assert "content-encoding" not in resp.headers
+
+
 class TestApiConfig:
     def test_get_returns_polish_models_and_languages(self, webapp_client, sample_polish_payload):
         client, _, _ = webapp_client

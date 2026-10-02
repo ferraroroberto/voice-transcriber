@@ -41,6 +41,7 @@ from typing import Dict
 
 # Third-party imports
 from fastapi import FastAPI
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
@@ -76,6 +77,10 @@ _DAILY_ASSETS = frozenset({
 })
 
 _IMMUTABLE_CACHE = "public, max-age=31536000, immutable"
+
+# Responses smaller than this go out uncompressed — gzip framing would
+# cost more than it saves on the small status/version JSON.
+_GZIP_MIN_BYTES = 1000
 
 
 class CachingStaticFiles(StaticFiles):
@@ -183,6 +188,15 @@ def create_app() -> FastAPI:
         title="Voice Transcriber",
         version="0.2.0",
         lifespan=_lifespan,
+    )
+
+    # Gzip entry document, JS/CSS and JSON. Registered *before* the auth
+    # gate so it sits inside it: ``BaseHTTPMiddleware`` re-streams every
+    # body, which would make an outer gzip ignore ``minimum_size`` and
+    # compress even empty bodies. Starlette's middleware skips
+    # ``text/event-stream``, so the session SSE stream stays unbuffered.
+    app.add_middleware(
+        GZipMiddleware, minimum_size=_GZIP_MIN_BYTES, compresslevel=6
     )
 
     # Read the token from app.state on every request so a /api/config
