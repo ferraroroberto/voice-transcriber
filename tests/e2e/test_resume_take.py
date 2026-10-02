@@ -10,6 +10,11 @@ it to produce a finalised take, then asserts the Resume button appears
 and that clicking it restarts recording with the earlier transcript
 still in place. ``desktop_only`` — WebKit can't fake a media stream.
 
+It backgrounds via ``pagehide``, so it is also the regression pin for that
+handler (issue #12): the ``/finish`` POST fires, the transcript lands, and
+the "Saved while you were away" status renders. The ``visibilitychange``
+handler is pinned separately in ``test_background_finalize.py``.
+
 To watch it fail meaningfully: on a throwaway branch, delete the
 ``showResumeButton()`` call from ``onRecorderStopped`` — the button
 stays hidden and ``expect(...).to_be_visible()`` times out.
@@ -41,9 +46,18 @@ def test_resume_button_continues_a_backgrounded_take(
     # Record, then background mid-take so it is finalised (issue #12).
     start_recording(page)
     page.wait_for_timeout(1300)
+    # pagehide can mean the page is being discarded outright — the take
+    # must be finalised, not abandoned as loose chunks.
     with page.expect_request(_finish_request):
         page.evaluate("window.dispatchEvent(new Event('pagehide'))")
     expect(page.locator("#transcript")).to_have_value(_TRANSCRIPT)
+    # The "Saved while you were away" status is the discriminating signal:
+    # it only renders when state.backgroundFinalized is set, which only
+    # finalizeForBackground() does. (Releasing the mic stream also ends
+    # the recorder, so a /finish alone doesn't prove the fix is wired.)
+    expect(page.locator("#recordStatus")).to_contain_text(
+        "Saved while you were away"
+    )
 
     # The ▶ Resume button is offered only because the take ended via
     # backgrounding and produced a transcript.
