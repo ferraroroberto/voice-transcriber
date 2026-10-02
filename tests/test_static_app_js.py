@@ -266,20 +266,24 @@ class TestHistoryButtonEmphasis:
     def test_load_more_is_ghost(self, index_html: str):
         assert 'id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn"' in index_html
 
-    def test_history_rows_render_ghost_buttons(self, app_js: str):
-        """Every per-row action is ghost in the markup; only the newest
-        row's Copy is re-tinted, and that happens in CSS via :first-child
-        so it survives Load more / delete-refresh with no JS state."""
-        assert "copyBtn.className = 'button-ghost compact history-copy';" in app_js
-        assert "reBtn.className = 'button-ghost compact';" in app_js
-        assert "delBtn.className = 'button-ghost compact';" in app_js
-        assert "button-tint" not in app_js
-
-    def test_newest_row_copy_is_tinted_but_yields_to_the_copied_flash(
-        self, styles_css: str
+    def test_history_row_is_tap_to_copy_with_one_overflow(
+        self, app_js: str, index_html: str
     ):
-        assert ".history-list li:first-child .history-copy:not(.copied)" in styles_css
-        # The green/red flashes must reach the ghost tier too.
+        """A take is an action-row (design.md): tapping the body copies it and
+        one overflow button opens the rest. The row builds no per-row button
+        strip, and the destructive Delete lives last in the menu (#213)."""
+        assert "main.className = 'history-main';" in app_js
+        assert "more.className = 'history-more';" in app_js
+        assert "button-ghost compact history-copy" not in app_js
+        assert "button-tint" not in app_js
+        menu = re.search(r'<dialog id="takeMenu".*?</dialog>', index_html, re.S)
+        assert menu, "takeMenu dialog not found"
+        body = menu.group(0)
+        assert body.index('id="takeRedo"') < body.index("<hr>") < body.index('id="takeDelete"')
+        assert 'id="takeDelete" type="button" class="button-tint danger' in body
+
+    def test_copy_and_clear_flashes_reach_the_ghost_tier(self, styles_css: str):
+        # The green/red flashes of the toolbar's ghost buttons.
         assert ".button-ghost.compact.copied" in styles_css
         assert ".button-ghost.compact.danger-flash" in styles_css
 

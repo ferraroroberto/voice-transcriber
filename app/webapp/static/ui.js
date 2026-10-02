@@ -127,6 +127,19 @@ export function renderTranscript(text) {
 export function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 export function truncate(s, n) { return (s && s.length > n) ? s.slice(0, n - 1) + '…' : s; }
 
+// A take's created_at is a naive local ISO string; show it the way people say
+// it ("Today, 14:32") instead of the raw timestamp.
+export function formatWhen(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso || '';
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const midnight = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const days = Math.round((midnight(new Date()) - midnight(d)) / 86400000);
+  if (days === 0) return `Today, ${time}`;
+  if (days === 1) return `Yesterday, ${time}`;
+  return `${d.toLocaleDateString([], { month: 'short', day: 'numeric' })}, ${time}`;
+}
+
 export function formatBytes(n) {
   if (n < 1024) return `${n} B`;
   if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;

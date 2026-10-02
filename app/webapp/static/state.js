@@ -35,6 +35,10 @@ export const els = {
   copySelection:    document.getElementById('copySelection'),
   cleanAll:         document.getElementById('cleanAll'),
   loadMoreHistory:  document.getElementById('loadMoreHistory'),
+  takeMenu:         document.getElementById('takeMenu'),
+  takeMenuWhen:     document.getElementById('takeMenuWhen'),
+  takeRedo:         document.getElementById('takeRedo'),
+  takeDelete:       document.getElementById('takeDelete'),
 
   resetBtn:         document.getElementById('resetBtn'),
   appendToggle:     document.getElementById('appendToggle'),

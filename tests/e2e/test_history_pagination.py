@@ -68,3 +68,30 @@ def test_load_more_paginates_and_hides_at_end(
     load_more.click()
     expect(rows).to_have_count(_TOTAL)  # second page appended
     expect(load_more).to_be_hidden()  # has_more=false → button hidden
+
+
+def test_row_taps_copy_and_overflow_opens_the_menu(
+    authed_page: Page, base_url: str
+) -> None:
+    """A take is an action-row (#213): tapping the body fetches the full text
+    to copy, and the one trailing overflow button opens the Redo / Delete
+    menu (Delete last)."""
+    _mock_sessions(authed_page)
+    authed_page.route(
+        "**/api/sessions/sess-00/text",
+        lambda route: route.fulfill(json={"transcript": "take number 0"}),
+    )
+    authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    authed_page.click("#tabHistory")
+
+    first = authed_page.locator("#historyList > li").first
+    with authed_page.expect_request("**/api/sessions/sess-00/text"):
+        first.locator(".history-main").click()
+
+    first.locator(".history-more").click()
+    menu = authed_page.locator("#takeMenu")
+    expect(menu).to_be_visible()
+    expect(menu.locator("#takeRedo")).to_be_visible()
+    expect(menu.locator("#takeDelete")).to_be_visible()
+    menu.locator(".detail-close").click()
+    expect(menu).to_be_hidden()

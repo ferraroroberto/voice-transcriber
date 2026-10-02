@@ -155,6 +155,15 @@
       <path d="m6.34 17.66-1.41 1.41" />
       <path d="m19.07 4.93-1.41 1.41" />
     </symbol>
+    <symbol id="i-ellipsis-vertical" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="12" cy="5" r="1" />
+      <circle cx="12" cy="19" r="1" />
+    </symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </symbol>
   </svg>
 
   <!-- Fleet nav contract: direct <body> child, sibling to <main class="app"> —
@@ -352,6 +361,21 @@
       <button type="submit" class="big-btn">Unlock</button>
       <div id="loginError" class="login-error" hidden></div>
     </form>
+  </dialog>
+
+  <!-- A History row's overflow menu: the actions that are not the row's tap
+       (Copy). Redo, then the destructive Delete last, after a divider. -->
+  <dialog id="takeMenu" class="detail-dialog take-menu" aria-labelledby="takeMenuTitle">
+    <div class="detail-card">
+      <div class="detail-header">
+        <h2 id="takeMenuTitle">Take</h2>
+        <button type="button" class="detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
+      </div>
+      <p id="takeMenuWhen" class="muted take-menu-when"></p>
+      <button id="takeRedo" type="button" class="button-ghost take-menu-btn"><svg class="icon" aria-hidden="true"><use href="#i-rotate-cw" /></svg> Redo transcription</button>
+      <hr>
+      <button id="takeDelete" type="button" class="button-tint danger take-menu-btn"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete take</button>
+    </div>
   </dialog>
 
   <script type="module" src="/static/app.js?v=__APP_JS__"></script>
