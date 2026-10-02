@@ -24,6 +24,11 @@
   --on: #1a7f37;            /* success */
   --danger: #cf222e;        /* danger — the record button's "recording" state */
   --danger-text: #a40e26;   /* danger text on its own tint */
+  /* solid status fills that carry white text (the record button, the copy /
+     clear flashes, the toasts): the base hue in light, a notch deeper in dark
+     so white holds 4.5:1 — the same trick accent-fill plays for the accent. */
+  --danger-fill: var(--danger);
+  --on-fill: var(--on);
   /* danger tint recipe the vendored button.css `.danger` reads (its `--deficit`
      base is this app's --danger) */
   --deficit-soft: color-mix(in srgb, var(--danger) 12%, transparent);
@@ -109,6 +114,8 @@
   --on: #3fb950;            /* success */
   --danger: #f85149;
   --danger-text: #ff7b72;
+  --danger-fill: #da3633;   /* white text 4.6:1 (danger itself gives 3.35) */
+  --on-fill: #238636;       /* white text 4.6:1 (on itself gives 2.3) */
   --attention: #d29922;
   --input-bg: var(--bg);
   --control-border: #6e7681;
@@ -236,9 +243,10 @@ html, body {
 :root:not([data-theme="dark"]) .theme-icon-sun { display: none; }
 
 /* Append + incognito header chips — compact role="switch" buttons (same
-   aria-checked state contract as the fleet switch, own chip look). Opacity +
-   accent border flip on the checked state so on/off reads at a glance
-   instead of relying on a tiny tick (issue #22). */
+   aria-checked state contract as the fleet switch, own chip look). Muted text
+   at rest, ink text + accent border + tint when on, so on/off reads at a
+   glance instead of relying on a tiny tick (issue #22) — never opacity,
+   which drops the label under 4.5:1. */
 .append-toggle,
 .incognito-btn {
   display: inline-flex;
@@ -248,15 +256,14 @@ html, body {
   font: inherit;
   font-size: var(--font-caption);
   background: transparent;
-  color: var(--ink);
+  color: var(--muted);
   padding: 0 10px;
   min-height: var(--hit-min);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
   user-select: none;
-  opacity: 0.55;
-  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
 }
 .append-toggle .icon,
 .incognito-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
@@ -266,7 +273,7 @@ html, body {
 .incognito-btn:active { background: var(--card-off); }
 .append-toggle[aria-checked="true"],
 .incognito-btn[aria-checked="true"] {
-  opacity: 1;
+  color: var(--ink);
   border-color: var(--accent);
   background: var(--accent-soft);
 }
@@ -287,7 +294,7 @@ html, body {
   width: min(32vw, 125px);
   height: min(32vw, 125px);
   border-radius: 50%;
-  background: var(--danger);
+  background: var(--danger-fill);
   color: var(--accent-fg);
   border: 0;
   font-size: var(--font-body);
@@ -306,7 +313,7 @@ html, body {
 }
 .record-btn:active { transform: scale(.97); }
 .record-btn[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--danger) 82%, #000);
+  background: color-mix(in srgb, var(--danger-fill) 82%, #000);
   animation: pulse 1.2s ease-in-out infinite;
 }
 @keyframes pulse {
@@ -458,19 +465,19 @@ textarea.text-out.editable::placeholder {
    accent button in the app. Status-colored controls (.record-btn,
    .resume-btn, the .copied / .danger-flash flashes) keep
    their state colors. */
-.big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent); flex: 1; }
+.big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent-text); flex: 1; }
 .big-btn:active { transform: scale(0.98); }
 .big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 
 .copy-btn {
   background: var(--accent-soft);
   border: 1px solid var(--accent-border-soft);
-  color: var(--accent);
+  color: var(--accent-text);
   min-width: 110px;
 }
 .copy-btn:active { transform: scale(0.98); }
 .copy-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
-.copy-btn.copied { background: var(--on); border-color: var(--on); color: var(--accent-fg); }
+.copy-btn.copied { background: var(--on-fill); border-color: var(--on-fill); color: var(--accent-fg); }
 
 /* History's compact toolbar/row footprint, shared by both tiers it uses.
    Color/border/radius/cursor come from the vendored tier (_vendored/button/
@@ -500,15 +507,15 @@ textarea.text-out.editable::placeholder {
 .button-ghost.compact:active { transform: scale(0.98); }
 .button-tint.compact.copied,
 .button-ghost.compact.copied {
-  background: var(--on);
+  background: var(--on-fill);
   color: var(--accent-fg);
-  border-color: var(--on);
+  border-color: var(--on-fill);
 }
 .button-tint.compact.danger-flash,
 .button-ghost.compact.danger-flash {
-  background: var(--danger);
+  background: var(--danger-fill);
   color: var(--accent-fg);
-  border-color: var(--danger);
+  border-color: var(--danger-fill);
 }
 
 .row {
@@ -848,13 +855,13 @@ textarea.text-out.editable::placeholder {
 }
 .toast.visible { opacity: 1; }
 .toast.error {
-  background: color-mix(in srgb, var(--danger) 75%, transparent);
-  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger-fill) 92%, transparent);
+  border-color: var(--danger-fill);
   color: var(--accent-fg);
 }
 .toast.success {
-  background: color-mix(in srgb, var(--on) 75%, transparent);
-  border-color: var(--on);
+  background: color-mix(in srgb, var(--on-fill) 92%, transparent);
+  border-color: var(--on-fill);
   color: var(--accent-fg);
 }
 
