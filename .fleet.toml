@@ -83,3 +83,21 @@ extensions = ["md"]
 [[e2e.rule]]             # this file itself -> none
 tier = "none"
 path = ".fleet.toml"
+
+# Launchers and repo-hygiene files never reach the browser suite (#211): the
+# e2e conftest spawns `python -m uvicorn app.webapp.server:app` itself and
+# never runs a .bat. Kept below the `app/webapp/` and `tests/e2e/` rules so a
+# .bat under either still routes full. `config/webapp_config.sample.json`
+# (seeded into the e2e run) and `.github/workflows/e2e.yml` (defines it) stay
+# unmatched on purpose -> full.
+[[e2e.rule]]             # launcher scripts (tray.bat, webapp.bat, ...) -> none
+tier       = "none"
+extensions = ["bat"]
+
+[[e2e.rule]]             # git ignore list -> none
+tier = "none"
+path = ".gitignore"
+
+[[e2e.rule]]             # sample config the e2e run never reads -> none
+tier = "none"
+path = "config/disfluencies.sample.json"
