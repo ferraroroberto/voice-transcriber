@@ -1073,7 +1073,7 @@ still covers the same logic via the parity port in
 | `tests\test_speaker_label.py` | Strip fabricated leading speaker labels (titled + assistant-name family + blocklist) |
 | `tests\test_disfluency.py` | Spoken filler-word strip — built-in list, elongations, punctuation/case repair, config override + hot-reload (issue #198) |
 | `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
-| `tests\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` |
+| `tests	est_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status`, cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp — issue #13) |
 | `tests\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
 | `tests\test_webapp_api_activity.py` | `GET /api/activity` — persistent activity log API |
 | `tests\test_webapp_api_analytics.py` | `GET /api/analytics/summary` — usage analytics API |
@@ -1083,7 +1083,6 @@ still covers the same logic via the parity port in
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
 | `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; boots its own disposable instance by default, or adopts a live tray via `VT_E2E_LIVE=1`) |
 | `tests\e2e\test_background_finalize.py` | Backgrounding mid-record finalises the in-flight take instead of dropping it (issue #12, `desktop_only`) |
-| `tests\e2e\test_cache_busting.py` | Cache hygiene — `/` always revalidated, `/static/*` immutable, `?v=<hash>` matches on-disk content, `/api/version` shape (issue #13) |
 | `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag (issue #139) |
 | `tests\e2e\test_resume_take.py` | ▶ Resume after backgrounding restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load (issue #87) |
