@@ -5,9 +5,31 @@ from __future__ import annotations
 # Standard library imports
 import json
 import re
+from pathlib import Path
 
 # Third-party imports
 import pytest
+
+# Local imports
+from src.static_versioning import asset_hash
+
+_STATIC_DIR = Path(__file__).resolve().parents[1] / "app" / "webapp" / "static"
+
+# Every asset index.html references directly with a ?v=__NAME__ placeholder —
+# root assets plus the vendored component CSS (issue #107). Deliberately a
+# hand-kept mirror of src.static_versioning.HTML_STAMPED_ASSETS, not an import
+# of it: dropping an asset from the source tuple must fail here.
+_STAMPED_ASSETS = (
+    "app.js",
+    "styles.css",
+    "_vendored/nav/nav-tabs.css",
+    "_vendored/card/card.css",
+    "_vendored/switch/switch.css",
+    "_vendored/select-native/select-native.css",
+    "_vendored/modal/modal.css",
+    "_vendored/empty-state/empty-state.css",
+    "_vendored/button/button.css",
+)
 
 
 class TestHealth:
@@ -48,14 +70,43 @@ class TestBuildVersion:
 
     def test_index_revalidates(self, webapp_client):
         client, _, _ = webapp_client
-        cc = client.get("/").headers.get("cache-control", "")
-        assert "no-cache" in cc
+        resp = client.get("/")
+        assert resp.status_code == 200
+        cc = resp.headers.get("cache-control", "")
+        assert "no-cache" in cc, f"index.html must revalidate; got {cc!r}"
 
     def test_static_assets_are_long_cached(self, webapp_client):
         client, _, _ = webapp_client
-        for asset in ("app.js", "styles.css"):
+        for asset in _STAMPED_ASSETS:
             cc = client.get(f"/static/{asset}").headers.get("cache-control", "")
-            assert "max-age=31536000" in cc and "immutable" in cc
+            assert "max-age=31536000" in cc and "immutable" in cc, (
+                f"{asset} must be immutably cached; got {cc!r}"
+            )
+
+    def test_index_stamps_match_on_disk(self, webapp_client):
+        """Catches "edited a JS/CSS file but the served stamp is stale"."""
+        client, _, _ = webapp_client
+        html = client.get("/").text
+        # Every placeholder must have been substituted at render time.
+        leftovers = re.findall(r"\?v=__[A-Z_]+__", html)
+        assert not leftovers, f"unstamped placeholders served: {leftovers}"
+        for asset in _STAMPED_ASSETS:
+            match = re.search(rf"/static/{re.escape(asset)}\?v=([0-9a-f]{{8}})", html)
+            assert match, f"{asset} is not content-hash stamped in index.html"
+            expected = asset_hash(_STATIC_DIR / asset)
+            assert match.group(1) == expected, (
+                f"{asset} stamp {match.group(1)} diverges from the on-disk "
+                f"content hash {expected} — a stale deploy or a missed bust"
+            )
+
+    def test_version_asset_hash_matches_app_js_stamp(self, webapp_client):
+        client, _, _ = webapp_client
+        version = client.get("/api/version").json()
+        html = client.get("/").text
+        match = re.search(r"/static/app\.js\?v=([0-9a-f]{8})", html)
+        assert match and match.group(1) == version["asset_hash"], (
+            "/api/version asset_hash must equal the app.js stamp in index.html"
+        )
 
     def test_icons_revalidate_daily(self, webapp_client):
         client, _, _ = webapp_client
