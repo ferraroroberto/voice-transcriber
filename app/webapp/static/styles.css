@@ -55,6 +55,13 @@
   --gap: 12px;
   /* shared height for inline controls (toggle / select / input) */
   --control-h: 36px;
+  /* hit-target.min (design.md) — the 44px effective pointer-target floor. A
+     native input/select is a replaced element that can't carry a ::before
+     expansion, so it gets the real 44px box and paints its 36px control
+     inside a transparent --control-inset band (the home-automation #779
+     recipe). */
+  --hit-min: 44px;
+  --control-inset: calc((var(--hit-min) - var(--control-h)) / 2);
   /* typography roles — system stack, weight (not case) for hierarchy */
   --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-heading-xl: 2rem;
@@ -62,8 +69,9 @@
   --font-body: 1rem;
   --font-label: 0.875rem;
   --font-caption: 0.75rem;
-  /* row heights the vendored nav references (design.md rows: 44px hit-target floor, 60px rail tab) */
+  /* row heights (design.md rows scale; the vendored nav references sm + lg) */
   --row-sm: 44px;
+  --row-md: 52px;
   --row-lg: 60px;
   /* icon-size steps (icons.size — the canonical 16/18/24 + nav 20) */
   --icon-inline: 16px;
@@ -193,10 +201,13 @@ html, body {
     calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
 }
 
+/* The Speak header holds four 44px controls; on a narrow phone they wrap
+   under the title rather than crowd it. */
+.speak-card .card-head { flex-wrap: wrap; }
 .header-actions {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
 }
 
 .header-icon-btn {
@@ -204,8 +215,9 @@ html, body {
   align-items: center;
   justify-content: center;
   font-size: var(--icon-title);
-  padding: var(--space-xs) 10px;
-  min-height: var(--control-h);
+  padding: 0;
+  min-width: var(--hit-min);
+  min-height: var(--hit-min);
   background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -237,8 +249,8 @@ html, body {
   font-size: var(--font-caption);
   background: transparent;
   color: var(--ink);
-  padding: var(--space-xs) 10px;
-  min-height: var(--control-h);
+  padding: 0 10px;
+  min-height: var(--hit-min);
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -248,6 +260,8 @@ html, body {
 }
 .append-toggle .icon,
 .incognito-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
+/* The incognito chip is icon-only — a square 44px target. */
+.incognito-btn { min-width: var(--hit-min); padding: 0; }
 .append-toggle:active,
 .incognito-btn:active { background: var(--card-off); }
 .append-toggle[aria-checked="true"],
@@ -476,7 +490,7 @@ textarea.text-out.editable::placeholder {
   font-size: var(--font-label);
   font-weight: 600;
   padding: 10px var(--gap);
-  min-height: 40px;
+  min-height: var(--hit-min);
   touch-action: manipulation;
 }
 .button-tint.compact .icon,
@@ -508,8 +522,8 @@ textarea.text-out.editable::placeholder {
 /* Card-header actions row: shrink so it fits next to the title without
  * inheriting the form-row top/bottom margin. */
 .card-header-actions { margin: 0; }
-.card-header-actions .big-btn { flex: 0 0 auto; padding: 10px 18px; min-height: 40px; }
-.card-header-actions .copy-btn { min-width: 92px; padding: 10px 14px; min-height: 40px; }
+.card-header-actions .big-btn { flex: 0 0 auto; padding: 10px 18px; min-height: var(--hit-min); }
+.card-header-actions .copy-btn { min-width: 92px; padding: 10px 14px; min-height: var(--hit-min); }
 
 .stacked {
   display: flex;
@@ -534,6 +548,25 @@ textarea.text-out.editable::placeholder {
 /* The shared 36px inline control comes from the vendored select-native.css; only the
    select's chevron-clearance is app-side. */
 .select-native { appearance: none; -webkit-appearance: none; padding-right: 32px; }
+
+/* Native inputs/selects reach the 44px floor with real geometry: the element
+   box is --hit-min tall, the visible 36px control is its padding box inside a
+   transparent vertical --control-inset border, and the 1px boundary is an
+   inset shadow on that padding box. The radius pair keeps the visible corners
+   at rounded.md and the focus ring hugs the visible box. Beats the vendored
+   rule on source order (this sheet loads after it). */
+.input-native,
+.select-native {
+  height: var(--hit-min);
+  border-style: solid;
+  border-color: transparent;
+  border-width: var(--control-inset) 0;
+  border-radius: var(--radius-md) / calc(var(--radius-md) + var(--control-inset));
+  background: var(--input-bg) padding-box;
+  box-shadow: inset 0 0 0 1px var(--control-border);
+}
+.input-native:focus-visible,
+.select-native:focus-visible { outline-offset: calc(2px - var(--control-inset)); }
 
 /* ---------- history ---------- */
 .history-actions {
@@ -706,10 +739,13 @@ textarea.text-out.editable::placeholder {
 .settings-card .input-native,
 .settings-card .select-native { text-align: right; }
 .settings-card .select-native { padding-right: 10px; }
+/* Each setting is a rows.md (52px) row — taller than its 44px control, so the
+   expanded hit rects of stacked rows never meet (TOUCH-02). */
+.settings-card .row { min-height: var(--row-md); margin: 0; }
 /* Save is a full-width bottom-of-card action like History's `Load more`;
-   match that 40px compact height rather than the 48px group base, same
+   it holds the 44px hit-target floor rather than the 48px group base, same
    footprint override .card-header-actions already makes. Issue #190. */
-.settings-card .big-btn { padding: 10px var(--gap); min-height: 40px; }
+.settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
 
