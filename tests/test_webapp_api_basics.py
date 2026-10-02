@@ -114,6 +114,83 @@ class TestBuildVersion:
         assert "max-age=86400" in cc
 
 
+class TestEntryRevalidation:
+    """ETag + 304 on ``/`` so a relaunch doesn't re-download the page —
+    perf-review finding, issue #212. A 304 must never outlive a build."""
+
+    def test_index_carries_etag(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/")
+        assert re.fullmatch(r'W/"[0-9a-f]{20}"', resp.headers.get("etag", ""))
+
+    def test_matching_if_none_match_answers_304(self, webapp_client):
+        client, _, _ = webapp_client
+        etag = client.get("/").headers["etag"]
+        resp = client.get("/", headers={"If-None-Match": etag})
+        assert resp.status_code == 304
+        assert resp.content == b""
+        assert resp.headers["etag"] == etag
+        # Still revalidates next launch, and a bodyless 304 is never gzipped.
+        assert "no-cache" in resp.headers.get("cache-control", "")
+        assert "content-encoding" not in resp.headers
+
+    @pytest.mark.parametrize(
+        "wrap", [lambda e: e[2:], lambda e: "*", lambda e: f'"zzz", {e}'],
+        ids=["strong-form", "star", "list"],
+    )
+    def test_if_none_match_variants_answer_304(self, webapp_client, wrap):
+        client, _, _ = webapp_client
+        etag = client.get("/").headers["etag"]
+        resp = client.get("/", headers={"If-None-Match": wrap(etag)})
+        assert resp.status_code == 304
+
+    def test_stale_if_none_match_answers_200_with_body(self, webapp_client):
+        client, _, _ = webapp_client
+        resp = client.get("/", headers={"If-None-Match": 'W/"0000000000"'})
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
+        assert resp.text
+
+    def test_new_commit_invalidates_etag(self, webapp_client, monkeypatch):
+        client, app, _ = webapp_client
+        old = client.get("/").headers["etag"]
+        monkeypatch.setattr(app.state.build_info, "git_sha", "feedbee")
+        resp = client.get("/", headers={"If-None-Match": old})
+        assert resp.status_code == 200
+        assert resp.headers["etag"] != old
+
+    def test_changed_transitive_module_invalidates_etag(
+        self, webapp_client, monkeypatch
+    ):
+        """The stamped HTML only names app.js + CSS; an edit to a module
+        reached through ``import`` must still move the validator."""
+        client, app, _ = webapp_client
+        old = client.get("/").headers["etag"]
+        hashes = dict(app.state.build_info.asset_hashes)
+        transitive = next(k for k in hashes if k not in _STAMPED_ASSETS)
+        hashes[transitive] = "ffffffff"
+        monkeypatch.setattr(app.state.build_info, "asset_hashes", hashes)
+        resp = client.get("/", headers={"If-None-Match": old})
+        assert resp.status_code == 200
+        assert resp.headers["etag"] != old
+
+    def test_edited_index_invalidates_etag(self, webapp_client, monkeypatch, tmp_path):
+        client, _, _ = webapp_client
+        from app.webapp.routers import misc
+
+        old = client.get("/").headers["etag"]
+        edited = tmp_path / "static"
+        edited.mkdir()
+        (edited / "index.html").write_text(
+            (_STATIC_DIR / "index.html").read_text(encoding="utf-8") + "<!-- edit -->",
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(misc, "STATIC_DIR", edited)
+        resp = client.get("/", headers={"If-None-Match": old})
+        assert resp.status_code == 200
+        assert resp.headers["etag"] != old
+
+
 class TestCompression:
     """Entry document + static assets are gzipped for a phone on cellular
     — perf-review finding, issue #212."""
