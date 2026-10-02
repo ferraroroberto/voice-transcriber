@@ -816,6 +816,10 @@ textarea.text-out.editable::placeholder {
 .settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
+/* History's "Today: N takes" line is read, not a caption: body-sm, with its
+   glyph on the inline step of the icon scale (it inherited the 12px text size). */
+#analyticsSummary { font-size: var(--font-label); }
+#analyticsSummary .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
 /* Status readout dots — status colors signal state only. */
 .status-dot {
