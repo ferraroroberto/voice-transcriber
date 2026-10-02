@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 # Local imports
-from src.static_versioning import asset_hash
+from src.static_versioning import BuildInfo, asset_hash
 
 _STATIC_DIR = Path(__file__).resolve().parents[1] / "app" / "webapp" / "static"
 
@@ -94,9 +94,13 @@ class TestBuildVersion:
             match = re.search(rf"/static/{re.escape(asset)}\?v=([0-9a-f]{{8}})", html)
             assert match, f"{asset} is not content-hash stamped in index.html"
             expected = asset_hash(_STATIC_DIR / asset)
+            if asset.endswith(".js"):
+                # A script's stamp covers its import graph (issue #220), so
+                # it is recomputed from disk rather than its own bytes.
+                expected = BuildInfo(_STATIC_DIR, _STATIC_DIR).asset_hashes[asset]
             assert match.group(1) == expected, (
                 f"{asset} stamp {match.group(1)} diverges from the on-disk "
-                f"content hash {expected} — a stale deploy or a missed bust"
+                f"hash {expected} — a stale deploy or a missed bust"
             )
 
     def test_version_asset_hash_matches_app_js_stamp(self, webapp_client):
@@ -112,6 +116,64 @@ class TestBuildVersion:
         client, _, _ = webapp_client
         cc = client.get("/static/favicon.ico").headers.get("cache-control", "")
         assert "max-age=86400" in cc
+
+
+class TestNestedModuleCacheBusting:
+    """A change deep in the ES-module graph must change every URL on the path
+    from the entry document down to it — each module is served immutably, so
+    a client that cached ``app.js`` only re-fetches the changed module if the
+    URL it is told to fetch moved. Issue #220."""
+
+    @staticmethod
+    def _build(tmp_path: Path, nested_body: str):
+        static = tmp_path / "static"
+        (static / "sub").mkdir(parents=True, exist_ok=True)
+        (static / "index.html").write_text(
+            '<script type="module" src="/static/app.js?v=__APP_JS__"></script>',
+            encoding="utf-8",
+        )
+        (static / "app.js").write_text("import './mid.js';\n", encoding="utf-8")
+        (static / "mid.js").write_text("import './sub/leaf.js';\n", encoding="utf-8")
+        (static / "sub" / "leaf.js").write_text(nested_body, encoding="utf-8")
+        (static / "other.js").write_text("export const x = 1;\n", encoding="utf-8")
+        info = BuildInfo(static, tmp_path)
+        html = info.stamp_html((static / "index.html").read_text(encoding="utf-8"))
+        return info, html
+
+    def test_nested_only_change_moves_the_entry_url(self, tmp_path):
+        _, before = self._build(tmp_path, "export const a = 1;\n")
+        _, after = self._build(tmp_path, "export const a = 2;\n")
+        assert before != after, (
+            "only sub/leaf.js changed, yet the app.js URL index.html serves is "
+            "identical — a phone with app.js cached keeps the old import stamps"
+        )
+
+    def test_every_module_on_the_import_path_moves(self, tmp_path):
+        old, _ = self._build(tmp_path, "export const a = 1;\n")
+        new, _ = self._build(tmp_path, "export const a = 2;\n")
+        for name in ("app.js", "mid.js", "sub/leaf.js"):
+            assert old.asset_hashes[name] != new.asset_hashes[name], name
+
+    def test_unrelated_module_keeps_its_url(self, tmp_path):
+        old, _ = self._build(tmp_path, "export const a = 1;\n")
+        new, _ = self._build(tmp_path, "export const a = 2;\n")
+        assert old.asset_hashes["other.js"] == new.asset_hashes["other.js"]
+
+    def test_import_cycle_is_hashed_without_recursing_forever(self, tmp_path):
+        static = tmp_path / "static"
+        static.mkdir()
+        (static / "a.js").write_text("import './b.js';\n", encoding="utf-8")
+        (static / "b.js").write_text("import './a.js';\n", encoding="utf-8")
+        first = BuildInfo(static, tmp_path).asset_hashes["a.js"]
+        (static / "b.js").write_text("import './a.js'; // edit\n", encoding="utf-8")
+        assert BuildInfo(static, tmp_path).asset_hashes["a.js"] != first
+
+    def test_served_import_stamp_is_the_module_url_stamp(self, tmp_path):
+        """The ``?v=`` an importer names must equal the stamp a client would
+        compute for that module — one value, not two."""
+        info, _ = self._build(tmp_path, "export const a = 1;\n")
+        body = info.rewrite_js_imports("import './mid.js';\n")
+        assert f"./mid.js?v={info.asset_hashes['mid.js']}" in body
 
 
 class TestEntryRevalidation:

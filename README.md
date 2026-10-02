@@ -272,7 +272,7 @@ voice-transcriber/
 │   ├── gain.py                    # quiet-env gain boost — post-silence-gate
 │   ├── speaker_label.py           # strip fabricated leading speaker labels
 │   ├── disfluency.py              # strip spoken filler words (uh/um) + hot-reload
-│   ├── static_versioning.py       # content-hash asset URLs
+│   ├── static_versioning.py       # content-hash asset URLs (JS: whole import graph)
 │   ├── recording_pipeline.py      # silence-gate -> gain-boost -> transcribe
 │   ├── hot_reload_json.py         # shared mtime-cached JSON loader
 │   ├── inject.py                  # clipboard + caret paste
