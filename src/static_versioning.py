@@ -6,6 +6,9 @@ answered by feel:
 
   * content-hash query stamps on every ``.js`` / ``.css`` asset so any
     edit changes the URL — no manual ``?v=N`` bumps, no stale iOS cache.
+    A ``.js`` stamp hashes the module plus everything it imports, so an
+    edit to a nested module also moves the URL of every importer above it,
+    up to ``app.js`` (issue #220),
     ``index.html`` carries a ``?v=__NAME__`` placeholder for the two
     assets it references directly (``app.js`` + ``styles.css``); every
     other module is a transitive ``import`` from ``app.js`` and gets its
@@ -108,6 +111,42 @@ def _git_short_sha(repo_root: Path) -> str:
     return result.stdout.strip() or "unknown"
 
 
+def _js_imports(static_dir: Path, name: str, known: Dict[str, str]) -> list[str]:
+    """Static-relative keys of the modules ``name`` imports.
+
+    Only imports that resolve to a hashed file count — the same rule
+    :meth:`BuildInfo.rewrite_js_imports` applies when it stamps them.
+    """
+    try:
+        body = (static_dir / name).read_text(encoding="utf-8")
+    except OSError:
+        return []
+    base = posixpath.dirname(name)
+    keys = (
+        posixpath.normpath(posixpath.join(base, match.group(2)))
+        for match in _JS_IMPORT_RE.finditer(body)
+    )
+    return [key for key in keys if key in known]
+
+
+def _graph_hash(name: str, content_hashes: Dict[str, str], static_dir: Path) -> str:
+    """Hash of ``name`` plus every module it transitively imports.
+
+    Walks the import graph with a visited set, so an import cycle terminates.
+    """
+    seen = {name}
+    pending = [name]
+    while pending:
+        for key in _js_imports(static_dir, pending.pop(), content_hashes):
+            if key not in seen:
+                seen.add(key)
+                pending.append(key)
+    digest = hashlib.sha256()
+    for key in sorted(seen):
+        digest.update(f"{key}={content_hashes[key]}\0".encode("utf-8"))
+    return digest.hexdigest()[:8]
+
+
 class BuildInfo:
     """Immutable build identity, computed once at webapp startup."""
 
@@ -117,10 +156,21 @@ class BuildInfo:
         # graph, not just the assets index.html names directly. Keys are
         # static-root-relative posix paths; for root-level files that is
         # just the filename, so old keys (``app.js``) are unchanged.
-        self.asset_hashes: Dict[str, str] = {
+        content_hashes: Dict[str, str] = {
             path.relative_to(static_dir).as_posix(): asset_hash(path)
             for path in sorted(static_dir.rglob("*"))
             if path.is_file() and path.suffix.lower() in STAMPED_SUFFIXES
+        }
+        # A ``.js`` stamp covers the module's whole import graph, not just its
+        # own bytes: modules are served immutably, so an importer whose URL
+        # didn't move would keep naming the old stamp of a changed dependency.
+        self.asset_hashes: Dict[str, str] = {
+            name: (
+                _graph_hash(name, content_hashes, static_dir)
+                if name.endswith(".js")
+                else digest
+            )
+            for name, digest in content_hashes.items()
         }
         self.git_sha: str = _git_short_sha(repo_root)
         self.built_at: str = datetime.now(timezone.utc).isoformat(
