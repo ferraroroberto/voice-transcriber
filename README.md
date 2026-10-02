@@ -547,8 +547,8 @@ raise it (e.g. `-45`) if hallucinations get through anyway.
 While recording, audio is streamed to the PC every second and persisted
 to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
 the connection drops mid-record, the partial recording is still on the
-PC — the **History** view's *Redo* button replays whisper
-on any saved take.
+PC — a take's **⋮** menu in the **History** view offers *Redo transcription*,
+which replays whisper on any saved take.
 
 #### Quiet-environment gain boost
 
@@ -739,14 +739,14 @@ bottom for the next 10. The header count reads `(10/N)` while more
 pages exist and collapses to `(N)` once everything is loaded — keeps
 the page light even after weeks of daily use.
 
-Each row carries a small **source badge** next to its timestamp so
+Each row carries a small **source badge** on its meta line so
 you can tell where a take came from: `webapp` for ones dictated in
 this UI, or a consumer's own label (e.g. `app-launcher`) for
 transcriptions triggered by another app through the
 [session API](docs/consuming-the-session-api.md). Every source renders
 in the same muted pill — in History the accent colour is reserved for
-the contextually-next action (Refresh, and the newest take's Copy),
-the way the Record tab already reads. History is the
+the contextually-next action (Refresh), the way the Record tab already
+reads. History is the
 single attributable source of truth for transcription across the
 fleet — externally triggered takes are captured *and* identifiable,
 not just recoverable on disk.
@@ -779,16 +779,18 @@ Three buttons live above the list, all in a single right-aligned row:
 | **Copy selected** | Concatenates every checked take's full text in chronological order (oldest → newest of the selection) with a blank-line separator and writes the whole bundle to the clipboard. Each item has a checkbox on the left; the newest take is auto-checked on every refresh, so the "just grab the latest" flow stays one click. Tick more boxes above it to bundle older takes. |
 | **🗑️ Clean** | Deletes every saved recording with a confirmation prompt. Briefly flashes red on success. |
 
-Each row also has its own three buttons:
+Each row follows the fleet's action-row pattern — a tick on the left,
+the take in the middle, one overflow button on the right:
 
-- **Copy** — copies the full text from disk, not the 200-char
-  preview the list payload carries.
-- **Redo** — re-runs whisper on the saved raw audio. Useful when
-  a phone died mid-record and you want to pull the transcript
-  afterwards.
-- **🗑️ Delete** — confirmation dialog, then `DELETE
-  /api/sessions/{id}` removes that one take. Cleaner than nuking
-  everything via the top-row Clean button.
+- **Tap the row** — copies the full text from disk (not the 200-char
+  preview the list payload carries) and flashes *Copied* on the row.
+- **The tick** — includes the take in **Copy selected** above.
+- **⋮ menu** — *Redo transcription* re-runs whisper on the saved raw
+  audio (useful when a phone died mid-record and you want to pull the
+  transcript afterwards); *Delete take* sits last, after a divider,
+  behind a confirmation, and calls `DELETE /api/sessions/{id}` to
+  remove that one take. Cleaner than nuking everything via the
+  top-row Clean button.
 
 ### Optional: bearer-token auth (extra layer)
 
@@ -1083,7 +1085,7 @@ still covers the same logic via the parity port in
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
 | `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; boots its own disposable instance by default, or adopts a live tray via `VT_E2E_LIVE=1`) |
 | `tests\e2e\test_background_finalize.py` | `visibilitychange` backgrounding mid-record finalises the in-flight take instead of dropping it (issue #12, `desktop_only`; the `pagehide` path is pinned in `test_resume_take.py`) |
-| `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag (issue #139) |
+| `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag (issue #139); a row tap fetches the take's text and its ⋮ menu opens (issue #213) |
 | `tests\e2e\test_resume_take.py` | `pagehide` backgrounding finalises the take (issue #12), then ▶ Resume restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load (issue #87) |
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor (issue #31) |

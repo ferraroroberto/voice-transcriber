@@ -8,7 +8,7 @@ import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
 import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
-import { copyText, flashDanger, renderTranscript, showToast } from './ui.js';
+import { copyText, flashDanger, formatWhen, renderTranscript, showToast } from './ui.js';
 import { mergeForAppend } from './recorder.js';
 
 const HISTORY_PAGE_SIZE = 10;
@@ -91,84 +91,119 @@ function renderEmptyState(shown) {
   }
 }
 
+// One take is one action-row (design.md): tap the body to copy it, one
+// overflow control for everything else (Redo, Delete), and one leading tick
+// for the multi-take "Copy selected". No per-row button strip.
 function renderHistoryItem(s) {
   const li = document.createElement('li');
 
   const selectLabel = document.createElement('label');
   selectLabel.className = 'select';
-  selectLabel.title = 'Include this take in "Copy selection"';
+  selectLabel.title = 'Include this take in "Copy selected"';
   const checkbox = document.createElement('input');
   checkbox.type = 'checkbox';
   checkbox.className = 'select-checkbox';
   checkbox.dataset.sessionId = s.session_id;
+  checkbox.setAttribute('aria-label', 'Include in Copy selected');
   selectLabel.append(checkbox);
 
-  const content = document.createElement('div');
-  content.className = 'content';
+  const main = document.createElement('button');
+  main.type = 'button';
+  main.className = 'history-main';
+  main.title = 'Copy this take';
 
-  const when = document.createElement('div');
-  when.className = 'when';
-  when.textContent = s.created_at + (s.language ? ` · ${s.language}` : '');
+  const preview = document.createElement('span');
+  preview.className = 'preview';
+  preview.textContent = s.polished_preview || s.transcript_preview || '(no transcript)';
+
+  const meta = document.createElement('span');
+  meta.className = 'meta';
+  meta.append(formatWhen(s.created_at) + (s.language ? ` · ${s.language}` : ''));
   // Attribution badge — who created the take. One muted pill for every
   // source (issue #190): the accent is reserved for the contextually-next
-  // action, so a badge never competes with the newest take's Copy.
+  // action, so a badge never competes with anything.
   if (s.source) {
     const badge = document.createElement('span');
     badge.className = 'source-badge';
     badge.textContent = s.source;
-    when.append(' ', badge);
+    meta.append(' ', badge);
   }
-  const preview = document.createElement('div');
-  preview.className = 'preview';
-  preview.textContent = s.polished_preview || s.transcript_preview || '(no transcript)';
-  const actions = document.createElement('div');
-  actions.className = 'actions';
+  // Where the "Copied" confirmation flashes (ui.js flashCopied restores the
+  // empty idle state afterwards).
+  const copiedFlag = document.createElement('span');
+  copiedFlag.className = 'history-copied';
+  copiedFlag.setAttribute('role', 'status');
+  meta.append(copiedFlag);
 
-  // Ghost by default; styles.css re-tints the newest row's Copy via
-  // :first-child, so the emphasis follows the list with no JS bookkeeping
-  // across Load more / delete-refresh (issue #190).
-  const copyBtn = document.createElement('button');
-  copyBtn.className = 'button-ghost compact history-copy';
-  copyBtn.innerHTML = icon('clipboard') + ' Copy';
-  copyBtn.addEventListener('click', async () => {
-    // The list payload only carries 200-char previews; fetch the full
-    // text on demand so what the user pastes matches what's on disk.
-    try {
-      const r = await authFetch(`/api/sessions/${s.session_id}/text`);
-      if (!r.ok) throw new Error(await r.text());
-      const data = await r.json();
-      const full = data.polished || data.transcript || '';
-      await copyText(full, copyBtn);
-    } catch (err) {
-      showToast('Copy failed: ' + (err.message || err), 'error');
-    }
-  });
+  main.append(preview, meta);
+  main.addEventListener('click', () => copyTake(s.session_id, copiedFlag));
 
-  const reBtn = document.createElement('button');
-  reBtn.className = 'button-ghost compact';
-  reBtn.innerHTML = icon('rotate-cw') + ' Redo';
-  reBtn.addEventListener('click', () => retranscribe(s.session_id));
+  const more = document.createElement('button');
+  more.type = 'button';
+  more.className = 'history-more';
+  more.setAttribute('aria-label', 'More actions');
+  more.innerHTML = icon('ellipsis-vertical');
+  more.addEventListener('click', () => openTakeMenu(s));
 
-  const delBtn = document.createElement('button');
-  delBtn.className = 'button-ghost compact';
-  delBtn.innerHTML = icon('trash-2') + ' Delete';
-  delBtn.addEventListener('click', async () => {
-    try {
-      const r = await authFetch(`/api/sessions/${s.session_id}`, {
-        method: 'DELETE',
-      });
-      if (!r.ok) throw new Error(await r.text());
-      // Refresh the whole list so counts and pagination stay correct.
-      refreshHistory();
-    } catch (err) {
-      showToast('Delete failed: ' + (err.message || err), 'error');
-    }
-  });
-
-  actions.append(copyBtn, reBtn, delBtn);
-  content.append(when, preview, actions);
-  li.append(selectLabel, content);
+  li.append(selectLabel, main, more);
   return li;
+}
+
+async function copyTake(id, flag) {
+  // The list payload only carries 200-char previews; fetch the full
+  // text on demand so what the user pastes matches what's on disk.
+  try {
+    const r = await authFetch(`/api/sessions/${id}/text`);
+    if (!r.ok) throw new Error(await r.text());
+    const data = await r.json();
+    const full = data.polished || data.transcript || '';
+    if (!full) {
+      showToast('This take has no text', 'error');
+      return;
+    }
+    await copyText(full, flag);
+  } catch (err) {
+    showToast('Copy failed: ' + (err.message || err), 'error');
+  }
+}
+
+async function deleteTake(id) {
+  try {
+    const r = await authFetch(`/api/sessions/${id}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(await r.text());
+    // Refresh the whole list so counts and pagination stay correct.
+    refreshHistory();
+  } catch (err) {
+    showToast('Delete failed: ' + (err.message || err), 'error');
+  }
+}
+
+// The overflow menu is one shared <dialog>; it remembers which take opened it.
+let menuTake = null;
+
+function openTakeMenu(s) {
+  menuTake = s;
+  els.takeMenuWhen.textContent =
+    formatWhen(s.created_at) + (s.language ? ` · ${s.language}` : '');
+  els.takeMenu.showModal();
+}
+
+export function initTakeMenu() {
+  const dlg = els.takeMenu;
+  dlg.querySelector('.detail-close').addEventListener('click', () => dlg.close());
+  // A tap on the backdrop (the dialog element itself, outside its card) dismisses.
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  els.takeRedo.addEventListener('click', () => {
+    const id = menuTake && menuTake.session_id;
+    dlg.close();
+    if (id) retranscribe(id);
+  });
+  els.takeDelete.addEventListener('click', async () => {
+    const id = menuTake && menuTake.session_id;
+    if (!id || !confirm('Delete this take?')) return;
+    dlg.close();
+    await deleteTake(id);
+  });
 }
 
 async function retranscribe(id) {

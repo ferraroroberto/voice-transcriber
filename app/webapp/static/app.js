@@ -31,6 +31,7 @@ import {
 import { closePartialStream } from './partials.js';
 import { acquireWakeLock } from './wakelock.js';
 import {
+  initTakeMenu,
   loadMoreHistory,
   onCleanAll,
   onCopySelection,
@@ -151,6 +152,7 @@ function bindEvents() {
   els.copySelection.addEventListener('click', onCopySelection);
   els.cleanAll.addEventListener('click', onCleanAll);
   els.loadMoreHistory.addEventListener('click', loadMoreHistory);
+  initTakeMenu();
 
   // Fleet switches (vendored component): a tap flips the state through the
   // one setSwitch() write path; reads everywhere go through isOn(). Forcing

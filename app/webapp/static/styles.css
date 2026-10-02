@@ -638,45 +638,45 @@ textarea.text-out.editable::placeholder {
   margin: 0;
   padding: 0;
 }
-/* Flat separator rows (the app-launcher#365 canon, GitHub-issue-list style):
+/* A take is an action-row (design.md): [tick] [tap-to-copy body] [overflow].
+   Flat separator rows (the app-launcher#365 canon, GitHub-issue-list style):
    no per-row box — a hairline divider is the row boundary; the outer History
    card keeps the boxed look, only the repeated rows inside it flatten. */
 .history-list li {
-  padding: 10px 0;
-  margin: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  align-items: center;
+  gap: var(--space-xs);
+  min-height: var(--row-md);
+  margin: 0;
+  padding: 0;
   border-bottom: 1px solid var(--line-muted);
 }
 .history-list li:last-child { border-bottom: none; }
-.history-list li .select {
-  display: flex;
-  align-items: center;
-  padding-top: 2px;
-  cursor: pointer;
-}
-/* The "include in Copy selection" tick is a multi-select control, not a
+.history-list li .select { display: flex; flex: none; cursor: pointer; }
+/* The "include in Copy selected" tick is a multi-select control, not a
    boolean setting (that one is the vendored switch). Modelled on shadcn's
    Checkbox (design.md Base UI): a hairline square that fills with the accent
    and draws a check when ticked. `appearance: none` takes only the paint —
    it stays a real <input type=checkbox>, so :checked, Space and the label
-   pairing are still the platform's. Same recipe as task-os's `.check`. */
+   pairing are still the platform's. It has real 44px geometry: the element
+   box is --hit-min, the visible 20px square is its padding box inside a
+   transparent border, and the 1px boundary is an inset shadow on that box. */
 .history-list li .select-checkbox {
   appearance: none;
   -webkit-appearance: none;
   flex: none;
   display: inline-grid;
   place-content: center;
-  width: 20px;
-  height: 20px;
+  width: var(--hit-min);
+  height: var(--hit-min);
   margin: 0;
-  border: 1px solid var(--line);
+  border: calc((var(--hit-min) - 20px) / 2) solid transparent;
   /* half the smallest fleet radius — a fully rounded tick reads as a radio */
-  border-radius: calc(var(--radius-sm) / 2);
-  background: var(--card);
+  border-radius: calc((var(--hit-min) - 20px) / 2 + var(--radius-sm) / 2);
+  background: var(--card) padding-box;
+  box-shadow: inset 0 0 0 1px var(--control-border);
   cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease;
+  transition: background-color 0.12s ease, box-shadow 0.12s ease;
 }
 /* the check glyph: two borders of an empty box, rotated — no sprite lookup
    in a control that repeats once per row */
@@ -690,11 +690,52 @@ textarea.text-out.editable::placeholder {
   transform: translateY(-1px) rotate(-45deg);
   opacity: 0;
 }
-.history-list li .select-checkbox:checked { background: var(--accent); border-color: var(--accent); }
+.history-list li .select-checkbox:checked {
+  background: var(--accent-fill) padding-box;
+  box-shadow: inset 0 0 0 1px var(--accent-fill);
+}
 .history-list li .select-checkbox:checked::before { opacity: 1; }
-.history-list li .select-checkbox:hover:not(:checked) { border-color: var(--accent); }
-.history-list li .content { flex: 1; min-width: 0; }
-.history-list li .when { color: var(--muted); font-size: var(--font-caption); }
+.history-list li .select-checkbox:hover:not(:checked) { box-shadow: inset 0 0 0 1px var(--accent); }
+.history-list li .select-checkbox:focus-visible { outline-offset: calc(2px - (var(--hit-min) - 20px) / 2); }
+
+/* The row body — the primary action (tap = copy this take). */
+.history-list li .history-main {
+  flex: 1;
+  min-width: 0;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: 10px 0;
+  text-align: left;
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.history-list li .history-main:active .preview { color: var(--accent-text); }
+.history-list li .preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  font-size: var(--font-body);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.history-list li .meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  color: var(--muted);
+  font-size: var(--font-label);
+  line-height: 1.45;
+}
 .history-list li .source-badge {
   display: inline-block;
   padding: 1px 7px;
@@ -704,28 +745,48 @@ textarea.text-out.editable::placeholder {
   background: var(--card-off);
   color: var(--muted);
   border: 1px solid var(--line-muted);
-  vertical-align: middle;
 }
-.history-list li .preview { margin-top: var(--space-xs); font-size: var(--font-label); color: var(--ink); }
-.history-list li .actions {
-  display: flex;
-  gap: 6px;
-  margin-top: var(--space-sm);
-  justify-content: flex-end;
-  flex-wrap: wrap;
+/* "Copied" confirmation (ui.js flashCopied); empty — and so invisible — at rest. */
+.history-list li .history-copied { margin-left: auto; font-weight: 600; }
+.history-list li .history-copied.copied { color: var(--on); }
+.history-list li .history-copied .icon { width: var(--icon-inline); height: var(--icon-inline); }
+
+/* The one trailing accessory: a 44px overflow button. */
+.history-list li .history-more {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--hit-min);
+  height: var(--hit-min);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
+  color: var(--muted);
+  cursor: pointer;
 }
-.history-list li .actions button { font-size: var(--font-caption); min-height: var(--control-h); padding: 6px 10px; }
-/* The newest take is the one that actually gets copied — it is also the
-   row auto-checked on every refresh (history.js) — so its Copy is the
-   contextually-next action and wears the tint, while every other row's
-   stays ghost. Driven by :first-child, not JS state, so the emphasis
-   follows the list across Load more and delete-refresh with no bookkeeping.
-   `:not(.copied)` so the green copy flash still wins (issue #190). */
-.history-list li:first-child .history-copy:not(.copied) {
-  background: var(--accent-soft);
-  color: var(--accent);
-  border-color: var(--accent-border-soft);
+.history-list li .history-more:active { background: var(--card-off); }
+.history-list li .history-more .icon { width: var(--icon-title); height: var(--icon-title); }
+
+/* The overflow menu (a <dialog> on the vendored modal shell): full-width
+   actions, the destructive one last, after a divider. */
+.take-menu { width: min(360px, 92vw); }
+.take-menu .detail-card { display: flex; flex-direction: column; }
+.take-menu-when { margin: 0 0 var(--space-sm); font-size: var(--font-label); }
+.take-menu hr { border: 0; border-top: 1px solid var(--line-muted); margin: var(--space-sm) 0; width: 100%; }
+.take-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  min-height: 48px;
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 600;
 }
+.take-menu-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
 /* ---------- settings panel ---------- */
 .settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
