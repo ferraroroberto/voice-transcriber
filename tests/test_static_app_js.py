@@ -291,11 +291,11 @@ class TestHistoryButtonEmphasis:
         assert "source-badge.external" not in styles_css
         assert "' external'" not in app_js
 
-    def test_settings_values_are_right_aligned_and_save_matches_load_more(
+    def test_settings_values_are_right_aligned_and_save_holds_the_hit_target_floor(
         self, styles_css: str
     ):
         assert ".settings-card .select-native { text-align: right; }" in styles_css
-        assert ".settings-card .big-btn { padding: 10px var(--gap); min-height: 40px; }" in styles_css
+        assert ".settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }" in styles_css
 
 
 # ---------------------------------------------------------------------------
