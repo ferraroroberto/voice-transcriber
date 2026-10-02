@@ -1082,9 +1082,9 @@ still covers the same logic via the parity port in
 | `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins across the static/ JS module graph |
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
 | `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; boots its own disposable instance by default, or adopts a live tray via `VT_E2E_LIVE=1`) |
-| `tests\e2e\test_background_finalize.py` | Backgrounding mid-record finalises the in-flight take instead of dropping it (issue #12, `desktop_only`) |
+| `tests\e2e\test_background_finalize.py` | `visibilitychange` backgrounding mid-record finalises the in-flight take instead of dropping it (issue #12, `desktop_only`; the `pagehide` path is pinned in `test_resume_take.py`) |
 | `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag (issue #139) |
-| `tests\e2e\test_resume_take.py` | ▶ Resume after backgrounding restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
+| `tests\e2e\test_resume_take.py` | `pagehide` backgrounding finalises the take (issue #12), then ▶ Resume restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load (issue #87) |
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor (issue #31) |
 
