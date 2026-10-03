@@ -22,6 +22,7 @@ _STATIC_DIR = Path(__file__).resolve().parents[1] / "app" / "webapp" / "static"
 _STAMPED_ASSETS = (
     "app.js",
     "styles.css",
+    "_vendored/base/base.css",
     "_vendored/nav/nav-tabs.css",
     "_vendored/card/card.css",
     "_vendored/switch/switch.css",

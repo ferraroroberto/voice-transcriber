@@ -322,7 +322,7 @@ voice-transcriber/
 │           ├── polish.js          # polish-text UI flow
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (nav · icons · card · switch · select-native · modal · empty-state · button)
+│                                  #   (base · nav · icons · card · switch · select-native · modal · empty-state · button)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -1089,6 +1089,7 @@ still covers the same logic via the parity port in
 | `tests\e2e\test_resume_take.py` | `pagehide` backgrounding finalises the take (issue #12), then ▶ Resume restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load (issue #87) |
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor (issue #31) |
+| `tests\e2e\test_typography.py` | A nav tab, a button, an input and a select compute the same `font-family` as the body, so form controls never fall back to the UA's Arial (issue #226) |
 
 ## 🔗 See also
 
