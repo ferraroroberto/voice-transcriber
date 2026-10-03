@@ -208,7 +208,7 @@ html, body {
     calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
 }
 
-/* The Speak header holds four 44px controls; on a narrow phone they wrap
+/* The Speak header holds three 44px controls; on a narrow phone they wrap
    under the title rather than crowd it. */
 .speak-card .card-head { flex-wrap: wrap; }
 .header-actions {
