@@ -58,7 +58,7 @@ export async function onPolish() {
     if (polishedForCopy) await tryAutoCopy(polishedForCopy, els.copyPolished);
     els.recordStatus.textContent =
       `Polished in ${(ms / 1000).toFixed(1)} s — tap Copy`;
-    showToast('Polish done', 'success');
+    showToast('Polish done');
     refreshHistory();
   } catch (err) {
     els.recordStatus.textContent = 'Polish failed — see toast';
@@ -108,7 +108,7 @@ export async function onSaveTranscript() {
     const data = await r.json();
     if (data.session_id) state.sessionId = data.session_id;
     els.recordStatus.textContent = 'Saved to history — ready to polish or copy';
-    showToast('Saved to history', 'success');
+    showToast('Saved to history');
     refreshHistory();
   } catch (err) {
     showToast('Save failed: ' + truncate(err.message || String(err), 80), 'error');

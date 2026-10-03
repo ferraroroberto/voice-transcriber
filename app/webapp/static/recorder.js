@@ -342,7 +342,7 @@ async function onRecorderStopped(mimeType) {
       // user may still have accumulated text from earlier takes.
       els.recordStatus.textContent =
         `Empty audio (${data.dbfs} dBFS) — skipped`;
-      showToast('Empty audio — nothing transcribed', 'success');
+      showToast('Empty audio — nothing transcribed');
       refreshHistory();
       return;
     }

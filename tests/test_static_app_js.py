@@ -303,6 +303,25 @@ class TestHistoryButtonEmphasis:
 
 
 # ---------------------------------------------------------------------------
+# Neutral toast (issue #226, fleet COLOR-05).
+# ---------------------------------------------------------------------------
+
+class TestNeutralToast:
+    """The toast is the vendored neutral frosted one: only an error tints.
+    A local `.toast` rule or a `success` kind is how the green one returns."""
+
+    def test_no_local_toast_rules_or_success_tint(self, styles_css: str):
+        assert ".toast.success" not in styles_css
+        assert not re.search(r"^\.toast\b", styles_css, re.MULTILINE)
+
+    def test_show_toast_is_the_vendored_one_and_no_caller_passes_success(
+        self, app_js: str
+    ):
+        assert "from './_vendored/toast/toast.js'" in app_js
+        assert "'success'" not in app_js
+
+
+# ---------------------------------------------------------------------------
 # Optional: actually run Vitest when Node is available.
 # ---------------------------------------------------------------------------
 

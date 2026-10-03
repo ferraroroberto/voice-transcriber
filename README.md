@@ -322,7 +322,7 @@ voice-transcriber/
 │           ├── polish.js          # polish-text UI flow
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (base · nav · home-head · icons · card · switch · select-native · modal · empty-state · button)
+│                                  #   (base · nav · home-head · toast · icons · card · switch · select-native · modal · empty-state · button)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -1091,6 +1091,7 @@ still covers the same logic via the parity port in
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor (issue #31) |
 | `tests\e2e\test_typography.py` | A nav tab, a button, an input and a select compute the same `font-family` as the body, so form controls never fall back to the UA's Arial (issue #226) |
 | `tests\e2e\test_page_header.py` | Settings is never a tab: the nav lists only Record and History, every pane opens with the `home-head` row carrying the theme toggle and the Settings gear, and the gear opens Settings from any tab until a tab is chosen (issue #226) |
+| `tests\e2e\test_toast.py` | The toast is neutral: a success message paints the nav's glass (no hue) and only an error tints danger, announced assertively (issue #226) |
 
 ## 🔗 See also
 
