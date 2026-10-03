@@ -49,6 +49,7 @@ STAMPED_SUFFIXES = (".js", ".css")
 HTML_STAMPED_ASSETS = (
     "app.js",
     "styles.css",
+    "_vendored/base/base.css",
     "_vendored/nav/nav-tabs.css",
     "_vendored/card/card.css",
     "_vendored/switch/switch.css",
