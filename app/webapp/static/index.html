@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/static/_vendored/base/base.css?v=__VENDORED_BASE_BASE_CSS__">
   <link rel="stylesheet" href="/static/_vendored/nav/nav-tabs.css?v=__VENDORED_NAV_NAV_TABS_CSS__">
   <link rel="stylesheet" href="/static/_vendored/card/card.css?v=__VENDORED_CARD_CARD_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/home-head/home-head.css?v=__VENDORED_HOME_HEAD_HOME_HEAD_CSS__">
   <link rel="stylesheet" href="/static/_vendored/switch/switch.css?v=__VENDORED_SWITCH_SWITCH_CSS__">
   <link rel="stylesheet" href="/static/_vendored/select-native/select-native.css?v=__VENDORED_SELECT_NATIVE_SELECT_NATIVE_CSS__">
   <link rel="stylesheet" href="/static/_vendored/modal/modal.css?v=__VENDORED_MODAL_MODAL_CSS__">
@@ -181,15 +182,20 @@
       <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-history" /></svg>
       <span class="tab-label">History</span>
     </button>
-    <button id="tabSettings" type="button" class="tab" data-tab="settings"
-            role="tab" aria-selected="false" aria-controls="paneSettings" tabindex="-1">
-      <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-settings" /></svg>
-      <span class="tab-label">Settings</span>
-    </button>
   </nav>
 
   <main class="app">
     <section id="paneRecord" class="pane" role="tabpanel" aria-labelledby="tabRecord" aria-label="Record">
+      <div class="card home-head">
+        <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Record</span>
+        <button type="button" class="home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
+          <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
+          <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
+        </button>
+        <button type="button" class="button-surface home-toggle home-settings" title="Settings" aria-label="Settings">
+          <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
+        </button>
+      </div>
       <section class="card speak-card">
         <header class="card-head">
           <h1 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Speak</h1>
@@ -200,13 +206,6 @@
             <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
                     title="Incognito — don't save this recording to history"
                     aria-label="Incognito — don't save this recording to history"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg></button>
-            <!-- Sprite moon + sun; CSS shows the glyph for the ACTION keyed on
-                 html[data-theme] (the app-launcher #355 pattern). -->
-            <button id="themeToggle" type="button" class="header-icon-btn theme-toggle"
-                    title="Toggle theme" aria-label="Toggle dark mode">
-              <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
-              <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
-            </button>
           </div>
         </header>
 
@@ -246,11 +245,18 @@
     </section>
 
     <section id="paneHistory" class="pane" role="tabpanel" aria-labelledby="tabHistory" aria-label="History" hidden>
+      <div class="card home-head">
+        <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</span>
+        <span class="status">Takes: <span id="historyCount">0</span></span>
+        <button type="button" class="home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
+          <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
+          <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
+        </button>
+        <button type="button" class="button-surface home-toggle home-settings" title="Settings" aria-label="Settings">
+          <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
+        </button>
+      </div>
       <section class="card history-card">
-        <div class="card-head">
-          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</h2>
-          <span class="card-head-meta">(<span id="historyCount">0</span>)</span>
-        </div>
         <p id="analyticsSummary" class="muted small"></p>
         <div class="history-actions">
           <button id="refreshHistory" type="button" class="button-tint compact"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw" /></svg> Refresh</button>
@@ -262,11 +268,18 @@
       </section>
     </section>
 
-    <section id="paneSettings" class="pane" role="tabpanel" aria-labelledby="tabSettings" aria-label="Settings" hidden>
+    <section id="paneSettings" class="pane" aria-label="Settings" hidden>
+      <div class="card home-head">
+        <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</span>
+        <button type="button" class="home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
+          <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
+          <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
+        </button>
+        <button type="button" class="button-surface home-toggle home-settings" title="Settings" aria-label="Settings">
+          <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
+        </button>
+      </div>
       <section id="settingsPanel" class="card settings-card">
-        <div class="card-head">
-          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</h2>
-        </div>
         <label class="row">
           <span>Polish model</span>
           <select id="polishModel" class="select-native"></select>

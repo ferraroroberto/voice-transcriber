@@ -46,6 +46,27 @@ init().catch(err => {
   showToast('Init failed: ' + err.message + ' — pull down to retry', 'error');
 });
 
+// Show the Settings pane over the current tab. The vendored nav only manages
+// its own tabs' panes, so hide them here and leave no tab selected; the nav's
+// next setTab (any tab tap) shows that tab's pane again and onChange hides
+// this one. The stored tab is untouched, so a reload from Settings reopens
+// the last real tab (same shape as app-launcher's openSettings).
+function openSettings() {
+  document.querySelectorAll('main.app > section.pane').forEach((pane) => {
+    pane.hidden = pane.id !== 'paneSettings';
+  });
+  const nav = document.querySelector('nav.tabs');
+  nav.querySelectorAll('.tab').forEach((tab) => {
+    tab.classList.remove('active');
+    tab.setAttribute('aria-selected', 'false');
+  });
+  nav.dataset.activeTab = 'settings';
+  const scroller = document.querySelector('.app');
+  if (scroller) scroller.scrollTop = 0;
+  window.scrollTo(0, 0);
+  refreshStatus();
+}
+
 async function init() {
   // Each step is wrapped so a single transient blip (iOS waking the
   // tailnet, Safari dropping a stale TLS connection) doesn't leave the
@@ -136,16 +157,19 @@ function bindEvents() {
   els.saveTranscript.addEventListener('click', onSaveTranscript);
   els.polishStyle.addEventListener('change', refreshPromptPreview);
 
-  // Fleet bottom-tab nav (vendored component — _vendored/nav/). Refresh the
-  // status readout whenever the Settings tab is activated, replacing the
-  // disclosure-toggle listener from the old single-scroll layout.
+  // Fleet bottom-tab nav (vendored component — _vendored/nav/). Settings is
+  // no tab (fleet NAV-03): every pane's header gear opens it (openSettings),
+  // and choosing any tab leaves it, so onChange hides the pane.
   initNavTabs({
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',
-    onChange: (tab) => {
-      if (tab === 'settings') refreshStatus();
+    onChange: () => {
+      document.getElementById('paneSettings').hidden = true;
     },
   });
+  for (const gear of document.querySelectorAll('.home-settings')) {
+    gear.addEventListener('click', openSettings);
+  }
   els.saveSettings.addEventListener('click', onSaveSettings);
 
   els.refreshHistory.addEventListener('click', refreshHistory);
@@ -177,14 +201,16 @@ function bindEvents() {
     });
   }
 
-  // Theme toggle (app-launcher #355 pattern): the pre-paint snippet in
-  // index.html already stamped html[data-theme]; the button just flips it.
-  // The sun/moon glyph swap is pure CSS keyed on the attribute.
-  els.themeToggle.addEventListener('click', () => {
-    const dark = document.documentElement.dataset.theme !== 'dark';
-    document.documentElement.dataset.theme = dark ? 'dark' : 'light';
-    try { localStorage.setItem('voice-transcriber.theme', dark ? 'dark' : 'light'); } catch (_) {}
-  });
+  // Theme toggle (app-launcher #355 pattern), one per pane header: the
+  // pre-paint snippet in index.html already stamped html[data-theme]; a button
+  // just flips it. The sun/moon glyph swap is pure CSS keyed on the attribute.
+  for (const toggle of document.querySelectorAll('.theme-toggle')) {
+    toggle.addEventListener('click', () => {
+      const dark = document.documentElement.dataset.theme !== 'dark';
+      document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+      try { localStorage.setItem('voice-transcriber.theme', dark ? 'dark' : 'light'); } catch (_) {}
+    });
+  }
 
   els.micSelect.addEventListener('change', releaseCachedStream);
 

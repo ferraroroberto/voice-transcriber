@@ -308,7 +308,7 @@ voice-transcriber/
 │       ├── routers/               # sessions · auth · config · misc · activity · analytics
 │       │   └── _helpers.py        # shared router helpers
 │       └── static/
-│           ├── index.html         # tabbed SPA (Record · History · Settings), big-button mobile-first
+│           ├── index.html         # tabbed SPA (Record · History; Settings opens from the header gear), big-button mobile-first
 │           ├── app.js             # module wiring / boot sequence
 │           ├── recorder.js        # MediaRecorder record/upload/finish state machine
 │           ├── level.js           # VU meter + VAD auto-stop
@@ -322,7 +322,7 @@ voice-transcriber/
 │           ├── polish.js          # polish-text UI flow
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (base · nav · icons · card · switch · select-native · modal · empty-state · button)
+│                                  #   (base · nav · home-head · icons · card · switch · select-native · modal · empty-state · button)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -1083,13 +1083,14 @@ still covers the same logic via the parity port in
 | `tests\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
 | `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins across the static/ JS module graph |
 | `tests\test_webapp_smoke.py` | Real `uvicorn` boot, `/healthz` + `/api/config` over HTTP (marked `smoke`) |
-| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, Settings tab activates, login `<dialog>` wired + Esc-proof (marked `smoke`; boots its own disposable instance by default, or adopts a live tray via `VT_E2E_LIVE=1`) |
+| `tests\e2e\test_smoke.py` | Playwright browser-E2E: SPA boots without JS errors, polish-model + polish-style `<select>`s populate, record button visible, the header gear opens Settings, login `<dialog>` wired + Esc-proof (marked `smoke`; boots its own disposable instance by default, or adopts a live tray via `VT_E2E_LIVE=1`) |
 | `tests\e2e\test_background_finalize.py` | `visibilitychange` backgrounding mid-record finalises the in-flight take instead of dropping it (issue #12, `desktop_only`; the `pagehide` path is pinned in `test_resume_take.py`) |
 | `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag (issue #139); a row tap fetches the take's text and its ⋮ menu opens (issue #213) |
 | `tests\e2e\test_resume_take.py` | `pagehide` backgrounding finalises the take (issue #12), then ▶ Resume restarts recording with the earlier transcript still in place (issue #14, `desktop_only`) |
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load (issue #87) |
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor (issue #31) |
 | `tests\e2e\test_typography.py` | A nav tab, a button, an input and a select compute the same `font-family` as the body, so form controls never fall back to the UA's Arial (issue #226) |
+| `tests\e2e\test_page_header.py` | Settings is never a tab: the nav lists only Record and History, every pane opens with the `home-head` row carrying the theme toggle and the Settings gear, and the gear opens Settings from any tab until a tab is chosen (issue #226) |
 
 ## 🔗 See also
 

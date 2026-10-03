@@ -56,7 +56,7 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
     speak_card = authed_page.locator(".speak-card")
     expect(speak_card).to_have_class("card speak-card")
     expect(speak_card.locator(".card-title")).to_contain_text("Speak")
-    for control_id in ("appendToggle", "resetBtn", "incognitoToggle", "themeToggle"):
+    for control_id in ("appendToggle", "resetBtn", "incognitoToggle"):
         expect(speak_card.locator(f"#{control_id}")).to_be_attached()
 
     record_btn = speak_card.locator("#recordBtn")
@@ -70,21 +70,21 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
     expect(transcript_title.locator("use")).to_have_attribute("href", "#i-file-text")
 
 
-def test_settings_tab_activates(authed_page: Page, base_url: str) -> None:
-    """Settings lives on its own tab (fleet nav contract, issue #107):
-    hidden by default, revealed by activating the Settings tab, with the
-    Record pane yielding. Catches a missing pane and broken nav wiring
-    in one shot."""
+def test_settings_gear_opens_settings(authed_page: Page, base_url: str) -> None:
+    """Settings is the header gear, never a tab (fleet NAV-03, issue #226):
+    hidden by default, revealed by the gear, with the Record pane yielding;
+    choosing a tab leaves it again. Catches a missing pane and broken gear
+    or nav wiring in one shot."""
     _navigate_collecting_errors(authed_page, base_url)
     panel = authed_page.locator("#settingsPanel")
     expect(panel).to_be_attached()
     expect(panel).to_be_hidden()
-    authed_page.click("#tabSettings")
+    authed_page.click("#paneRecord .home-settings")
     expect(panel).to_be_visible()
     expect(authed_page.locator("#paneRecord")).to_be_hidden()
-    expect(authed_page.locator("#tabSettings")).to_have_attribute(
-        "aria-selected", "true"
-    )
+    authed_page.click("#tabRecord")
+    expect(panel).to_be_hidden()
+    expect(authed_page.locator("#paneRecord")).to_be_visible()
 
 
 def test_login_dialog_dom_present(authed_page: Page, base_url: str) -> None:
