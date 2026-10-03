@@ -165,7 +165,7 @@ export async function onSaveSettings() {
     });
     if (!r.ok) throw new Error(await r.text());
     await loadConfig();
-    showToast('Settings saved', 'success');
+    showToast('Settings saved');
   } catch (err) {
     showToast('Save failed: ' + err.message, 'error');
   }

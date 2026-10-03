@@ -25,10 +25,14 @@
   --danger: #cf222e;        /* danger — the record button's "recording" state */
   --danger-text: #a40e26;   /* danger text on its own tint */
   /* solid status fills that carry white text (the record button, the copy /
-     clear flashes, the toasts): the base hue in light, a notch deeper in dark
-     so white holds 4.5:1 — the same trick accent-fill plays for the accent. */
+     clear flashes): the base hue in light, a notch deeper in dark so white
+     holds 4.5:1 — the same trick accent-fill plays for the accent. */
   --danger-fill: var(--danger);
   --on-fill: var(--on);
+  /* The vendored toast tints an error with a 75% mix of this over the glass
+     and sets white text on it. --danger-fill would give 3.7:1 there in light,
+     so light uses the deeper text red (about 5:1). */
+  --deficit: var(--danger-text);
   /* danger tint recipe the vendored button.css `.danger` reads (its `--deficit`
      base is this app's --danger) */
   --deficit-soft: color-mix(in srgb, var(--danger) 12%, transparent);
@@ -116,6 +120,7 @@
   --danger-text: #ff7b72;
   --danger-fill: #da3633;   /* white text 4.6:1 (danger itself gives 3.35) */
   --on-fill: #238636;       /* white text 4.6:1 (on itself gives 2.3) */
+  --deficit: var(--danger-fill);  /* the vendored error toast: white holds over near-black */
   --attention: #d29922;
   --input-bg: var(--bg);
   --control-border: #6e7681;
@@ -832,42 +837,8 @@ textarea.text-out.editable::placeholder {
 .status-dot.on { background: var(--on); }
 .status-dot.off { background: var(--danger); }
 
-/* ---------- toast ---------- */
-/* Glass pill above the floating nav — with the toast and the nav the only
-   shadowed/blurred elements (they float over scrolling content). */
-.toast {
-  position: fixed;
-  bottom: calc(
-    var(--bottom-tabs-height) + var(--bottom-tabs-margin) * 2 +
-    env(safe-area-inset-bottom, 0px) + var(--space-sm)
-  );
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--tabbar-bg);
-  -webkit-backdrop-filter: blur(20px) saturate(1.25);
-  backdrop-filter: blur(20px) saturate(1.25);
-  border: 1px solid var(--tabbar-border);
-  color: var(--ink);
-  padding: var(--gap) 18px;
-  border-radius: var(--radius-pill);
-  font-size: var(--font-label);
-  box-shadow: var(--shadow);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity .2s;
-  z-index: 1000;
-}
-.toast.visible { opacity: 1; }
-.toast.error {
-  background: color-mix(in srgb, var(--danger-fill) 92%, transparent);
-  border-color: var(--danger-fill);
-  color: var(--accent-fg);
-}
-.toast.success {
-  background: color-mix(in srgb, var(--on-fill) 92%, transparent);
-  border-color: var(--on-fill);
-  color: var(--accent-fg);
-}
+/* The toast is the vendored component (_vendored/toast/toast.css): the nav's
+   glass, neutral for every message, tinted only for a real error. */
 
 /* Build-identity footer (which build the PWA is running) — visible under
    every tab; home-automation's .page-foot recipe. */

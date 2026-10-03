@@ -207,7 +207,7 @@ export function initTakeMenu() {
 }
 
 async function retranscribe(id) {
-  showToast('Re-transcribing…', 'success');
+  showToast('Re-transcribing…');
   try {
     const r = await authFetch(`/api/sessions/${id}/retranscribe`, { method: 'POST' });
     if (!r.ok) throw new Error(await r.text());
@@ -215,7 +215,7 @@ async function retranscribe(id) {
     state.sessionId = id;
     renderTranscript(mergeForAppend(state.transcript, data.transcript || ''));
     refreshHistory();
-    showToast('Done', 'success');
+    showToast('Done');
   } catch (err) {
     showToast('Re-transcribe failed', 'error');
   }
@@ -227,7 +227,7 @@ export async function onCleanAll() {
     const r = await authFetch('/api/sessions', { method: 'DELETE' });
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
-    showToast(`Removed ${data.removed}`, 'success');
+    showToast(`Removed ${data.removed}`);
     flashDanger(els.cleanAll);
     refreshHistory();
   } catch (err) {

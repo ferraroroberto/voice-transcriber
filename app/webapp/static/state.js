@@ -62,7 +62,6 @@ export const els = {
   statusReadout:    document.getElementById('statusReadout'),
   buildInfo:        document.getElementById('buildInfo'),
 
-  toast:            document.getElementById('toast'),
 };
 
 export const state = {

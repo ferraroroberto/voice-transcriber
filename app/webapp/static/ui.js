@@ -8,6 +8,11 @@
 
 import { els, state } from './state.js';
 import { icon } from './_vendored/icons/icons.js';
+import { showToast } from './_vendored/toast/toast.js';
+
+// The one fleet toast (neutral frosted; only an error tints). Re-exported so
+// every module keeps importing it from here.
+export { showToast };
 
 // The one read path for every role="switch" control (the vendored fleet
 // switch and the compact header chips) — the aria-checked attribute is the
@@ -35,7 +40,7 @@ export async function copyText(text, btn) {
     ta.select();
     try { document.execCommand('copy'); } catch (_) {}
     document.body.removeChild(ta);
-    showToast('Copied (fallback)', 'success');
+    showToast('Copied (fallback)');
   }
 }
 
@@ -94,17 +99,6 @@ export function flashDanger(btn) {
     btn.innerHTML = original;
     btn.classList.remove('danger-flash');
   }, 1400);
-}
-
-export function showToast(msg, kind) {
-  els.toast.textContent = msg;
-  els.toast.className = 'toast visible' + (kind ? ' ' + kind : '');
-  els.toast.hidden = false;
-  clearTimeout(showToast._t);
-  showToast._t = setTimeout(() => {
-    els.toast.classList.remove('visible');
-    setTimeout(() => { els.toast.hidden = true; }, 200);
-  }, 2400);
 }
 
 // Push a transcript into the DOM and re-derive the buttons that depend on

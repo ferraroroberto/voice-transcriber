@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/static/_vendored/base/base.css?v=__VENDORED_BASE_BASE_CSS__">
   <link rel="stylesheet" href="/static/_vendored/nav/nav-tabs.css?v=__VENDORED_NAV_NAV_TABS_CSS__">
   <link rel="stylesheet" href="/static/_vendored/card/card.css?v=__VENDORED_CARD_CARD_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/toast/toast.css?v=__VENDORED_TOAST_TOAST_CSS__">
   <link rel="stylesheet" href="/static/_vendored/home-head/home-head.css?v=__VENDORED_HOME_HEAD_HOME_HEAD_CSS__">
   <link rel="stylesheet" href="/static/_vendored/switch/switch.css?v=__VENDORED_SWITCH_SWITCH_CSS__">
   <link rel="stylesheet" href="/static/_vendored/select-native/select-native.css?v=__VENDORED_SELECT_NATIVE_SELECT_NATIVE_CSS__">
@@ -348,7 +349,7 @@
     </footer>
   </main>
 
-  <div id="toast" class="toast" hidden></div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <!-- Auth gate as a native <dialog> (fleet modal contract) — the vendored nav
        hides itself while it is open via body:has(dialog[open]). Esc-dismissal
