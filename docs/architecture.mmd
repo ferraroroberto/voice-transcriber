@@ -63,7 +63,7 @@ flowchart TB
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
     EVENTLOOP["event_loop.py\nselector event-loop shim — every uvicorn spawn of\napp.webapp.server:app picks it (fixes the :8443 wedge, issue #113)"]
     STATIC["static/\nindex.html (Record · History tabs, Settings via the header gear) · app.js ·\nrecorder.js (record/upload/finish) · level.js (VU+VAD) ·\npartials.js (rolling SSE) · wakelock.js · api.js · state.js ·\nui.js · history.js · polish.js · styles.css (fleet tokens, light+dark)"]
-    VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nbase · nav · home-head · toast · icons · card · switch · select-native · modal · empty-state · button"]
+    VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nbase · nav · home-head · toast · text-size · range-tab · icons · card · switch · select-native · modal · empty-state · button"]
   end
   WEBSERVER --> ROUTERS
   WEBSERVER --> MIDDLEWARE

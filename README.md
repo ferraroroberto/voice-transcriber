@@ -322,7 +322,7 @@ voice-transcriber/
 │           ├── polish.js          # polish-text UI flow
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (base · nav · home-head · toast · icons · card · switch · select-native · modal · empty-state · button)
+│                                  #   (base · nav · home-head · toast · text-size · range-tab · icons · card · switch · select-native · modal · empty-state · button)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -563,6 +563,18 @@ and both persist in `config/webapp_config.json` (`gain_boost_enabled`,
 spinbox, saving to the same shared file; the tray's hotkey-driven
 recordings pick up whichever value is currently saved, with no
 dedicated tray menu entry (same pattern as the silence threshold).
+
+#### Text size
+
+The PWA locks the viewport zoom, so **Settings** opens with a **Text size**
+control — **Small / Default / Large** — as the way to enlarge text (it scales
+the root font size to 93.75% / 100% / 112.5%, and every rem-based type role
+follows; the nav, rows and hit targets keep their pixel geometry). It applies
+the moment you tap it and is remembered **per device** in the browser
+(`voice-transcriber.textsize`), not in `webapp_config.json`, so the phone and
+the PC each keep their own. A pre-paint snippet in `<head>` restores it before
+first paint, so the page never reflows. It is webapp-only by design: the tk
+window and tray have no viewport zoom lock to escape.
 
 #### Rolling transcription
 
@@ -1092,6 +1104,7 @@ still covers the same logic via the parity port in
 | `tests\e2e\test_typography.py` | A nav tab, a button, an input and a select compute the same `font-family` as the body, so form controls never fall back to the UA's Arial (issue #226) |
 | `tests\e2e\test_page_header.py` | Settings is never a tab: the nav lists only Record and History, every pane opens with the `home-head` row carrying the theme toggle and the Settings gear, and the gear opens Settings from any tab until a tab is chosen (issue #226) |
 | `tests\e2e\test_toast.py` | The toast is neutral: a success message paints the nav's glass (no hue) and only an error tints danger, announced assertively (issue #226) |
+| `tests\e2e\test_text_size.py` | Each text-size step sets the root font-size (15 / 16 / 18px) and the rem-based type follows; the choice persists and is stamped before first paint (issue #226) |
 
 ## 🔗 See also
 

@@ -801,6 +801,9 @@ textarea.text-out.editable::placeholder {
 .take-menu-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
 /* ---------- settings panel ---------- */
+/* The Text size row: the vendored range-tabs sit inline with their label, so
+   they drop the stacked-use bottom margin the component ships with. */
+.settings-card .range-tabs { margin: 0; }
 .settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
 /* Every Settings control is right-anchored in its row, so its value reads
    from that same edge — a left-aligned value inside a right-anchored box

@@ -10,6 +10,7 @@
 
 import { initNavTabs } from './_vendored/nav/nav-tabs.js';
 import { setSwitch } from './_vendored/switch/switch.js';
+import { bindTextSize } from './_vendored/text-size/text-size.js';
 import { els, state, captureTokenFromURL } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, isOn, showToast } from './ui.js';
@@ -211,6 +212,11 @@ function bindEvents() {
       try { localStorage.setItem('voice-transcriber.theme', dark ? 'dark' : 'light'); } catch (_) {}
     });
   }
+
+  // Text size (fleet escape from the zoom lock): persists to
+  // voice-transcriber.textsize and stamps html[data-textsize] on every tap, so
+  // there is nothing for Save to do. The boot script handles first paint.
+  bindTextSize(document.getElementById('textSizeControl'), 'voice-transcriber');
 
   els.micSelect.addEventListener('change', releaseCachedStream);
 
