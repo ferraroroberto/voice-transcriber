@@ -272,8 +272,9 @@ html, body {
 }
 .append-toggle .icon,
 .incognito-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
-/* The incognito chip is icon-only — a square 44px target. */
-.incognito-btn { min-width: var(--hit-min); padding: 0; }
+/* The incognito chip is icon-only — a square 44px target. With no label to
+   identify it, its edge is the control-border token (3:1), not the hairline. */
+.incognito-btn { min-width: var(--hit-min); padding: 0; border-color: var(--control-border); }
 .append-toggle:active,
 .incognito-btn:active { background: var(--card-off); }
 .append-toggle[aria-checked="true"],
@@ -419,7 +420,7 @@ html, body {
 
 .text-out {
   background: var(--input-bg);
-  border: 1px solid var(--line-muted);
+  border: 1px solid var(--control-border);
   border-radius: var(--radius-md);
   padding: var(--gap);
   min-height: 120px;
@@ -548,7 +549,7 @@ textarea.text-out.editable::placeholder {
   width: 100%;
   background: var(--input-bg);
   color: var(--muted);
-  border: 1px solid var(--line-muted);
+  border: 1px solid var(--control-border);
   border-radius: var(--radius-md);
   padding: 10px var(--gap);
   font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
