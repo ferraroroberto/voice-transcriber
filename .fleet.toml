@@ -33,6 +33,8 @@ range-tab = { src = "app/webapp/static/_vendored/range-tab", sha = "7e1433c70cac
 nav = { src = "app/webapp/static/_vendored/nav", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/nav" }
 select-native = { src = "app/webapp/static/_vendored/select-native", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/select-native" }
 switch = { src = "app/webapp/static/_vendored/switch", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/switch" }
+button = { src = "app/webapp/static/_vendored/button", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/button" }
+modal = { src = "app/webapp/static/_vendored/modal", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/modal" }
 
 # Diff-proportionate e2e routing (project-scaffolding docs/e2e-routing.md).
 # Rules are evaluated top-to-bottom; first match wins. Unmatched paths fall
