@@ -47,6 +47,11 @@ tier       = "static"
 prefix     = "app/webapp/static/"
 extensions = ["svg", "png", "jpg", "ico", "woff2", "webmanifest"]
 
+[[e2e.rule]]             # vendored component READMEs are docs, never served -> none (#216)
+tier       = "none"
+prefix     = "app/webapp/static/_vendored/"
+extensions = ["md"]
+
 [[e2e.rule]]             # the webapp (routers + static css/js/html) -> full
 tier   = "full"
 prefix = "app/webapp/"

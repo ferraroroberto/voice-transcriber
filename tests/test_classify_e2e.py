@@ -54,5 +54,13 @@ def test_real_rules_route_representative_paths() -> None:
     assert tier("docs/architecture.mmd") == "skip"
     assert tier("README.md") == "skip"
 
+    # Vendored component READMEs are docs -> skip, but riding with the
+    # component's own css/js they still force full (#216).
+    assert tier("app/webapp/static/_vendored/nav/README.md") == "skip"
+    assert tier(
+        "app/webapp/static/_vendored/nav/nav-tabs.css",
+        "app/webapp/static/_vendored/nav/README.md",
+    ) == "full"
+
     # Mixed real diff (gui + webapp) -> full.
     assert tier("app/gui/service_supervisor.py", "app/webapp/static/app.js") == "full"
