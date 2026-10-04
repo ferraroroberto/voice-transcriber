@@ -43,7 +43,9 @@ try {
     Write-Host "==> pytest e2e (Chromium + WebKit/iPhone, auto-booted)..." -ForegroundColor Cyan
     $env:VT_E2E_AUTOBOOT = "1"
     try {
-        & $python -m pytest tests/e2e -q
+        # Per-test timing for /e2e-audit: the path is gitignored (.pytest_cache/)
+        # and mirrors `[e2e] junit_xml` in .fleet.toml (#216).
+        & $python -m pytest tests/e2e -q --junitxml=.pytest_cache/e2e-junit.xml
         $e2eExit = $LASTEXITCODE
     }
     finally {

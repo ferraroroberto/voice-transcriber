@@ -41,6 +41,7 @@ switch = { src = "app/webapp/static/_vendored/switch", sha = "f23a32ea8d24cf5291
 static_pytest_target = "tests/e2e/test_smoke.py"
 static_browsers       = ["chromium"]
 full_pytest_target    = "tests/e2e"
+junit_xml             = ".pytest_cache/e2e-junit.xml"
 
 [[e2e.rule]]              # inert assets under the webapp static tree -> static
 tier       = "static"
