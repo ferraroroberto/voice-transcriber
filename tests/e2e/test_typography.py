@@ -25,8 +25,15 @@ def test_form_controls_inherit_the_body_font(authed_page: Page, base_url: str) -
     assert "system-ui" in body_family, f"body lost the fleet font stack: {body_family!r}"
 
     # A nav tab (the label that read larger on the desktop rail), a bare
-    # button, a number input and a select each render in the body's face.
-    for selector in (".tabs .tab", "#recordBtn", "#gainBoostDb", "#polishModel"):
+    # button, a number input, a select and the polish-prompt preview (prose,
+    # so no monospace override) each render in the body's face.
+    for selector in (
+        ".tabs .tab",
+        "#recordBtn",
+        "#gainBoostDb",
+        "#polishModel",
+        "#polishPromptPreview",
+    ):
         family = authed_page.evaluate(_FAMILY_JS, selector)
         assert family == body_family, (
             f"{selector} computes font-family {family!r}, body is {body_family!r}"

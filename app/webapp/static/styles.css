@@ -552,7 +552,6 @@ textarea.text-out.editable::placeholder {
   border: 1px solid var(--control-border);
   border-radius: var(--radius-md);
   padding: 10px var(--gap);
-  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", monospace;
   font-size: var(--font-caption);
   line-height: 1.4;
   resize: vertical;
