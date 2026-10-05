@@ -42,7 +42,7 @@
   --input-bg: var(--card-off);
   --control-border: #818b98; /* input/select boundary + switch off-track (3:1 vs card) */
   --toggle-knob: #ffffff;
-  --close-bg: var(--card-off);
+  --close-bg: transparent; /* glyph-only controls draw nothing at rest (fleet-config#1259) */
   /* the modal/login scrim is theme-invariant by design — it dims content */
   --scrim: rgba(0, 0, 0, 0.5);
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -125,7 +125,7 @@
   --input-bg: var(--bg);
   --control-border: #6e7681;
   --toggle-knob: var(--ink);
-  --close-bg: var(--line);
+  --close-bg: transparent;
   /* Depth on a near-black canvas comes from surface lightness, not shadow. */
   --shadow: 0 8px 24px rgba(1, 4, 9, 0.6);
   --tabbar-bg: rgba(22, 27, 34, 0.86);
