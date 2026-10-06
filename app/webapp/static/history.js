@@ -140,7 +140,7 @@ function renderHistoryItem(s) {
 
   const more = document.createElement('button');
   more.type = 'button';
-  more.className = 'history-more';
+  more.className = 'icon-button history-more';
   more.setAttribute('aria-label', 'More actions');
   more.innerHTML = icon('ellipsis-vertical');
   more.addEventListener('click', () => openTakeMenu(s));

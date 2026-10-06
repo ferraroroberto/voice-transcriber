@@ -273,7 +273,7 @@ class TestHistoryButtonEmphasis:
         one overflow button opens the rest. The row builds no per-row button
         strip, and the destructive Delete lives last in the menu (#213)."""
         assert "main.className = 'history-main';" in app_js
-        assert "more.className = 'history-more';" in app_js
+        assert "more.className = 'icon-button history-more';" in app_js
         assert "button-ghost compact history-copy" not in app_js
         assert "button-tint" not in app_js
         menu = re.search(r'<dialog id="takeMenu".*?</dialog>', index_html, re.S)
