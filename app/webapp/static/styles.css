@@ -222,24 +222,8 @@ html, body {
   gap: var(--space-xs);
 }
 
-.header-icon-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--icon-title);
-  padding: 0;
-  min-width: var(--hit-min);
-  min-height: var(--hit-min);
-  background: transparent;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  color: var(--ink);
-  cursor: pointer;
-  user-select: none;
-  transition: background 0.15s;
-}
-.header-icon-btn:active { background: var(--card-off); }
-.header-icon-btn .icon { width: var(--icon-title); height: var(--icon-title); }
+/* The reset glyph rides the vendored icon-button; the box is the 44px floor. */
+.header-actions .icon-button { --icon-btn-box: var(--hit-min); }
 
 /* Theme toggle — shows the glyph for the ACTION: moon in light (tap → dark),
    sun in dark (tap → light). Pure CSS swap keyed on html[data-theme]; the
@@ -763,23 +747,8 @@ textarea.text-out.editable::placeholder {
 .history-list li .history-copied.copied { color: var(--on); }
 .history-list li .history-copied .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
-/* The one trailing accessory: a 44px overflow button. */
-.history-list li .history-more {
-  flex: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: var(--radius-md);
-  color: var(--muted);
-  cursor: pointer;
-}
-.history-list li .history-more:active { background: var(--card-off); }
-.history-list li .history-more .icon { width: var(--icon-title); height: var(--icon-title); }
+/* The one trailing accessory: a 44px overflow button (the vendored icon-button). */
+.history-list li .history-more { --icon-btn-box: var(--hit-min); }
 
 /* The overflow menu (a <dialog> on the vendored modal shell): full-width
    actions, the destructive one last, after a divider. */
