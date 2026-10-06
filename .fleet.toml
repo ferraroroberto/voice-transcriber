@@ -10,14 +10,14 @@ chips       = ["whisper :8090"]
 
 # Design-lint findings examined and accepted (schema: fleet-config's
 # architecture/README.md, "[[design.accepted]]"). `detail` is the finding's
-# exact string, so it goes stale if the dialog moves off index.html:386.
+# exact string, so it goes stale if the dialog moves off index.html:387.
 # In effect since fleet-config#953: design_lint's modal-header row carries
-# evidence (index.html:386), so this entry matches it and the FAIL reports
+# evidence (index.html:387), so this entry matches it and the FAIL reports
 # ACCEPTED.
 [[design.accepted]]
 check  = "modal-header"
 target = "app/webapp/static/index.html"
-detail = "editor-modal header contract violated (design.md modal wants a heading-lg title + square x close, never a footer Cancel): app/webapp/static/index.html:386 no square x close button"
+detail = "editor-modal header contract violated (design.md modal wants a heading-lg title + square x close, never a footer Cancel): app/webapp/static/index.html:387 no square x close button"
 reason = "#loginOverlay is a non-dismissable auth gate: a x close would be a no-op or a way past authentication"
 record = "https://github.com/ferraroroberto/voice-transcriber/issues/202"
 
