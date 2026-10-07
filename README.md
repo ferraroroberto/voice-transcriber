@@ -774,14 +774,21 @@ day. See issue #95.
 
 Unlike `archive/` (pruned after 30 days), every session-lifecycle event
 — created, transcribed, transcribe/polish failures, polished, deleted —
-is also written to a separate, much longer-lived SQLite log at
-`webapp/activity.sqlite3` (gitignored), retained for 365 days and
-pruned on boot. This is what backs the analytics line above, and it's
-also where to look for *why* something failed after its archive folder
-is long gone: `GET /api/activity` (optional `event_type` / `since`
-epoch-seconds / `limit` query params, newest first) returns the raw
-event trail. No dedicated UI page for it yet — it's an API, curl or
-open it in a browser.
+is also written to a separate, much longer-lived SQLite log, retained
+for 365 days and pruned on boot. Since #194 it lives outside the git
+checkout, at `C:\sqlite\voice-transcriber\activity.sqlite3` by default
+— resolved by `src/runtime_data.py`, overridable (highest precedence
+first) via `VT_ACTIVITY_DB_PATH` (full file path), `VOICE_TRANSCRIBER_DATA_DIR`
+(this app's own data directory), or `FLEET_DATA_ROOT` (the fleet-wide
+root; the app's directory is `<root>/voice-transcriber`). Because that
+path is outside the checkout, it's invisible to `git ls-files` and
+needs its own backup source (`fleet-config#724`). This is what backs
+the analytics line above, and it's also where to look for *why*
+something failed after its archive folder is long gone: `GET
+/api/activity` (optional `event_type` / `since` epoch-seconds /
+`limit` query params, newest first) returns the raw event trail. No
+dedicated UI page for it yet — it's an API, curl or open it in a
+browser.
 
 Three buttons live above the list, all in a single right-aligned row:
 
@@ -804,14 +811,18 @@ the take in the middle, one overflow button on the right:
   remove that one take. Cleaner than nuking everything via the
   top-row Clean button.
 
-### Optional: bearer-token auth (extra layer)
+### Bearer-token auth (required for the tunnel)
 
 The webapp ships with the auth gate **off** by default — `auth_token`
-is `""` in `config/webapp_config.json` and every caller (tk window,
-loopback browser, tunnel visitor) reaches the API freely. With
-Cloudflare Access in front of your tunnel, that's already a strong
-gate. The bearer token adds a second factor on the API itself — even
-a caller past the Access policy still needs the token. Turn it on:
+is `""` in `config/webapp_config.json`. That's fine for loopback-only
+use: the tk window and local probes reach the API freely either way,
+zero config required. But since #182 the Cloudflare tunnel will not
+start at all while `auth_token` is empty (`src/tunnel.py`
+`publish_refusal_reason` refuses the spawn) — so the token is a
+**prerequisite for the persistent URL**, not an optional extra layer.
+Pair it with Cloudflare Access in front of your tunnel for a second
+factor — even a caller past the Access policy still needs the token.
+Turn it on:
 
 ```powershell
 & .\.venv\Scripts\python.exe scripts\gen_token.py
@@ -925,13 +936,18 @@ cloudflared tunnel route dns voice voice.your-domain.net
 # 5. Copy the sample config and fill in your UUID + hostname
 copy webapp\cloudflared.sample.yml webapp\cloudflared.yml
 notepad webapp\cloudflared.yml
+
+# 6. Generate the bearer token — the tunnel refuses to start without
+#    one (see "Bearer-token auth" below)
+& .\.venv\Scripts\python.exe scripts\gen_token.py
 ```
 
 `webapp/cloudflared.yml` is gitignored so your tunnel UUID + hostname
 don't end up in the repo. Default `credentials-file` lookup at
 `~/.cloudflared/<UUID>.json` works out of the box; only set it
 explicitly in the YAML if you stored the credentials JSON somewhere
-else.
+else. Step 6 isn't optional: since #182 cloudflared won't spawn at all
+while `auth_token` is empty.
 
 #### Cloudflare Access policy (recommended)
 
@@ -986,6 +1002,7 @@ work in one foreground process.
 | Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |
 | Tray says `cloudflared not on PATH` | Binary missing | `winget install Cloudflare.cloudflared`, restart the tray |
 | Tray boots but no public URL | `webapp/cloudflared.yml` missing | Copy `webapp/cloudflared.sample.yml` to `webapp/cloudflared.yml`, fill in UUID + hostname, restart the tray. See "Persistent URL via Cloudflare tunnel" |
+| Tray notification `Cloudflare tunnel: Not started — no auth_token configured…` | `webapp/cloudflared.yml` exists, but `src/tunnel.py`'s `publish_refusal_reason` refuses to spawn cloudflared while `auth_token` is empty (#182) | Run `scripts/gen_token.py`, then restart the tray. See "Bearer-token auth (required for the tunnel)" |
 | Webapp goes completely unresponsive (process alive, every request fails/hangs) until a tray restart | Windows' default asyncio proactor event loop closes its listening socket the moment `accept()` sees any `OSError` — a dropped Wi-Fi/Tailscale handoff or a browser tab closed mid-handshake surfaces as `WinError 64` on the accept side, and one such abort kills the listener for good (#113) | Fixed — every `app.webapp.server:app` uvicorn invocation now runs on the selector event loop instead (`app/webapp/event_loop.py`), whose accept path doesn't have this failure mode. If it recurs anyway, `tray.bat --restart` remains the manual recovery |
 | `Recording upload glitch — audio may be incomplete` toast | A `/chunk` POST failed 4 times in a row (network blip through the tunnel) — retried with backoff, then gave up on that one chunk (#192) | Check the transcript for a gap around when the toast fired. If it's the very first chunk of the take, the WebM header is lost and the take won't transcode — re-record |
 
