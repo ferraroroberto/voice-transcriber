@@ -6,9 +6,9 @@ from __future__ import annotations
 import json
 import logging
 import platform
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,30 @@ def _machine_name() -> str:
         return "unknown"
 
 
+# Fields whose raw JSON value is treated as "absent" when falsy (empty
+# string / empty dict), not just when the key is missing entirely — the
+# optional mic/language overrides and the hub URLs fall back to their
+# declared dataclass default even when a stale falsy value was persisted.
+_OR_ABSENT_FIELDS = frozenset(
+    {
+        "preferred_mics",
+        "machine_specific_mics",
+        "transcribe_base_url",
+        "translate_base_url",
+        "webapp",
+        "enabled_languages",
+    }
+)
+
+
+def _caster_for(default: Any) -> Callable[[Any], Any]:
+    """Infer a JSON-value coercion from a field's default value's type."""
+    if default is None:
+        return lambda v: v
+    py_type = type(default)
+    return list if py_type is list else py_type
+
+
 def load_app_config(path: Optional[Path] = None) -> AppConfig:
     """Load `config/config.json` from next to this file (or an override)."""
     if path is None:
@@ -191,25 +215,21 @@ def load_app_config(path: Optional[Path] = None) -> AppConfig:
 
     raw = json.loads(path.read_text(encoding="utf-8"))
     _validate(raw)
-    return AppConfig(
-        language=raw.get("language", "english"),
-        max_record_seconds=int(raw.get("max_record_seconds", 300)),
-        sample_rate=int(raw.get("sample_rate", 16000)),
-        preferred_mics=raw.get("preferred_mics") or None,
-        machine_specific_mics=raw.get("machine_specific_mics") or {},
-        hotkey=raw.get("hotkey", "<F8>"),
-        auto_copy=bool(raw.get("auto_copy", True)),
-        auto_start_server=bool(raw.get("auto_start_server", False)),
-        log_level=raw.get("log_level", "INFO"),
-        auto_paste_after_hotkey=bool(raw.get("auto_paste_after_hotkey", True)),
-        suppress_hotkey=bool(raw.get("suppress_hotkey", True)),
-        show_notifications=bool(raw.get("show_notifications", True)),
-        ptt_threshold_ms=int(raw.get("ptt_threshold_ms", 600)),
-        transcribe_base_url=str(raw.get("transcribe_base_url") or "http://127.0.0.1:8000"),
-        translate_base_url=str(raw.get("translate_base_url") or "http://127.0.0.1:8091"),
-        webapp=raw.get("webapp") or {},
-        enabled_languages=raw.get("enabled_languages") or None,
-    )
+
+    # One field list (dataclasses.fields()), not a hand-written copy of
+    # every default: each field's own declared default supplies both the
+    # fallback value and — via its Python type — the JSON coercion, so a
+    # new knob needs no reader edit. Mirrors load_webapp_config's loop.
+    defaults = AppConfig()
+    kwargs: Dict[str, Any] = {}
+    for f in fields(AppConfig):
+        default = getattr(defaults, f.name)
+        if f.name in _OR_ABSENT_FIELDS:
+            raw_value = raw.get(f.name) or default
+        else:
+            raw_value = raw.get(f.name, default)
+        kwargs[f.name] = _caster_for(default)(raw_value)
+    return AppConfig(**kwargs)
 
 
 def _validate(raw: Dict) -> None:
