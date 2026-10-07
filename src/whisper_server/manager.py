@@ -25,6 +25,7 @@ from typing import Any, Deque, Dict, List, Optional
 import requests
 import yaml
 
+from src.no_window import NO_WINDOW
 from src.process_supervisor import (
     OWNERSHIP_EXTERNAL,
     OWNERSHIP_NONE,
@@ -411,7 +412,7 @@ class WhisperServerManager:
             )
             if sys.platform == "win32":
                 popen_kwargs["creationflags"] = (
-                    subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+                    subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW
                 )
             self._proc = subprocess.Popen(cmd, **popen_kwargs)
         except FileNotFoundError as e:
