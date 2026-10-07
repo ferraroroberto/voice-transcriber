@@ -41,6 +41,11 @@ class ServerCommand(BaseCommand):
             return _print_status(manager)
         if action == "logs":
             lines = manager.log_lines()
+            if not lines:
+                logger.info(
+                    f"ℹ️  No log to show — no whisper-server started by this project "
+                    f"is running (log: {manager.config.log_file})"
+                )
             for line in lines[-args.tail:]:
                 logger.info(line)
             return 0

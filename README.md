@@ -370,7 +370,9 @@ tray.bat
 
 If the server doesn't come up, `server.bat logs` prints what
 `whisper-server` printed on startup (backend, model-load lines, system
-info). A CUDA-backed build will log `whisper_backend_init: using CUDA
+info). The output is kept in `.whisper_server.log` beside the PID file, so
+it stays readable after `server.bat start` exits, and `server.bat stop`
+can stop a server an earlier `server.bat start` launched. A CUDA-backed build will log `whisper_backend_init: using CUDA
 backend`; a CPU build logs `whisper_backend_init: using CPU backend`.
 
 ## 🎯 GPU / CPU compatibility
