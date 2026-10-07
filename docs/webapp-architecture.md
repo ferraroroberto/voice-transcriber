@@ -158,9 +158,13 @@ subscription quota. Tailscale-only / loopback paths are already gated by
 Tailscale's ACL, so this only matters when the tunnel is the exposure
 path — but a built-in, dormant-by-default token gate covers it.
 
-- **Default off.** `auth_token` defaults to `""`. With an empty token the
-  middleware short-circuits — every existing flow (tk window, Tailscale
-  phone, cloudflared) keeps working unchanged. Zero config required.
+- **Default off, loopback/Tailscale only.** `auth_token` defaults to
+  `""`. With an empty token the middleware short-circuits for the tk
+  window and Tailscale callers — those flows keep working unchanged,
+  zero config required. The Cloudflare tunnel is the exception: since
+  #182, `src/tunnel.py`'s `publish_refusal_reason` refuses to spawn
+  cloudflared at all while `auth_token` is empty, so the tunnel will
+  not publish without a token configured first (`scripts/gen_token.py`).
 - **Loopback always bypasses.** `client.host in {"127.0.0.1", "::1"}`
   goes straight through, so the tk main window's reuse of the API and any
   local probe / script keeps working without the token. No Tailnet
