@@ -15,11 +15,9 @@ import os
 import re
 import subprocess
 import sys
-import threading
-from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Deque, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 # Third-party imports
 import requests
@@ -72,6 +70,15 @@ class ServerConfig:
     @property
     def base_url(self) -> str:
         return f"http://{self.host}:{self.port}"
+
+    @property
+    def log_file(self) -> Path:
+        """Where the spawned server's stdout/stderr lands — beside the PID file.
+
+        A file (not a pipe) so a later CLI process can read it and the server
+        keeps a valid stdout after the process that spawned it exits.
+        """
+        return self.pid_file.with_suffix(".log")
 
 
 @dataclass
@@ -206,6 +213,28 @@ def _parse_runtime_info(log_lines: List[str]) -> Dict[str, str]:
     return found
 
 
+_LOG_HEAD_BYTES = 64 * 1024
+_LOG_TAIL_BYTES = 512 * 1024
+
+
+def _read_log_lines(path: Path, *, tail: bool) -> List[str]:
+    """Read the first (`tail=False`) or last (`tail=True`) chunk of the server
+    log as lines. Bounded so a server that has been up for days stays cheap
+    to inspect. Missing/unreadable file → ``[]``."""
+    try:
+        with open(path, "rb") as fh:
+            if tail:
+                size = fh.seek(0, os.SEEK_END)
+                fh.seek(max(0, size - _LOG_TAIL_BYTES))
+                raw = fh.read()
+                lines = raw.decode("utf-8", errors="replace").splitlines()
+                # A mid-file seek lands inside a line — drop the fragment.
+                return lines[1:] if size > _LOG_TAIL_BYTES else lines
+            return fh.read(_LOG_HEAD_BYTES).decode("utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+
+
 def _infer_display_name(model_filename: str) -> str:
     """`ggml-large-v3-turbo.bin` → `large-v3-turbo`."""
     stem = model_filename
@@ -302,9 +331,6 @@ class WhisperServerManager:
     def __init__(self, config: Optional[ServerConfig] = None) -> None:
         self.config: ServerConfig = config or load_config()
         self._proc: Optional[subprocess.Popen] = None
-        self._log: Deque[str] = deque(maxlen=self.config.log_ring_size)
-        self._lock = threading.Lock()
-        self._reader: Optional[threading.Thread] = None
         self._session = requests.Session()
 
     # ------------------------------------------------------------------ status
@@ -400,14 +426,20 @@ class WhisperServerManager:
             env["PATH"] = str(self.config.binary_path.parent) + os.pathsep + env.get("PATH", "")
 
         try:
+            # Output goes to a file the child owns outright, so it outlives
+            # this process (`server.bat start` exits right after spawning)
+            # and `server.bat logs` / `status` can read it later.
+            log_handle = open(self.config.log_file, "wb")
+        except OSError as e:
+            raise RuntimeError(
+                f"❌ cannot open whisper-server log {self.config.log_file}: {e}"
+            ) from e
+
+        try:
             popen_kwargs: Dict[str, Any] = dict(
                 cwd=str(self.config.project_root),
-                stdout=subprocess.PIPE,
+                stdout=log_handle,
                 stderr=subprocess.STDOUT,
-                text=True,
-                encoding="utf-8",
-                errors="replace",
-                bufsize=1,
                 env=env,
             )
             if sys.platform == "win32":
@@ -421,14 +453,10 @@ class WhisperServerManager:
             ) from e
         except Exception as e:
             raise RuntimeError(f"❌ failed to launch whisper-server: {e}") from e
+        finally:
+            log_handle.close()  # the child holds its own inherited handle
 
         self._write_pid_file(self._proc.pid)
-        self._reader = threading.Thread(
-            target=self._drain_output,
-            args=(self._proc,),
-            daemon=True,
-        )
-        self._reader.start()
 
         if wait:
             self._wait_until_ready()
@@ -438,11 +466,26 @@ class WhisperServerManager:
     # -------------------------------------------------------------------- stop
 
     def stop(self) -> ServerStatus:
-        """Stop the server we started. Never touches an EXTERNAL server."""
+        """Stop the server we started. Never touches an EXTERNAL server.
+
+        "We started" includes an earlier process of this project (e.g. a
+        previous `server.bat start`): the PID file it wrote identifies it.
+        """
         status = self.status()
         if status.ownership == OWNERSHIP_EXTERNAL:
-            logger.info("✋ Leaving external whisper-server running (not ours)")
-            return status
+            adopted = self._adopted_pid()
+            if adopted is None:
+                logger.info("✋ Leaving external whisper-server running (not ours)")
+                return status
+            self._stop_pid(adopted)
+            self._clear_pid_file()
+            return ServerStatus(
+                running=False,
+                ownership=OWNERSHIP_NONE,
+                port=self.config.port,
+                base_url=self.config.base_url,
+                detail="stopped",
+            )
         if not status.running or self._proc is None:
             logger.info("ℹ️  Whisper server was not running")
             self._clear_pid_file()
@@ -472,8 +515,12 @@ class WhisperServerManager:
     # -------------------------------------------------------------- diagnostics
 
     def log_lines(self) -> List[str]:
-        with self._lock:
-            return list(self._log)
+        """Tail of the log of the server this project spawned (this process
+        or an earlier one). Empty when nothing of ours is serving — the file
+        would otherwise describe a long-dead run next to someone else's server."""
+        if self._proc is None and self._adopted_pid() is None:
+            return []
+        return _read_log_lines(self.config.log_file, tail=True)[-self.config.log_ring_size:]
 
     def describe(self, status: Optional[ServerStatus] = None) -> ServerDescription:
         """Collect everything that identifies *what* is serving.
@@ -504,7 +551,11 @@ class WhisperServerManager:
             except (psutil.Error, OSError):
                 rss = None
 
-        runtime_info = _parse_runtime_info(self.log_lines())
+        # whisper.cpp prints its diagnostics once at startup, so read the head
+        # of the log too — per-request output pushes them out of the tail.
+        log = self.log_lines()
+        head = _read_log_lines(self.config.log_file, tail=False) if log else []
+        runtime_info = _parse_runtime_info(head + log)
 
         return ServerDescription(
             mode=self.config.mode,
@@ -554,13 +605,44 @@ class WhisperServerManager:
         cmd.extend(self.config.args)
         return cmd
 
-    def _drain_output(self, proc: subprocess.Popen) -> None:
-        if proc.stdout is None:
-            return
-        for raw in proc.stdout:
-            line = raw.rstrip("\n")
-            with self._lock:
-                self._log.append(line)
+    def _adopted_pid(self) -> Optional[int]:
+        """PID from our PID file when it provably still names *our* server.
+
+        The file alone can be stale (PID reuse), so the process must also be
+        running the configured binary and listening on the configured port —
+        otherwise it is someone else's and stays hands-off.
+        """
+        pid = self._read_pid_file()
+        if pid is None or psutil is None:
+            return None
+        try:
+            proc = psutil.Process(pid)
+            if os.path.normcase(os.path.realpath(proc.exe())) != os.path.normcase(
+                os.path.realpath(self.config.binary_path)
+            ):
+                return None
+            connections = proc.net_connections(kind="inet")
+        except (psutil.Error, OSError):
+            return None
+        for conn in connections:
+            if conn.status == psutil.CONN_LISTEN and conn.laddr and conn.laddr.port == self.config.port:
+                return pid
+        return None
+
+    def _stop_pid(self, pid: int) -> None:
+        """terminate() -> kill() ladder for a process we did not Popen here."""
+        logger.info(f"🛑 Stopping whisper-server (pid={pid}, started earlier)")
+        try:
+            proc = psutil.Process(pid)
+            proc.terminate()
+            try:
+                proc.wait(timeout=8)
+            except psutil.TimeoutExpired:
+                logger.warning("⚠️  whisper-server didn't exit; killing")
+                proc.kill()
+                proc.wait(timeout=5)
+        except psutil.NoSuchProcess:
+            pass
 
     def _wait_until_ready(self) -> None:
         def _not_alive_message() -> str:

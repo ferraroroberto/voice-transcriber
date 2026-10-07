@@ -64,12 +64,15 @@ args:
   - "/v1/audio/transcriptions"
 
 # PID file path, relative to project_root. Written when we spawn the server
-# so a second invocation can tell "is it mine or someone else's?".
+# so a second invocation can tell "is it mine or someone else's?" (it is ours
+# only if the PID is running the configured binary and listening on `port`).
+# The server's stdout/stderr goes to the same path with a `.log` suffix.
 pid_file: ".whisper_server.pid"
 
-# Ring buffer size for captured server stdout/stderr lines — the GUI /
-# CLI "describe" view parses whisper.cpp's one-shot startup diagnostics
-# (backend CPU/CUDA, model type, languages, system_info) out of this buffer.
+# How many trailing server-log lines `log_lines()` / `server logs` return. The
+# GUI / CLI "describe" view also parses whisper.cpp's one-shot startup
+# diagnostics (backend CPU/CUDA, model type, languages, system_info) out of
+# the head of the log file.
 log_ring_size: 1000
 
 # Health check timing.

@@ -231,11 +231,18 @@ async def finish_session(
     # Skip final whisper when the rolling worker already has the
     # whole take covered. Even a one-byte difference is enough to
     # justify a final pass — Cloudflare can briefly buffer the last
-    # chunk and we want the canonical transcript on disk.
+    # chunk and we want the canonical transcript on disk. Partials are
+    # always transcribed (not translated) in the session's own language,
+    # so a translate request or a different language must fall through.
+    app_cfg = request.app.state.app_config
+    partial_iso = resolve_iso(session.meta.language or app_cfg.language)
+    requested_iso = resolve_iso(language) if language else partial_iso
     if (
         worker is not None
         and worker.partial_text
         and worker.last_bytes_at_partial == session.meta.raw_bytes
+        and not translate
+        and requested_iso == partial_iso
     ):
         text = worker.partial_text
         session.write_transcript(text)
