@@ -3,9 +3,9 @@
 Two independent checkpoints, both cheap and both easy to regress because
 neither fires in the normal loopback flow:
 
-- ``src.tunnel.publish_refusal_reason`` — consulted before cloudflared is
-  spawned, so a publicly-reachable origin can't come up while the request
-  gate is configured off.
+- ``src.tunnel.publish_refusal_reason`` — consulted by both launchers
+  before cloudflared is spawned, so a publicly-reachable origin can't come
+  up while the request gate is configured off.
 - ``scripts/set_password.py``'s length floor — the value it writes is the
   one reachable over that same public hostname.
 """
@@ -70,6 +70,68 @@ class TestTrayConsultsTheGuard:
 
         assert spawned == [], "cloudflared must not be spawned without a token"
         assert notes, "the refusal must be surfaced to the user, not swallowed"
+
+
+def _load_run_named_tunnel():
+    """Import ``scripts/run_named_tunnel.py`` by path, like ``set_password``."""
+    spec = importlib.util.spec_from_file_location(
+        "_run_named_tunnel_under_test", PROJECT_ROOT / "scripts" / "run_named_tunnel.py"
+    )
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestHeadlessLauncherConsultsTheGuard:
+    """The no-tray launcher spawns the same tunnel, so it needs the same check."""
+
+    @pytest.fixture
+    def launcher(self, tmp_path, monkeypatch):
+        # Run directly, the script finds its sibling helpers via sys.path[0];
+        # loaded by path it needs scripts/ on the path explicitly.
+        monkeypatch.syspath_prepend(str(PROJECT_ROOT / "scripts"))
+        module = _load_run_named_tunnel()
+        config = tmp_path / "cloudflared.yml"
+        config.write_text(
+            "ingress:\n  - hostname: voice.example.test\n"
+            "    service: https://localhost:8443\n  - service: http_status:404\n",
+            encoding="utf-8",
+        )
+        monkeypatch.setenv("CLOUDFLARED_CONFIG", str(config))
+        spawned = []
+        proc = type("Proc", (), {"stdout": None, "wait": lambda self: 0})()
+        monkeypatch.setattr(
+            module, "spawn_cloudflared",
+            lambda *a, **k: spawned.append("cloudflared") or proc,
+        )
+        monkeypatch.setattr(
+            module, "_spawn_uvicorn", lambda *a, **k: spawned.append("uvicorn"),
+        )
+        monkeypatch.setattr(module, "_have_listener", lambda port: True)
+        monkeypatch.setattr(
+            module, "persist_tunnel_url", lambda *a, **k: spawned.append("url"),
+        )
+        monkeypatch.setattr(module, "stop_popen", lambda *a, **k: None)
+        monkeypatch.setattr(module, "remove_tunnel_url_file", lambda *a, **k: None)
+        module.spawned = spawned
+        yield module
+        sys.modules.pop("_run_named_tunnel_under_test", None)
+
+    @pytest.mark.parametrize("token", ["", "   "])
+    def test_headless_launcher_returns_before_spawning(self, launcher, monkeypatch, token):
+        monkeypatch.setattr(launcher, "configured_auth_token", lambda: token)
+
+        assert launcher.main() == 1
+        assert launcher.spawned == [], "nothing may start without a token"
+
+    def test_headless_launcher_proceeds_with_a_token(self, launcher, monkeypatch):
+        monkeypatch.setattr(
+            launcher, "configured_auth_token", lambda: "s3cr3t-token-value",
+        )
+
+        assert launcher.main() == 0
+        assert "cloudflared" in launcher.spawned
 
 
 class TestPasswordFloor:

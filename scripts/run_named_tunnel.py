@@ -47,7 +47,9 @@ from app.webapp.manager import build_uvicorn_command, cert_paths  # noqa: E402
 from src.process_supervisor import stop_popen  # noqa: E402
 from src.tunnel import (  # noqa: E402
     CloudflaredNotFoundError,
+    configured_auth_token,
     persist_tunnel_url,
+    publish_refusal_reason,
     read_tunnel_hostname,
     remove_tunnel_url_file,
     spawn_cloudflared,
@@ -127,6 +129,13 @@ def main() -> int:
             f"{config_path.name} and fill in your tunnel UUID + hostname. "
             "See README → 'Persistent URL via named Cloudflare tunnel'."
         )
+        return 1
+
+    # Same gate the tray applies before its own spawn (src/tunnel.py): checked
+    # before uvicorn too, so a refused run leaves nothing behind to tear down.
+    refusal = publish_refusal_reason(configured_auth_token())
+    if refusal is not None:
+        logger.error(f"❌ Cloudflare tunnel not started: {refusal}")
         return 1
 
     hostname = read_tunnel_hostname(config_path)

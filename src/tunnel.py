@@ -51,6 +51,19 @@ def read_tunnel_hostname(config_path: Path) -> Optional[str]:
     return None
 
 
+def configured_auth_token() -> str:
+    """The bearer token from ``webapp_config.json``, re-read at call time.
+
+    An unreadable config yields ``""`` — so a launcher gating on
+    :func:`publish_refusal_reason` fails closed rather than open.
+    """
+    try:
+        return (load_webapp_config().auth_token or "").strip()
+    except Exception as exc:  # noqa: BLE001
+        logger.debug(f"could not read auth_token: {exc}")
+        return ""
+
+
 def publish_refusal_reason(auth_token: str) -> Optional[str]:
     """Return why the tunnel must not be published, or ``None`` to proceed.
 
@@ -58,13 +71,15 @@ def publish_refusal_reason(auth_token: str) -> Optional[str]:
     lets every caller through. That is the right default for a loopback-only
     app, but publishing the same origin on a stable public hostname turns it
     into an open one — so the two settings have to be decided together rather
-    than independently. Callers refuse the spawn and surface the reason.
+    than independently. Every caller of :func:`spawn_cloudflared` (the tray's
+    ``ServiceSupervisor`` and ``scripts/run_named_tunnel.py``) refuses the
+    spawn and surfaces the reason.
     """
     if not (auth_token or "").strip():
         return (
             "no auth_token configured — refusing to publish the webapp on a "
             "public hostname without one. Run scripts/gen_token.py, then "
-            "restart the tray."
+            "start the tunnel again."
         )
     return None
 
@@ -110,11 +125,7 @@ def persist_tunnel_url(hostname: str, url_file: Path) -> None:
     """Write the public URL (with ``?token=…`` when configured) to
     ``url_file`` so external tooling (the launcher hub) can find it."""
     url = f"https://{hostname}"
-    try:
-        token = (load_webapp_config().auth_token or "").strip()
-    except Exception as exc:  # noqa: BLE001
-        logger.debug(f"could not read auth_token: {exc}")
-        token = ""
+    token = configured_auth_token()
     if token:
         url = append_auth_token(url, token)
     try:
