@@ -17,7 +17,7 @@ export async function onPolish() {
   const promptId = els.polishStyle.value || undefined;
   els.polishBtn.disabled = true;
   els.polishBtn.textContent = '…';
-  els.recordStatus.textContent = `LLM hub → ${model} · polishing…`;
+  els.recordStatus.textContent = `LLM hub: ${model} · polishing…`;
   const t0 = Date.now();
   try {
     let r;

@@ -311,7 +311,7 @@ async function onRecorderStopped(mimeType) {
 
     const elapsedSec = Math.max(0, (Date.now() - state.startedAt) / 1000);
     els.recordStatus.textContent =
-      `Server: ffmpeg → whisper · ${formatDuration(elapsedSec)} of audio…`;
+      `Server: ffmpeg, then whisper · ${formatDuration(elapsedSec)} of audio…`;
     const t0 = Date.now();
     const translate = isOn(els.translateToggle);
     const finishUrl =
@@ -320,7 +320,7 @@ async function onRecorderStopped(mimeType) {
       `&translate=${translate ? 'true' : 'false'}`;
     if (translate) {
       els.recordStatus.textContent =
-        `Server: ffmpeg → translate (cold-start ~5 s on first call)…`;
+        `Server: ffmpeg, then translate (cold-start ~5 s on first call)…`;
     }
     const r = await authFetch(finishUrl, {
       method: 'POST',
