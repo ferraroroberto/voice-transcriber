@@ -18,7 +18,7 @@ export async function loadConfig() {
     if (!ok) throw new Error('login cancelled');
     return loadConfig();
   }
-  if (!r.ok) throw new Error(`/api/config → ${r.status}`);
+  if (!r.ok) throw new Error(`/api/config returned ${r.status}`);
   state.config = await r.json();
   state.configIsFallback = false;  // real server config — drop the fallback flag
   populateConfigUI();
