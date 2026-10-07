@@ -23,6 +23,7 @@ from typing import Optional
 
 import yaml
 
+from src.no_window import NO_WINDOW
 from src.webapp_config import append_auth_token, load_webapp_config
 
 logger = logging.getLogger(__name__)
@@ -115,9 +116,7 @@ def spawn_cloudflared(
     else:
         kw.update(stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     if sys.platform == "win32":
-        kw["creationflags"] = (
-            subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
-        )
+        kw["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW
     return subprocess.Popen(cmd, **kw)
 
 

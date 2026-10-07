@@ -19,6 +19,8 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from src.no_window import NO_WINDOW
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_SAMPLE_RATE = 16000
@@ -82,7 +84,7 @@ def transcode_to_wav(
             capture_output=True,
             text=True,
             check=False,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            creationflags=NO_WINDOW,
         )
     except OSError as exc:
         raise AudioTranscodeError(f"ffmpeg failed to launch: {exc}") from exc

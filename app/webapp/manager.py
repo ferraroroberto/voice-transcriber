@@ -29,6 +29,7 @@ import requests
 
 from app.tray.single_instance import cross_process_lock
 from app.webapp.event_loop import LOOP_FACTORY
+from src.no_window import NO_WINDOW
 from src.process_supervisor import (
     OWNERSHIP_EXTERNAL,
     OWNERSHIP_NONE,
@@ -252,7 +253,7 @@ class WebappManager:
                 )
                 if sys.platform == "win32":
                     popen_kwargs["creationflags"] = (
-                        subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.CREATE_NO_WINDOW
+                        subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW
                     )
                 self._proc = subprocess.Popen(cmd, **popen_kwargs)
             except FileNotFoundError as exc:
