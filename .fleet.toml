@@ -27,7 +27,7 @@ no_window = { src = "src/no_window.py", sha = "cb22565c62751b9db9411116eac0e8072
 runtime_data = { src = "src/runtime_data.py", sha = "346765f7c14af0ec61e960333c055974e4e9e1db", dest = "src/runtime_data.py" }
 classify_e2e = { src = "scripts/classify_e2e.py", sha = "bede95f00aee0b17d5007246a29fa881a71f24f4", dest = "scripts/classify_e2e.py" }
 base = { src = "app/webapp/static/_vendored/base", sha = "f23a32ea8d24cf5291df482f988dee334617409c", dest = "app/webapp/static/_vendored/base" }
-home-head = { src = "app/webapp/static/_vendored/home-head", sha = "28c3e2c09a6bdc224a2188dfd2abcea2d99744f7", dest = "app/webapp/static/_vendored/home-head" }
+home-head = { src = "app/webapp/static/_vendored/home-head", sha = "aa820f1215151087588433f290cd2ba55b34658d", dest = "app/webapp/static/_vendored/home-head" }
 toast = { src = "app/webapp/static/_vendored/toast", sha = "f23a32ea8d24cf5291df482f988dee334617409c", dest = "app/webapp/static/_vendored/toast" }
 text-size = { src = "app/webapp/static/_vendored/text-size", sha = "f23a32ea8d24cf5291df482f988dee334617409c", dest = "app/webapp/static/_vendored/text-size" }
 range-tab = { src = "app/webapp/static/_vendored/range-tab", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/range-tab" }
@@ -35,7 +35,7 @@ nav = { src = "app/webapp/static/_vendored/nav", sha = "f70569640ebaf251ab0ed5f5
 select-native = { src = "app/webapp/static/_vendored/select-native", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/select-native" }
 switch = { src = "app/webapp/static/_vendored/switch", sha = "7e1433c70cac1bdcdbd160e874d3f486ba9e2a08", dest = "app/webapp/static/_vendored/switch" }
 button = { src = "app/webapp/static/_vendored/button", sha = "f70569640ebaf251ab0ed5f5daadd6055953a8c9", dest = "app/webapp/static/_vendored/button" }
-modal = { src = "app/webapp/static/_vendored/modal", sha = "28c3e2c09a6bdc224a2188dfd2abcea2d99744f7", dest = "app/webapp/static/_vendored/modal" }
+modal = { src = "app/webapp/static/_vendored/modal", sha = "aa820f1215151087588433f290cd2ba55b34658d", dest = "app/webapp/static/_vendored/modal" }
 icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "aa820f1215151087588433f290cd2ba55b34658d", dest = "app/webapp/static/_vendored/icon-button" }
 
 # Diff-proportionate e2e routing (project-scaffolding docs/e2e-routing.md).

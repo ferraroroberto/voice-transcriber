@@ -50,3 +50,21 @@ def test_gear_and_theme_toggle_work_from_any_tab(authed_page: Page, base_url: st
     authed_page.click("#tabHistory")
     expect(authed_page.locator("#paneSettings")).to_be_hidden()
     expect(authed_page.locator("#paneHistory")).to_be_visible()
+
+
+_PAINT = """els => els.map(el => {
+    const s = getComputedStyle(el);
+    return [s.backgroundColor, s.borderTopWidth];
+})"""
+
+
+def test_header_toggles_and_dialog_close_are_unpainted_glyphs(
+    authed_page: Page, base_url: str
+) -> None:
+    """They are .icon-button's (project-scaffolding#339): a glyph on nothing at rest."""
+    _open(authed_page, base_url)
+    toggles = authed_page.locator("#paneRecord > .card.home-head .home-toggle")
+    closes = authed_page.locator(".detail-close")
+    assert toggles.count() == 2 and closes.count() >= 1
+    for paint in toggles.evaluate_all(_PAINT) + closes.evaluate_all(_PAINT):
+        assert paint == ["rgba(0, 0, 0, 0)", "0px"]
