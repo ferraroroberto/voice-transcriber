@@ -97,7 +97,7 @@ def test_header_line_names_only_exceptions_and_never_wraps(
     assert line.get_attribute("data-tone") is None
 
     authed_page.click("#incognitoToggle")
-    expect(line).to_have_text("Incognito: this take won't be saved")
+    expect(line).to_have_text("Incognito: not saved")
     expect(line).to_have_attribute("data-tone", "neutral")
     _assert_one_row(authed_page, "#paneRecord")
     authed_page.click("#incognitoToggle")
