@@ -51,6 +51,8 @@ export const els = {
   confirmDeleteAll: document.getElementById('confirmDeleteAll'),
   loadMoreHistory:  document.getElementById('loadMoreHistory'),
   takeSheet:        document.getElementById('takeSheet'),
+  takeCard:         document.getElementById('takeCard'),
+  takeDetail:       document.getElementById('takeDetail'),
   takeSheetTitle:   document.getElementById('takeSheetTitle'),
   takeSheetText:    document.getElementById('takeSheetText'),
   takeCopy:         document.getElementById('takeCopy'),
@@ -113,6 +115,7 @@ export const state = {
   historyTakes: [],           // every loaded History row, newest first (#264)
   historySelecting: false,    // History is in Select mode
   historySelected: new Set(), // session ids picked in Select mode
+  historyOpenId: null,        // the take shown in the wide layout's detail pane (#266)
   configIsFallback: false,  // true while running on applyConfigDefaults()'s
                             // offline defaults — a later visit re-fetches
                             // the real server config (issue #87)

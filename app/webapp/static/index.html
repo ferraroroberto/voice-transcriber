@@ -320,6 +320,10 @@
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
+      <!-- On a wide window (#266) the list and the picked take sit side by
+           side: the take sheet's card moves into #takeDetail. -->
+      <div class="history-layout">
+      <div class="history-list-pane">
       <!-- The Latest take card (#264): the newest take with one-tap Copy, its
            kebab to the take sheet, and today's numbers as its foot. -->
       <section id="latestCard" class="card latest-card" hidden>
@@ -346,6 +350,9 @@
         <b id="selectCount">0 takes · oldest first</b>
         <button id="selectCancel" type="button" class="button-ghost text-verb">Cancel</button>
         <button id="copySelection" type="button" class="button-primary text-verb"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+      </div>
+      </div>
+      <aside id="takeDetail" class="card take-detail" aria-label="Picked take" hidden></aside>
       </div>
     </section>
 
@@ -478,7 +485,7 @@
        Delete last as danger text that a second tap confirms. Opened from the
        row's kebab; the row's own tap still copies. -->
   <dialog id="takeSheet" class="detail-dialog take-sheet" aria-labelledby="takeSheetTitle">
-    <div class="detail-card">
+    <div id="takeCard" class="detail-card take-card">
       <div class="detail-header">
         <h2 id="takeSheetTitle">Take</h2>
         <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>

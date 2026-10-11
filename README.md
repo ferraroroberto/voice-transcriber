@@ -761,6 +761,12 @@ meta line such as `61 words · 0:27 · This app`. The list loads the **10
 newest** entries, and **Show older takes** at the bottom loads the next
 10, continuing a day's group rather than repeating its heading.
 
+On a wide desktop window (1100px or more, with a mouse) the nav becomes
+a left rail, **Record** puts the recorder beside its Text card, and
+**History** shows the picked take (the same full text, Copy, Redo, facts
+and Delete as the phone's sheet) beside the list, opening on the newest
+take. Settings keeps its centred column.
+
 Each row names its source in plain text: *This app* for takes dictated
 in this UI, or a consumer's own label (e.g. `app-launcher`) for
 transcriptions triggered by another app through the
