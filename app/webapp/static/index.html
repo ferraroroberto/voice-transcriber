@@ -218,28 +218,28 @@
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
-      <section class="card speak-card">
-        <header class="card-head">
-          <h1 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Speak</h1>
-          <div class="header-actions">
-            <button id="appendToggle" type="button" class="append-toggle" role="switch" aria-checked="false"
-                    title="Append the next take to the current transcript instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
-            <button id="resetBtn" type="button" class="icon-button" title="Reset — clear both boxes and the current session" aria-label="Reset"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg></button>
-            <button id="incognitoToggle" type="button" class="incognito-btn" role="switch" aria-checked="false"
-                    title="Incognito — don't save this recording to history"
-                    aria-label="Incognito — don't save this recording to history"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg></button>
-          </div>
-        </header>
-
+      <!-- The recorder (#262): one circle in four states (idle accent "Record",
+           live danger "Stop", finishing disabled, and back from another app
+           a smaller Record beside "Continue this text"), the status line, the
+           level meter, then the labelled mode toggles and Reset. -->
+      <section class="card recorder-card">
         <div id="recordZone" class="record-zone">
-          <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
-            <span id="recordLabel" class="record-label"><span class="rec-glyph rec-glyph-dot" aria-hidden="true"></span> RECORD</span>
-            <span id="recordTimer" class="record-timer" hidden>00:00</span>
-          </button>
-          <button id="resumeBtn" type="button" class="resume-btn" title="Resume — continue this transcript with a new take" aria-label="Resume recording" hidden><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg></button>
+          <div class="record-buttons">
+            <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
+              <span id="recordLabel" class="record-label"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg>Record</span>
+            </button>
+            <button id="resumeBtn" type="button" class="button-tint resume-btn" title="Start a new take that adds to this text" hidden><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg> Continue this text</button>
+          </div>
+          <span id="recordTimer" class="record-timer" hidden>00:00</span>
           <div id="recordStatus" class="record-status">Tap to start</div>
-          <p id="modelRoute" class="muted small model-route" title="Which STT backend actually served the last take" hidden></p>
           <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
+          <div class="record-modes">
+            <button id="appendToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
+                    title="Append the next take to the current text instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
+            <button id="incognitoToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
+                    title="Don't save the next take to History"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg> Incognito</button>
+            <button id="resetBtn" type="button" class="mode-toggle" title="Clear both boxes and the current session"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg> Reset</button>
+          </div>
         </div>
       </section>
 

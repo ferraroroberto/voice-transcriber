@@ -59,10 +59,13 @@ def test_resume_button_continues_a_backgrounded_take(
         "Saved while you were away"
     )
 
-    # The ▶ Resume button is offered only because the take ended via
-    # backgrounding and produced a transcript.
+    # "Continue this text" is offered only because the take ended via
+    # backgrounding and produced a transcript; the circle is back to an idle
+    # "Record" beside it (#262).
     resume = page.locator("#resumeBtn")
     expect(resume).to_be_visible()
+    expect(resume).to_have_text("Continue this text")
+    expect(page.locator("#recordLabel")).to_have_text("Record")
 
     # Tapping Resume reattaches: a fresh take starts, the button hides,
     # and the earlier transcript stays on screen for the new take to
@@ -71,5 +74,6 @@ def test_resume_button_continues_a_backgrounded_take(
     page.wait_for_selector(
         "#recordBtn[aria-pressed='true']", state="attached", timeout=10_000
     )
+    expect(page.locator("#recordLabel")).to_have_text("Stop")
     expect(resume).to_be_hidden()
     expect(page.locator("#transcript")).to_have_value(_TRANSCRIPT)

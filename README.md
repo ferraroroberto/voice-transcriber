@@ -235,14 +235,12 @@ confirm it without grepping logs.
 That's the *locally-configured* model. When `transcribe_base_url` points at
 the local-llm-hub (the default), the hub can route a take to a different
 backend entirely — e.g. Parakeet on a Mac Mini, falling back across its
-`roles.audio.transcribe` chain. The **webapp**'s Record tab shows which
-backend actually served the *last* take (e.g. `via Parakeet · Mac Mini M4`),
-read from the hub's `X-Hub-Served-Model`/`X-Hub-Served-Host` response
-headers — a small line under the record status, populated after each take
-completes. The pair is also stored on the take (`served_model` /
-`served_host` in its `meta.json` and the `/api/sessions` list), so a take's
-sheet in **History** shows it under *Served by* later; takes made before
-that was stored show *Not recorded*.
+`roles.audio.transcribe` chain. The **webapp** shows which backend
+actually served each take (e.g. `Parakeet · Mac Mini M4`), read from the
+hub's `X-Hub-Served-Model`/`X-Hub-Served-Host` response headers and stored
+on the take (`served_model` / `served_host` in its `meta.json` and the
+`/api/sessions` list): open the take's sheet in **History** and read
+*Served by*. Takes made before that was stored show *Not recorded*.
 
 ## 🗂️ Layout
 
@@ -466,8 +464,8 @@ between recordings, so back-to-back records never re-prompt.
 
 ### Daily use
 
-Open the home-screen icon → tap the big red **RECORD** circle →
-speak → tap **STOP**. The transcript appears, auto-copied to the
+Open the home-screen icon → tap the big blue **Record** circle (it turns
+red while the mic is live) → speak → tap **Stop**. The transcript appears, auto-copied to the
 clipboard (the **Copy** button briefly flashes green to confirm),
 ready to paste anywhere. Optional second tap on **Polish** runs the
 transcript through the local LLM hub for filler-word removal,
@@ -483,26 +481,26 @@ want to save the pasted text for later (no polish yet), tap
 **Save** next to the transcript's Copy button — it creates a
 text-only session in History so you can polish or re-copy it from
 there, exactly as if you had dictated it. The
-eraser icon button in the top-right of the header clears both boxes
-and the current session so the next record starts fresh. Sits between
-**Append** and **Incognito**.
+**Reset** pill under the record button clears both boxes and the current
+session so the next record starts fresh. It sits after **Append** and
+**Incognito**.
 
 #### Append mode
 
-An **Append** checkbox sits in the header. With it on, every new
+An **Append** toggle pill sits under the record button. With it on, every new
 take is glued onto the existing transcript with a blank-line
 separator instead of replacing it — useful when you're moving
 between locations or apps and want to build up one big transcript
 across multiple records before polishing. The toggle is ephemeral
-(off on every fresh page load) and exists on every surface: header
-checkbox in the webapp, **➕ Append mode** menu item in the tray,
+(off on every fresh page load) and exists on every surface: the
+toggle pill in the webapp, **➕ Append mode** menu item in the tray,
 **➕ Append** checkbox on the *Last transcription* row in the tk
 window. The tray menu and tk checkbox share one flag so toggling
 either keeps both in sync; the webapp toggle is independent.
 
 #### Incognito mode
 
-An incognito (mask) icon toggle in the header. When the outline turns blue,
+An **Incognito** toggle pill under the record button. While it is on (blue),
 the **next recording** is flagged `incognito=true` server-side and
 never appears in the History list — useful for taking a private
 note that shouldn't sit on disk for the 30-day retention window.
@@ -624,11 +622,11 @@ relying on that would make the two platforms behave differently.)
 So the webapp does the next best thing, symmetrically on both: the
 moment you background it mid-record, the take is **finalised** — the
 audio streamed so far is transcribed and saved to History instead of
-silently lost. When you come back, a yellow **Resume** (play) button appears
-next to the record button — one tap starts a new take that continues
+silently lost. When you come back, a **Continue this text** button appears
+beside a smaller record button — one tap starts a new take that continues
 the same transcript (it force-appends, whatever the **Append** toggle
 is set to), so the seam across the app-switch is invisible. The plain
-**RECORD** button still starts a fresh take. Worst case — the page is
+**Record** button still starts a fresh take. Worst case — the page is
 discarded before the finalise lands — the streamed chunks are still on
 the PC, recoverable via History → **Redo**.
 

@@ -56,3 +56,6 @@ def test_visibility_hidden_mid_record_finalizes_the_take(
     expect(page.locator("#recordStatus")).to_contain_text(
         "Saved while you were away"
     )
+    # The circle leaves its live (danger) state for the idle "Record" (#262).
+    expect(page.locator("#recordBtn")).to_have_attribute("aria-pressed", "false")
+    expect(page.locator("#recordLabel")).to_have_text("Record")

@@ -194,9 +194,10 @@ function bindEvents() {
   flipOnTap(els.vadAutoStopToggle);
   flipOnTap(els.forceBuiltinMic, releaseCachedStream);
 
-  // Header chips (append / incognito) are compact role="switch" buttons —
-  // same aria-checked state contract, own look (not the track switch), so
-  // they flip aria-checked directly rather than through setSwitch().
+  // The recorder's mode toggles (append / incognito) are labelled
+  // role="switch" pills — same aria-checked state contract, own look (not
+  // the track switch), so they flip aria-checked directly rather than
+  // through setSwitch().
   for (const chip of [els.appendToggle, els.incognitoToggle]) {
     chip.addEventListener('click', () => {
       chip.setAttribute('aria-checked', isOn(chip) ? 'false' : 'true');

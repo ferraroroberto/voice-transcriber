@@ -48,22 +48,37 @@ def test_polish_options_populated(authed_page: Page, base_url: str) -> None:
 
 
 def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
-    """The complete Speak step is one card, followed by Transcript.
+    """The recorder is one untitled card (#262), followed by Transcript: an
+    accent "Record" circle in sentence case, then Append, Incognito and
+    Reset as labelled pills (no glyph-only toggle), Append and Incognito
+    keeping their switch semantics.
 
     We do NOT click Record — that would start real mic capture.
     """
     _navigate_collecting_errors(authed_page, base_url)
-    speak_card = authed_page.locator(".speak-card")
-    expect(speak_card).to_have_class("card speak-card")
-    expect(speak_card.locator(".card-title")).to_contain_text("Speak")
-    for control_id in ("appendToggle", "resetBtn", "incognitoToggle"):
-        expect(speak_card.locator(f"#{control_id}")).to_be_attached()
+    recorder = authed_page.locator(".recorder-card")
+    expect(recorder).to_have_class("card recorder-card")
+    expect(recorder.locator(".card-title")).to_have_count(0)
+    for control_id, text in (
+        ("appendToggle", "Append"), ("incognitoToggle", "Incognito"), ("resetBtn", "Reset"),
+    ):
+        expect(recorder.locator(f".record-modes #{control_id}")).to_have_text(text)
+    for switch_id in ("appendToggle", "incognitoToggle"):
+        expect(recorder.locator(f"#{switch_id}")).to_have_attribute("role", "switch")
 
-    record_btn = speak_card.locator("#recordBtn")
+    record_btn = recorder.locator("#recordBtn")
     expect(record_btn).to_be_visible()
-    label = speak_card.locator("#recordLabel")
-    expect(label).to_be_visible()
-    expect(label).to_contain_text("RECORD")
+    expect(recorder.locator("#recordLabel")).to_have_text("Record")
+    fill, accent = authed_page.evaluate("""() => {
+        const probe = document.createElement('div');
+        probe.style.background = 'var(--accent-fill)';
+        document.body.appendChild(probe);
+        const want = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return [getComputedStyle(document.getElementById('recordBtn')).backgroundColor, want];
+    }""")
+    assert fill == accent, (fill, accent)
+    expect(authed_page.locator("#modelRoute")).to_have_count(0)
 
     transcript_title = authed_page.locator(".transcript-card .card-title")
     expect(transcript_title).to_contain_text("Transcript")
