@@ -1,5 +1,6 @@
-/* History list — paginated take list, per-item copy / redo / delete,
- * multi-take copy-selection, and the clean-all action.
+/* History list — paginated take list, per-item copy, the take sheet
+ * (full text, Copy, Redo, facts, Delete), multi-take copy-selection, and
+ * the clean-all action.
  */
 
 'use strict';
@@ -8,7 +9,9 @@ import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
 import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
-import { copyText, flashDanger, formatWhen, renderTranscript, showToast } from './ui.js';
+import {
+  capitalize, copyText, flashDanger, formatWhen, renderTranscript, setHeadLine, showToast,
+} from './ui.js';
 import { mergeForAppend } from './recorder.js';
 
 const HISTORY_PAGE_SIZE = 10;
@@ -61,6 +64,7 @@ async function fetchHistoryPage(offset) {
     const r = await authFetch(
       `/api/sessions?limit=${HISTORY_PAGE_SIZE}&offset=${offset}`
     );
+    if (!r.ok) throw new Error(`/api/sessions returned ${r.status}`);
     const data = await r.json();
     const list = data.sessions || [];
     const total = typeof data.total === 'number' ? data.total : list.length;
@@ -68,17 +72,32 @@ async function fetchHistoryPage(offset) {
       els.historyList.appendChild(renderHistoryItem(s));
     }
     const shown = els.historyList.children.length;
-    els.historyCount.textContent = total > shown ? `${shown}/${total}` : `${shown}`;
+    state.historyTotal = total;
+    renderHistoryHeadLine();
     // `has_more` is the authoritative, incognito-aware pagination signal
     // (the server derives it from a one-row-over probe); `total` is a
     // cheap folder count that may run slightly high, so don't gate the
     // button on `shown >= total`. See #139.
     els.loadMoreHistory.hidden = !data.has_more;
     renderEmptyState(shown);
-  } catch (err) { /* swallow */ }
+  } catch (err) {
+    console.warn('history page failed:', err);
+    setHeadLine(els.historyHeadLine, "Couldn't load history", 'danger');
+  }
   finally {
     els.loadMoreHistory.disabled = false;
   }
+}
+
+// History's header line (#261): "N takes · kept D days", counted from the
+// same list `total` the pages draw from, with D the retention setting. Also
+// re-run when the config (and so the retention) reloads.
+export function renderHistoryHeadLine() {
+  const n = state.historyTotal;
+  if (typeof n !== 'number') return;
+  const days = state.config && state.config.history_retention_days;
+  const takes = `${n} take${n === 1 ? '' : 's'}`;
+  setHeadLine(els.historyHeadLine, days ? `${takes} · kept ${days} days` : takes);
 }
 
 // The canonical fleet empty-state (vendored component) whenever the list can
@@ -143,20 +162,24 @@ function renderHistoryItem(s) {
   more.className = 'icon-button history-more';
   more.setAttribute('aria-label', 'More actions');
   more.innerHTML = icon('ellipsis-vertical');
-  more.addEventListener('click', () => openTakeMenu(s));
+  more.addEventListener('click', () => openTakeSheet(s));
 
   li.append(selectLabel, main, more);
   return li;
 }
 
+// Full text of a take. The list payload only carries 200-char previews, so
+// fetch on demand: what the user pastes matches what's on disk.
+async function fetchTakeText(id) {
+  const r = await authFetch(`/api/sessions/${id}/text`);
+  if (!r.ok) throw new Error(await r.text());
+  const data = await r.json();
+  return data.polished || data.transcript || '';
+}
+
 async function copyTake(id, flag) {
-  // The list payload only carries 200-char previews; fetch the full
-  // text on demand so what the user pastes matches what's on disk.
   try {
-    const r = await authFetch(`/api/sessions/${id}/text`);
-    if (!r.ok) throw new Error(await r.text());
-    const data = await r.json();
-    const full = data.polished || data.transcript || '';
+    const full = await fetchTakeText(id);
     if (!full) {
       showToast('This take has no text', 'error');
       return;
@@ -178,29 +201,119 @@ async function deleteTake(id) {
   }
 }
 
-// The overflow menu is one shared <dialog>; it remembers which take opened it.
-let menuTake = null;
+// ------------------------------------------------------------ take sheet
 
-function openTakeMenu(s) {
-  menuTake = s;
-  els.takeMenuWhen.textContent =
-    formatWhen(s.created_at) + (s.language ? ` · ${s.language}` : '');
-  els.takeMenu.showModal();
+const NOT_RECORDED = 'Not recorded';
+// How long the armed "Tap again to delete" waits for the second tap.
+const DELETE_ARM_MS = 4000;
+
+// The sheet is one shared <dialog>; it remembers which take opened it and the
+// full text once fetched (Copy reads it, so it never copies the preview).
+let sheetTake = null;
+let sheetText = '';
+let deleteArmTimer = null;
+
+// "webapp" is this app; "api" is the transport another app used, never a
+// name worth showing as such. Any other value is the caller's own label.
+function sourceLabel(src) {
+  if (!src) return NOT_RECORDED;
+  if (src === 'webapp') return 'This app';
+  if (src === 'api') return 'Another app';
+  return src;
 }
 
-export function initTakeMenu() {
-  const dlg = els.takeMenu;
+function languageLabel(lang) {
+  if (!lang) return NOT_RECORDED;
+  const wanted = String(lang).toLowerCase();
+  const hit = ((state.config && state.config.languages) || []).find(
+    (l) => typeof l === 'object' && (l.iso === wanted || String(l.label).toLowerCase() === wanted)
+  );
+  return hit ? hit.label : capitalize(String(lang));
+}
+
+function formatClock(sec) {
+  const total = Math.round(sec);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+// "61 words · 0:27"; the word count joins once the full text has landed.
+function lengthLabel(s, text) {
+  const parts = [];
+  if (text) {
+    const words = text.trim().split(/\s+/).filter(Boolean).length;
+    parts.push(`${words} word${words === 1 ? '' : 's'}`);
+  }
+  if (typeof s.duration_seconds === 'number') parts.push(formatClock(s.duration_seconds));
+  return parts.length ? parts.join(' · ') : NOT_RECORDED;
+}
+
+function servedByLabel(s) {
+  if (!s.served_model) return NOT_RECORDED;
+  return s.served_host ? `${s.served_model} · ${s.served_host}` : s.served_model;
+}
+
+function disarmDelete() {
+  clearTimeout(deleteArmTimer);
+  deleteArmTimer = null;
+  delete els.takeDelete.dataset.armed;
+  els.takeDelete.querySelector('.take-delete-label').textContent = 'Delete take';
+}
+
+async function openTakeSheet(s) {
+  sheetTake = s;
+  sheetText = '';
+  disarmDelete();
+  els.takeSheetTitle.textContent = formatWhen(s.created_at);
+  // The preview fills the box at once; the full text replaces it on arrival.
+  els.takeSheetText.textContent = s.polished_preview || s.transcript_preview || '';
+  els.takeSheetText.scrollTop = 0;
+  els.takeLength.textContent = lengthLabel(s, '');
+  els.takeLanguage.textContent = languageLabel(s.language);
+  els.takeSource.textContent = sourceLabel(s.source);
+  els.takeServedBy.textContent = servedByLabel(s);
+  els.takeSheet.showModal();
+  try {
+    const full = await fetchTakeText(s.session_id);
+    if (sheetTake !== s) return;  // closed, or another take opened meanwhile
+    sheetText = full;
+    els.takeSheetText.textContent = full || '(no transcript)';
+    els.takeLength.textContent = lengthLabel(s, full);
+  } catch (err) {
+    console.warn('take text failed:', err);
+  }
+}
+
+export function initTakeSheet() {
+  const dlg = els.takeSheet;
   dlg.querySelector('.detail-close').addEventListener('click', () => dlg.close());
   // A tap on the backdrop (the dialog element itself, outside its card) dismisses.
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  dlg.addEventListener('close', () => { disarmDelete(); sheetTake = null; });
+  els.takeCopy.addEventListener('click', () => {
+    if (!sheetText) {
+      showToast(sheetTake ? 'Still loading this take' : 'This take has no text', 'error');
+      return;
+    }
+    copyText(sheetText, els.takeCopy);
+  });
   els.takeRedo.addEventListener('click', () => {
-    const id = menuTake && menuTake.session_id;
+    const id = sheetTake && sheetTake.session_id;
     dlg.close();
     if (id) retranscribe(id);
   });
+  // Two taps on the same row delete: the first arms it ("Tap again to
+  // delete"), the second confirms. It disarms after a few seconds and
+  // whenever the sheet closes. Replaces the native confirm() (fleet modal
+  // contract: never the browser's own dialogs).
   els.takeDelete.addEventListener('click', async () => {
-    const id = menuTake && menuTake.session_id;
-    if (!id || !confirm('Delete this take?')) return;
+    const id = sheetTake && sheetTake.session_id;
+    if (!id) return;
+    if (!els.takeDelete.dataset.armed) {
+      els.takeDelete.dataset.armed = '1';
+      els.takeDelete.querySelector('.take-delete-label').textContent = 'Tap again to delete';
+      deleteArmTimer = setTimeout(disarmDelete, DELETE_ARM_MS);
+      return;
+    }
     dlg.close();
     await deleteTake(id);
   });

@@ -68,3 +68,54 @@ def test_header_toggles_and_dialog_close_are_unpainted_glyphs(
     assert toggles.count() == 2 and closes.count() >= 1
     for paint in toggles.evaluate_all(_PAINT) + closes.evaluate_all(_PAINT):
         assert paint == ["rgba(0, 0, 0, 0)", "0px"]
+
+
+def _assert_one_row(page: Page, pane: str) -> None:
+    box = page.locator(f"{pane} > .card.home-head").bounding_box()
+    assert box is not None and box["height"] <= 52.5, (pane, box)
+
+
+_UP = {"whisper": {"running": True}, "llm_hub": {"reachable": True}, "ffmpeg_present": True}
+_DOWN = {"whisper": {"running": False}, "llm_hub": {"reachable": False}, "ffmpeg_present": True}
+
+
+def test_header_line_names_only_exceptions_and_never_wraps(
+    authed_page: Page, base_url: str
+) -> None:
+    """Every pane's context line (#261): a plain fact by default, one
+    exception in its tone while it applies, and back again when it clears.
+    The header row stays one 52px line whatever the line says."""
+    status = {"reply": _UP}
+    authed_page.route("**/api/status", lambda route: route.fulfill(json=status["reply"]))
+    _open(authed_page, base_url)
+    line = authed_page.locator("#recordHeadLine")
+    authed_page.wait_for_function("document.getElementById('languageSelect').options.length > 0")
+    language = authed_page.evaluate(
+        "document.getElementById('languageSelect').selectedOptions[0].textContent"
+    )
+    expect(line).to_have_text(language)
+    assert line.get_attribute("data-tone") is None
+
+    authed_page.click("#incognitoToggle")
+    expect(line).to_have_text("Incognito: this take won't be saved")
+    expect(line).to_have_attribute("data-tone", "neutral")
+    _assert_one_row(authed_page, "#paneRecord")
+    authed_page.click("#incognitoToggle")
+    expect(line).to_have_text(language)
+
+    authed_page.click("#paneRecord .home-settings")
+    expect(authed_page.locator("#settingsHeadLine")).to_have_text("All services up")
+    authed_page.click("#translateToggle")
+    authed_page.click("#tabRecord")
+    expect(line).to_have_text(f"{language} → English")
+    expect(line).to_have_attribute("data-tone", "attention")
+
+    status["reply"] = _DOWN
+    authed_page.click("#paneRecord .home-settings")
+    settings_line = authed_page.locator("#settingsHeadLine")
+    expect(settings_line).to_have_text("Transcription offline")
+    expect(settings_line).to_have_attribute("data-tone", "danger")
+    _assert_one_row(authed_page, "#paneSettings")
+    authed_page.click("#tabRecord")
+    expect(line).to_have_text("Transcription offline")
+    expect(line).to_have_attribute("data-tone", "danger")

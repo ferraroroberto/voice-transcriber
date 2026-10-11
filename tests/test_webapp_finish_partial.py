@@ -1,4 +1,5 @@
-"""`POST /api/sessions/{id}/finish` — rolling-partial shortcut guards (#244).
+"""`POST /api/sessions/{id}/finish` — rolling-partial shortcut guards (#244)
+and the served-by stamp it leaves on the take (#261).
 
 The shortcut serves the worker's last partial instead of running a final
 whisper pass. Partials are never translated and always use the session's
@@ -67,3 +68,29 @@ def test_finish_same_language_still_reuses_partial(finish_ctx):
     body = client.post(f"/api/sessions/{sid}/finish", params={"language": "en"}).json()
     assert body["from_partial"] is True
     overrides["transcription"].transcribe_file.assert_not_called()
+
+
+# Served-by persisted on the take (#261): History's take sheet reads it from
+# the list payload long after the /finish response is gone.
+
+
+def _listed(client, sid):
+    rows = client.get("/api/sessions").json()["sessions"]
+    return next(r for r in rows if r["session_id"] == sid)
+
+
+@pytest.mark.parametrize("params", [{}, {"translate": "true"}], ids=["partial", "full"])
+def test_finish_persists_served_by_on_the_take(finish_ctx, params):
+    client, overrides, sid = finish_ctx
+    overrides["transcription"].last_served_model = "speech-model-a"
+    overrides["transcription"].last_served_host = "box_one"
+    body = client.post(f"/api/sessions/{sid}/finish", params=params).json()
+    assert (body["served_model"], body["served_host"]) == ("Speech Model A", "Box One")
+    row = _listed(client, sid)
+    assert (row["served_model"], row["served_host"]) == ("Speech Model A", "Box One")
+
+
+def test_take_without_served_by_lists_none(finish_ctx):
+    client, _overrides, sid = finish_ctx
+    row = _listed(client, sid)
+    assert row["served_model"] is None and row["served_host"] is None

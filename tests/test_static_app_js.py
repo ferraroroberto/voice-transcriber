@@ -270,17 +270,22 @@ class TestHistoryButtonEmphasis:
         self, app_js: str, index_html: str
     ):
         """A take is an action-row (design.md): tapping the body copies it and
-        one overflow button opens the rest. The row builds no per-row button
-        strip, and the destructive Delete lives last in the menu (#213)."""
+        one overflow button opens the take sheet. The row builds no per-row
+        button strip; in the sheet Copy is the one primary and Delete comes
+        last as unfilled danger text, confirmed by a second tap rather than
+        the browser's confirm() (#213, #261)."""
         assert "main.className = 'history-main';" in app_js
         assert "more.className = 'icon-button history-more';" in app_js
         assert "button-ghost compact history-copy" not in app_js
         assert "button-tint" not in app_js
-        menu = re.search(r'<dialog id="takeMenu".*?</dialog>', index_html, re.S)
-        assert menu, "takeMenu dialog not found"
-        body = menu.group(0)
-        assert body.index('id="takeRedo"') < body.index("<hr>") < body.index('id="takeDelete"')
-        assert 'id="takeDelete" type="button" class="button-tint danger' in body
+        sheet = re.search(r'<dialog id="takeSheet".*?</dialog>', index_html, re.S)
+        assert sheet, "takeSheet dialog not found"
+        body = sheet.group(0)
+        order = ['id="takeSheetText"', 'id="takeCopy"', 'id="takeRedo"', 'id="takeServedBy"', 'id="takeDelete"']
+        assert [body.index(i) for i in order] == sorted(body.index(i) for i in order)
+        assert body.count("button-primary") == 1
+        assert 'id="takeDelete" type="button" class="take-sheet-action take-sheet-delete"' in body
+        assert "confirm('Delete this take?')" not in app_js
 
     def test_copy_and_clear_flashes_reach_the_ghost_tier(self, styles_css: str):
         # The green/red flashes of the toolbar's ghost buttons.

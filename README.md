@@ -239,7 +239,10 @@ backend entirely — e.g. Parakeet on a Mac Mini, falling back across its
 backend actually served the *last* take (e.g. `via Parakeet · Mac Mini M4`),
 read from the hub's `X-Hub-Served-Model`/`X-Hub-Served-Host` response
 headers — a small line under the record status, populated after each take
-completes.
+completes. The pair is also stored on the take (`served_model` /
+`served_host` in its `meta.json` and the `/api/sessions` list), so a take's
+sheet in **History** shows it under *Served by* later; takes made before
+that was stored show *Not recorded*.
 
 ## 🗂️ Layout
 
@@ -549,7 +552,7 @@ raise it (e.g. `-45`) if hallucinations get through anyway.
 While recording, audio is streamed to the PC every second and persisted
 to `archive/YYYY/MM/DD/HH-MM-SS-<id>/raw.webm`. If your phone dies or
 the connection drops mid-record, the partial recording is still on the
-PC — a take's **⋮** menu in the **History** view offers *Redo transcription*,
+PC — a take's **⋮** sheet in the **History** view offers *Redo transcription*,
 which replays whisper on any saved take.
 
 #### Quiet-environment gain boost
@@ -806,12 +809,19 @@ the take in the middle, one overflow button on the right:
 - **Tap the row** — copies the full text from disk (not the 200-char
   preview the list payload carries) and flashes *Copied* on the row.
 - **The tick** — includes the take in **Copy selected** above.
-- **⋮ menu** — *Redo transcription* re-runs whisper on the saved raw
-  audio (useful when a phone died mid-record and you want to pull the
-  transcript afterwards); *Delete take* sits last, after a divider,
-  behind a confirmation, and calls `DELETE /api/sessions/{id}` to
-  remove that one take. Cleaner than nuking everything via the
-  top-row Clean button.
+- **⋮ sheet** — the take's full text with one **Copy**; *Redo
+  transcription* re-runs whisper on the saved raw audio (useful when a
+  phone died mid-record and you want to pull the transcript afterwards);
+  the take's facts (*Length*, *Language*, *Source*, *Served by*); and
+  *Delete take* last, as red text: the first tap turns it into *Tap again
+  to delete*, the second calls `DELETE /api/sessions/{id}` to remove that
+  one take. Cleaner than nuking everything via the top-row Clean button.
+
+Every tab's header carries one live line beside its title: Record shows
+the dictation language, or the one exception that applies (in order:
+*Transcription offline*, Incognito, the Translate route, *Polish
+unavailable*); History shows *N takes · kept D days*; Settings shows *All
+services up* or names the first failing service.
 
 ### Bearer-token auth (required for the tunnel)
 

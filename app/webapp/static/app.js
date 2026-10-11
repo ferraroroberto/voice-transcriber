@@ -21,6 +21,7 @@ import {
   onSaveSettings,
   refreshPromptPreview,
   refreshStatus,
+  renderRecordHeadLine,
 } from './config.js';
 import {
   finalizeForBackground,
@@ -32,7 +33,7 @@ import {
 import { closePartialStream } from './partials.js';
 import { acquireWakeLock } from './wakelock.js';
 import {
-  initTakeMenu,
+  initTakeSheet,
   loadMoreHistory,
   onCleanAll,
   onCopySelection,
@@ -177,7 +178,7 @@ function bindEvents() {
   els.copySelection.addEventListener('click', onCopySelection);
   els.cleanAll.addEventListener('click', onCleanAll);
   els.loadMoreHistory.addEventListener('click', loadMoreHistory);
-  initTakeMenu();
+  initTakeSheet();
 
   // Fleet switches (vendored component): a tap flips the state through the
   // one setSwitch() write path; reads everywhere go through isOn(). Forcing
@@ -188,7 +189,7 @@ function bindEvents() {
     setSwitch(el, !isOn(el));
     if (after) after();
   });
-  flipOnTap(els.translateToggle);
+  flipOnTap(els.translateToggle, renderRecordHeadLine);
   flipOnTap(els.gainBoostToggle);
   flipOnTap(els.vadAutoStopToggle);
   flipOnTap(els.forceBuiltinMic, releaseCachedStream);
@@ -199,6 +200,7 @@ function bindEvents() {
   for (const chip of [els.appendToggle, els.incognitoToggle]) {
     chip.addEventListener('click', () => {
       chip.setAttribute('aria-checked', isOn(chip) ? 'false' : 'true');
+      renderRecordHeadLine();
     });
   }
 
@@ -219,6 +221,7 @@ function bindEvents() {
   bindTextSize(document.getElementById('textSizeControl'), 'voice-transcriber');
 
   els.micSelect.addEventListener('change', releaseCachedStream);
+  els.languageSelect.addEventListener('change', renderRecordHeadLine);
 
   // Release the mic when the page goes away so the iOS recording
   // indicator turns off — iOS keeps the permission grant for the

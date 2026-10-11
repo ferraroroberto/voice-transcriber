@@ -118,6 +118,21 @@ export function renderTranscript(text) {
   els.saveTranscript.disabled = true;
 }
 
+// The page header's one live context line (design.md page-header, #261): a
+// plain fact in fg-muted, or a single exception in its tone from the
+// styles.css tone map. An attention/danger exception leads with the warning
+// glyph. The slot is in the markup from first paint and ellipsizes, so a
+// line landing late never moves the row.
+export function setHeadLine(el, text, tone) {
+  if (!el) return;
+  const alarm = tone === 'attention' || tone === 'danger';
+  el.innerHTML = alarm ? icon('triangle-alert') + ' ' : '';
+  el.append(text || '');
+  el.title = text || '';
+  if (tone) el.dataset.tone = tone;
+  else delete el.dataset.tone;
+}
+
 export function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }
 export function truncate(s, n) { return (s && s.length > n) ? s.slice(0, n - 1) + '…' : s; }
 
