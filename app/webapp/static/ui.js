@@ -89,18 +89,6 @@ async function writePlainText(text) {
   await navigator.clipboard.writeText(text);
 }
 
-export function flashDanger(btn) {
-  if (!btn) return;
-  // innerHTML for the same icon-preserving reason as flashCopied above.
-  const original = btn.innerHTML;
-  btn.classList.add('danger-flash');
-  btn.innerHTML = icon('check') + ' Cleared';
-  setTimeout(() => {
-    btn.innerHTML = original;
-    btn.classList.remove('danger-flash');
-  }, 1400);
-}
-
 // Push a transcript into the Text card. Shared by every "the transcript
 // just changed" caller — a fresh take, a retranscribe, Clear — so the two
 // textareas and everything derived from them are owned in one place. Always

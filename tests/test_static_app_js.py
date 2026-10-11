@@ -251,8 +251,8 @@ def index_html() -> str:
 
 class TestHistoryButtonEmphasis:
     """History's one primary is Copy (the Latest take card's, or the Select
-    bar's); the list foot is quiet ghosts and delete-all is never a peer of
-    Copy (issues #190, #264). The tiers are markup-level, so a rename or a
+    bar's); the list foot is a quiet ghost and delete-all is never a peer of
+    Copy (issues #190, #264, #265). The tiers are markup-level, so a rename or a
     stray tier regresses it silently."""
 
     def test_copy_is_the_primary_and_the_foot_is_quiet(self, index_html: str):
@@ -260,9 +260,11 @@ class TestHistoryButtonEmphasis:
         assert 'id="copySelection" type="button" class="button-primary' in index_html
         foot = re.search(r'<div class="history-foot">(.*?)</div>', index_html, re.S)
         assert foot, "history-foot block not found"
-        for quiet in ("loadMoreHistory", "cleanAll"):
-            assert f'id="{quiet}" type="button" class="button-ghost compact' in foot.group(1)
+        assert 'id="loadMoreHistory" type="button" class="button-ghost compact' in foot.group(1)
         assert 'id="refreshHistory"' not in index_html
+        # Delete-all lives in Settings › History since #265, as danger text.
+        assert 'id="cleanAll"' not in foot.group(1)
+        assert 'id="cleanAll" type="button" class="setting-row setting-link setting-danger"' in index_html
 
     def test_history_row_is_tap_to_copy_with_one_overflow(
         self, app_js: str, index_html: str
@@ -285,11 +287,6 @@ class TestHistoryButtonEmphasis:
         assert 'id="takeDelete" type="button" class="take-sheet-action take-sheet-delete"' in body
         assert "confirm('Delete this take?')" not in app_js
 
-    def test_copy_and_clear_flashes_reach_the_ghost_tier(self, styles_css: str):
-        # The green/red flashes of the toolbar's ghost buttons.
-        assert ".button-ghost.compact.copied" in styles_css
-        assert ".button-ghost.compact.danger-flash" in styles_css
-
     def test_source_badge_has_one_style_for_every_source(
         self, styles_css: str, app_js: str
     ):
@@ -298,11 +295,15 @@ class TestHistoryButtonEmphasis:
         assert "source-badge.external" not in styles_css
         assert "' external'" not in app_js
 
-    def test_settings_values_are_right_aligned_and_save_holds_the_hit_target_floor(
-        self, styles_css: str
+    def test_settings_apply_instantly_with_right_aligned_values(
+        self, styles_css: str, app_js: str, index_html: str
     ):
-        assert ".settings-card .select-native { text-align: right; }" in styles_css
-        assert ".settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }" in styles_css
+        """Settings (#265): values read from the control's right edge, there
+        is no Save button, and no browser confirm() remains anywhere."""
+        assert ".settings-group .select-native { text-align: right; }" in styles_css
+        assert 'id="saveSettings"' not in index_html
+        assert "bindSettings()" in app_js
+        assert "confirm(" not in app_js.replace("confirm()", "")
 
 
 # ---------------------------------------------------------------------------

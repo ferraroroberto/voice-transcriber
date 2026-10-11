@@ -17,11 +17,13 @@ import { copyText, isOn, renderTextCard, setTextView, shownText, showToast } fro
 import { icon } from './_vendored/icons/icons.js';
 import {
   applyConfigDefaults,
+  bindSettings,
+  initPromptSheet,
   loadConfig,
-  onSaveSettings,
   refreshPromptPreview,
   refreshStatus,
   renderRecordHeadLine,
+  renderSettingsHeadLine,
 } from './config.js';
 import {
   finalizeForBackground,
@@ -33,10 +35,10 @@ import {
 import { closePartialStream } from './partials.js';
 import { acquireWakeLock } from './wakelock.js';
 import {
+  initDeleteAll,
   initSelectMode,
   initTakeSheet,
   loadMoreHistory,
-  onCleanAll,
   refreshHistory,
 } from './history.js';
 import { onPolish, onReset, onSaveTranscript } from './polish.js';
@@ -88,9 +90,9 @@ async function init() {
   loadVersion();
 }
 
-// Surface the loaded build in the every-tab footer so "is the phone
-// running the current code?" is answerable at a glance — see issue #13.
-// Format + stale-shell reload guard mirror home-automation's main.js.
+// Surface the loaded build in Settings › About so "is the phone running the
+// current code?" is answerable — see issue #13. Format + stale-shell reload
+// guard mirror home-automation's main.js.
 function fmtBuildTime(iso) {
   if (!iso) return '';
   const d = new Date(iso);
@@ -126,11 +128,17 @@ async function loadVersion() {
       return;
     }
     if (assetHash) localStorage.setItem(ASSET_HASH_KEY, assetHash);
+    // This module was loaded as app.js?v=<its asset hash>; a different hash
+    // from the server means the shell is stale even after the one automatic
+    // reload, so Settings' header line asks for a reload (#265).
+    const loaded = new URL(import.meta.url).searchParams.get('v');
+    state.staleShell = !!(assetHash && loaded && loaded !== assetHash);
+    renderSettingsHeadLine();
     const ts = fmtBuildTime(v.built_at || '');
-    els.buildInfo.textContent = ts ? `Build: ${sha} · ${ts}` : `Build: ${sha}`;
+    els.buildInfo.textContent = ts ? `${sha} · ${ts}` : sha;
   } catch (_) {
-    // Non-critical — leave the placeholder rather than alarming the user.
-    els.buildInfo.textContent = 'Build: unavailable';
+    // Non-critical — say it plainly rather than alarming the user.
+    els.buildInfo.textContent = 'Unavailable';
   }
 }
 
@@ -175,12 +183,12 @@ function bindEvents() {
   for (const gear of document.querySelectorAll('.home-settings')) {
     gear.addEventListener('click', openSettings);
   }
-  els.saveSettings.addEventListener('click', onSaveSettings);
 
-  els.cleanAll.addEventListener('click', onCleanAll);
   els.loadMoreHistory.addEventListener('click', loadMoreHistory);
   initSelectMode();
   initTakeSheet();
+  initDeleteAll();
+  initPromptSheet();
 
   // Fleet switches (vendored component): a tap flips the state through the
   // one setSwitch() write path; reads everywhere go through isOn(). Forcing
@@ -195,6 +203,9 @@ function bindEvents() {
   flipOnTap(els.gainBoostToggle);
   flipOnTap(els.vadAutoStopToggle);
   flipOnTap(els.forceBuiltinMic, releaseCachedStream);
+  // Persisted settings save as they change (#265); registered after the
+  // flips above so a switch saves its new state.
+  bindSettings();
 
   // The recorder's mode toggles (append / incognito) are labelled
   // role="switch" pills — same aria-checked state contract, own look (not
