@@ -10,6 +10,7 @@
 
 'use strict';
 
+import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
 import { formatBytes, isOn, renderTranscript, showToast, tryAutoCopy, truncate } from './ui.js';
@@ -20,13 +21,11 @@ import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
 
 function setMode(m) { state.mode = m; }
 
-// Record-button label states — CSS glyphs (no emoji / glyph-font
-// characters, per the fleet design system). Matches the idle markup
-// shipped in index.html.
-const LABEL_RECORD =
-  '<span class="rec-glyph rec-glyph-dot" aria-hidden="true"></span> RECORD';
-const LABEL_STOP =
-  '<span class="rec-glyph rec-glyph-square" aria-hidden="true"></span> STOP';
+// Record-button label states, sentence case (#262): the mic glyph over
+// "Record" at rest (matches the idle markup in index.html), a stop square
+// over "Stop" while the mic is live, a spinner while the take finishes.
+const LABEL_RECORD = icon('mic') + 'Record';
+const LABEL_STOP = '<span class="rec-stop" aria-hidden="true"></span>Stop';
 const LABEL_BUSY = '<span class="rec-spinner" aria-hidden="true"></span>';
 
 // Append is active when the Append toggle is on, or when this take was
@@ -221,8 +220,8 @@ export function finalizeForBackground() {
   stopRecording();
 }
 
-// The yellow Resume button — shown only after a take was finalised
-// by backgrounding (issue #14). It starts a fresh take that
+// "Continue this text" — shown only after a take was finalised by
+// backgrounding (issue #14), beside a smaller Record (#262). It starts a fresh take that
 // force-appends onto the existing transcript regardless of the
 // Append toggle, so the seam across the app-switch is invisible.
 export function resumeRecording() {
@@ -359,9 +358,8 @@ async function onRecorderStopped(mimeType) {
     if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyTranscript);
     const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
     els.recordStatus.textContent = state.backgroundFinalized
-      ? 'Saved while you were away — tap Resume to continue'
+      ? 'Saved while you were away — Continue adds to the same text'
       : `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
-    updateModelRoute(data.served_model, data.served_host);
     refreshHistory();
   } catch (err) {
     console.error(err);
@@ -426,17 +424,6 @@ function startTimer() {
         `Recording · ${formatBytes(state.bytesSent)} streamed to PC`;
     }
   }, 250);
-}
-
-// Shows which STT backend/host actually served the last take (#156) — the
-// hub's routing (parakeet-first, whisper failover) is otherwise invisible.
-// Missing/empty fields (older server, or the silent-skip branch which never
-// calls whisper at all) leave whatever was shown before untouched, rather
-// than blanking a still-accurate previous answer.
-function updateModelRoute(servedModel, servedHost) {
-  if (!els.modelRoute || !servedModel) return;
-  els.modelRoute.textContent = servedHost ? `via ${servedModel} · ${servedHost}` : `via ${servedModel}`;
-  els.modelRoute.hidden = false;
 }
 
 function formatDuration(sec) {

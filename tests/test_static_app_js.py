@@ -122,13 +122,14 @@ class TestAppJsSourcePins:
         assert "source-badge" in app_js
         assert "s.source" in app_js
 
-    def test_model_route_indicator_wired(self, app_js: str):
-        """The Record tab must surface which STT backend/host actually
-        served the last take (issue #156) — read from the /finish response
-        and rendered into #modelRoute."""
-        assert "function updateModelRoute" in app_js
-        assert "updateModelRoute(data.served_model, data.served_host)" in app_js
-        assert "els.modelRoute" in app_js
+    def test_served_by_lives_in_the_take_sheet(self, app_js: str, index_html: str):
+        """Which STT backend/host served a take (issue #156) is the take
+        sheet's Served by row (#261); the line under the record button that
+        showed it for the last take only is gone (#262)."""
+        assert "updateModelRoute" not in app_js
+        assert 'id="modelRoute"' not in index_html
+        assert 'id="takeServedBy"' in index_html
+        assert "servedByLabel(s)" in app_js
 
     def test_save_transcript_preserves_icon_markup(self, app_js: str):
         """`onSaveTranscript` must swap `innerHTML`, not `textContent` — the

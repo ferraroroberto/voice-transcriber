@@ -49,6 +49,8 @@
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
   --accent-border-soft: color-mix(in srgb, var(--accent) 24%, transparent);
   --accent-border-strong: color-mix(in srgb, var(--accent) 28%, transparent);
+  /* neutral-soft (design.md): chip / meter-track fill; text on it is --ink */
+  --neutral-soft: color-mix(in srgb, var(--muted) 16%, transparent);
   /* radii (rounded scale) — adopted steps: {sm, md, lg, pill, nav, 50%-circles} */
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -239,187 +241,182 @@ html, body {
     calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
 }
 
-/* The Speak header holds three 44px controls; on a narrow phone they wrap
-   under the title rather than crowd it. */
-.speak-card .card-head { flex-wrap: wrap; }
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-/* The reset glyph rides the vendored icon-button; the box is the 44px floor. */
-.header-actions .icon-button { --icon-btn-box: var(--hit-min); }
-
 /* Theme toggle — shows the glyph for the ACTION: moon in light (tap → dark),
    sun in dark (tap → light). Pure CSS swap keyed on html[data-theme]; the
    first-paint snippet in <head> stamps the attribute before render. */
 :root[data-theme="dark"] .theme-icon-moon { display: none; }
 :root:not([data-theme="dark"]) .theme-icon-sun { display: none; }
 
-/* Append + incognito header chips — compact role="switch" buttons (same
-   aria-checked state contract as the fleet switch, own chip look). Muted text
-   at rest, ink text + accent border + tint when on, so on/off reads at a
-   glance instead of relying on a tiny tick (issue #22) — never opacity,
-   which drops the label under 4.5:1. */
-.append-toggle,
-.incognito-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font: inherit;
-  font-size: var(--font-caption);
-  background: transparent;
-  color: var(--muted);
-  padding: 0 10px;
-  min-height: var(--hit-min);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  user-select: none;
-  transition: color 0.15s, border-color 0.15s, background 0.15s;
-}
-.append-toggle .icon,
-.incognito-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
-/* The incognito chip is icon-only — a square 44px target. With no label to
-   identify it, its edge is the control-border token (3:1), not the hairline. */
-.incognito-btn { min-width: var(--hit-min); padding: 0; border-color: var(--control-border); }
-.append-toggle:active,
-.incognito-btn:active { background: var(--card-off); }
-.append-toggle[aria-checked="true"],
-.incognito-btn[aria-checked="true"] {
-  color: var(--accent-text);
-  border-color: var(--accent);
-  background: var(--accent-soft);
-}
-
-/* ---------- record zone (above the fold) ---------- */
+/* ---------- the recorder (#262) ---------- */
+/* One circle, its status, the level meter and the labelled mode toggles,
+   centred in one card under the page header (which names the tab, so the
+   card has no title of its own). */
 .record-zone {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding-top: 2px;
+}
+.record-buttons {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  margin-top: var(--gap);
-  margin-bottom: 18px;
-  position: relative;
+  gap: var(--space-md);
 }
 
-/* Recording is a *state*, so the big control wears the status color
-   (danger), not the accent — status colors signal state only. */
+/* The circle is the accent at rest and danger only while the mic is live:
+   status colours signal state (live mic = danger, tone map), never a
+   resting control. White label on the solid fills (--accent-fill and
+   --danger-fill both hold 4.5:1 in either theme). */
 .record-btn {
-  width: min(32vw, 125px);
-  height: min(32vw, 125px);
+  width: 112px;
+  height: 112px;
   border-radius: 50%;
-  background: var(--danger-fill);
+  background: var(--accent-fill);
   color: var(--accent-fg);
-  border: 0;
-  font-size: var(--font-body);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  border: 1px solid var(--accent-border-strong);
   box-shadow: var(--shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
+  display: grid;
+  place-items: center;
+  font-size: var(--font-label);
+  font-weight: 600;
   cursor: pointer;
-  transition: transform .12s, background .12s;
+  transition: transform .12s, background .12s, width .12s, height .12s;
   user-select: none;
   -webkit-user-select: none;
   touch-action: manipulation;
 }
 .record-btn:active { transform: scale(.97); }
 .record-btn[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--danger-fill) 82%, #000);
+  background: var(--danger-fill);
+  border-color: var(--danger-fill);
   animation: pulse 1.2s ease-in-out infinite;
 }
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 35%, transparent); }
   50%      { box-shadow: 0 0 0 18px color-mix(in srgb, var(--danger) 0%, transparent); }
 }
-.record-btn[disabled] { background: var(--card-off); color: var(--muted); box-shadow: none; cursor: not-allowed; }
-
-/* Appears beside the record circle only after a take was finalised by
-   backgrounding the app — one tap continues the same transcript (#14). */
-.resume-btn {
-  position: absolute;
-  /* Record circle is the first child of .record-zone, so its vertical
-     centre sits at half its height from the zone's top. translateY(-50%)
-     below lines the button's centre up with it exactly. */
-  top: min(16vw, 62.5px);
-  left: 50%;
-  transform: translate(calc(min(16vw, 62.5px) + 22px), -50%);
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  background: var(--attention);
-  color: var(--accent-fg);
-  border: 0;
-  font-size: var(--font-heading-lg);
-  font-weight: 700;
-  box-shadow: var(--shadow);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+/* Finishing: the one disabled recipe (button-disabled), no shadow. */
+.record-btn[disabled] {
+  background: var(--card-off);
+  border-color: var(--line);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
 }
-.resume-btn:active {
-  transform: translate(calc(min(16vw, 62.5px) + 22px), -50%) scale(.94);
+.record-label {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-xs);
 }
-
-.record-label { font-size: var(--font-body); }
-/* CSS glyphs for the record-button label states — crisp filled shapes
-   instead of emoji-presentation characters (⬤ / ◼︎ / ⏳). */
-.rec-glyph {
-  display: inline-block;
-  width: 0.65em;
-  height: 0.65em;
+.record-label .icon { width: 32px; height: 32px; }
+.rec-stop {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
   background: currentColor;
-  vertical-align: baseline;
 }
-.rec-glyph-dot { border-radius: 50%; }
-.rec-glyph-square { border-radius: 2px; }
 .rec-spinner {
   display: inline-block;
-  width: 1.1em;
-  height: 1.1em;
+  width: 1.75rem;
+  height: 1.75rem;
   border: 2.5px solid color-mix(in srgb, currentColor 30%, transparent);
   border-top-color: currentColor;
   border-radius: 50%;
   animation: rec-spin 0.9s linear infinite;
 }
 @keyframes rec-spin { to { transform: rotate(360deg); } }
-.record-timer { font-size: var(--font-heading-lg); margin-top: var(--space-xs); font-variant-numeric: tabular-nums; }
 
+/* Back from another app (#14): a smaller Record beside "Continue this text",
+   the tint verb that starts a take appending onto the same text. */
+.record-buttons:has(.resume-btn:not([hidden])) .record-btn { width: 88px; height: 88px; }
+.record-buttons:has(.resume-btn:not([hidden])) .record-label .icon { width: 26px; height: 26px; }
+.resume-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 0 var(--space-md);
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 700;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+.resume-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
+
+.record-timer {
+  font-size: 1.25rem;          /* heading-md */
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
 .record-status {
-  margin-top: var(--gap);
   color: var(--muted);
   font-size: var(--font-label);
-  min-height: 18px;
+  min-height: 1.45em;
   text-align: center;
 }
 
-/* Which STT backend/host actually served the last take (#156) — same
-   quiet treatment as the build-info footer (.muted.small), just relocated
-   next to the record status it's most relevant to. */
-.model-route {
-  margin-top: 2px;
-  text-align: center;
-}
-
+/* The level meter (design.md meter): a neutral-soft pill track with an
+   accent fill. */
 .level-bar {
-  width: min(72vw, 280px);
+  width: 100%;
+  max-width: 280px;
   height: 6px;
-  background: var(--card-off);
-  border: 1px solid var(--line-muted);
+  background: var(--neutral-soft);
   border-radius: var(--radius-pill);
-  margin-top: 10px;
   overflow: hidden;
 }
 .level-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--on), var(--attention), var(--danger));
+  background: var(--accent);
+  border-radius: var(--radius-pill);
   width: 0%;
   transition: width .08s;
+}
+
+/* Mode toggles (Append, Incognito) and Reset: labelled pills under the
+   button. A pressed toggle takes the accent (a mode, not an alarm — tone
+   map); at rest the edge is the control-border token (3:1). The pill is
+   drawn 36px tall; ::before grows its target to 44px vertically only, so
+   neighbours 8px apart never share a tappable pixel. */
+.record-modes {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+.mode-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--control-h);
+  padding: 0 var(--gap);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.mode-toggle::before {
+  content: "";
+  position: absolute;
+  inset: calc((var(--control-h) - var(--hit-min)) / 2) 0;
+}
+.mode-toggle .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.mode-toggle:active { background: var(--neutral-soft); }
+.mode-toggle[aria-checked="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent-border-soft);
+  color: var(--accent-text);
 }
 
 /* ---------- cards ---------- */
@@ -478,9 +475,8 @@ textarea.text-out.editable::placeholder {
 .copy-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* Accent-tinted ghost recipe — home-automation's canonical .big-btn
    (accent tint + accent text + soft accent border), applied to every
-   accent button in the app. Status-colored controls (.record-btn,
-   .resume-btn, the .copied / .danger-flash flashes) keep
-   their state colors. */
+   accent button in the app. The status-coloured exceptions are the record
+   circle's live state and the .copied / .danger-flash flashes. */
 .big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent-text); flex: 1; }
 .big-btn:active { transform: scale(0.98); }
 .big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
