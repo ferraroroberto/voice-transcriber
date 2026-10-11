@@ -153,6 +153,25 @@ class TestListSessions:
         body = client.get("/api/sessions").json()
         assert body["sessions"][0]["transcript_preview"] == "hello world"
 
+    def test_word_count_counts_the_text_copy_takes(self, webapp_client):
+        """History's row meta (#264): the polished text when there is one,
+        else the transcript, and 0 for a take with no text."""
+        client, app, _ = webapp_client
+        plain = app.state.archive.new_session()
+        plain.write_transcript("one two three\nfour")
+        plain.write_meta()
+        polished = app.state.archive.new_session()
+        polished.write_transcript("uh one um two three")
+        polished.write_polished("one two three", "test-model", {}, {})
+        polished.write_meta()
+        empty = app.state.archive.new_session()
+        empty.write_meta()
+        counts = {
+            r["session_id"]: r["word_count"]
+            for r in client.get("/api/sessions").json()["sessions"]
+        }
+        assert counts == {plain.session_id: 4, polished.session_id: 3, empty.session_id: 0}
+
     def test_surfaces_source(self, webapp_client):
         client, app, _ = webapp_client
         s = app.state.archive.new_session(source="app-launcher")

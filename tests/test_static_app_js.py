@@ -116,11 +116,11 @@ class TestAppJsSourcePins:
         externally-sourced (session-API consumer) ones (issue #59)."""
         assert "source: 'webapp'" in app_js
 
-    def test_history_renders_source_badge(self, app_js: str):
-        """The History list must render the per-session source attribution
-        badge (issue #59)."""
-        assert "source-badge" in app_js
-        assert "s.source" in app_js
+    def test_history_names_the_source_in_plain_text(self, app_js: str):
+        """History attributes each take to its source (issue #59) as plain
+        meta text, hiding the transport-only "api" fallback on rows (#264)."""
+        assert "rowSourceLabel(s.source)" in app_js
+        assert "source-badge" not in app_js
 
     def test_served_by_lives_in_the_take_sheet(self, app_js: str, index_html: str):
         """Which STT backend/host served a take (issue #156) is the take
@@ -250,22 +250,19 @@ def index_html() -> str:
 
 
 class TestHistoryButtonEmphasis:
-    """History reads like Record: ghost by default, accent-tinted only on
-    the contextually-next action (issue #190). The tiers are markup-level,
-    so a rename or a stray `button-tint` regresses it silently."""
+    """History's one primary is Copy (the Latest take card's, or the Select
+    bar's); the list foot is quiet ghosts and delete-all is never a peer of
+    Copy (issues #190, #264). The tiers are markup-level, so a rename or a
+    stray tier regresses it silently."""
 
-    def test_only_refresh_is_tinted_in_the_history_toolbar(self, index_html: str):
-        toolbar = re.search(
-            r'<div class="history-actions">(.*?)</div>', index_html, re.S
-        )
-        assert toolbar, "history-actions block not found"
-        assert 'id="refreshHistory" type="button" class="button-tint compact"' in toolbar.group(1)
-        for quiet in ("copySelection", "cleanAll"):
-            assert f'id="{quiet}" type="button" class="button-ghost compact"' in toolbar.group(1)
-        assert toolbar.group(1).count("button-tint") == 1
-
-    def test_load_more_is_ghost(self, index_html: str):
-        assert 'id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn"' in index_html
+    def test_copy_is_the_primary_and_the_foot_is_quiet(self, index_html: str):
+        assert 'id="latestCopy" type="button" class="button-primary' in index_html
+        assert 'id="copySelection" type="button" class="button-primary' in index_html
+        foot = re.search(r'<div class="history-foot">(.*?)</div>', index_html, re.S)
+        assert foot, "history-foot block not found"
+        for quiet in ("loadMoreHistory", "cleanAll"):
+            assert f'id="{quiet}" type="button" class="button-ghost compact' in foot.group(1)
+        assert 'id="refreshHistory"' not in index_html
 
     def test_history_row_is_tap_to_copy_with_one_overflow(
         self, app_js: str, index_html: str

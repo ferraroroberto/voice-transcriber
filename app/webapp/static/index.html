@@ -182,6 +182,10 @@
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
     </symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 6v6l4 2" />
+    </symbol>
     <symbol id="i-triangle-alert" viewBox="0 0 24 24" fill="none">
       <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
       <path d="M12 9v4" />
@@ -280,16 +284,34 @@
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
-      <section class="card history-card">
-        <p id="analyticsSummary" class="muted small"></p>
-        <div class="history-actions">
-          <button id="refreshHistory" type="button" class="button-tint compact"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw" /></svg> Refresh</button>
-          <button id="copySelection" type="button" class="button-ghost compact"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy selected</button>
-          <button id="cleanAll" type="button" class="button-ghost compact"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Clean</button>
+      <!-- The Latest take card (#264): the newest take with one-tap Copy, its
+           kebab to the take sheet, and today's numbers as its foot. -->
+      <section id="latestCard" class="card latest-card" hidden>
+        <div class="card-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-clock" /></svg> Latest take</h2>
+          <span id="latestWhen" class="card-head-meta"></span>
         </div>
-        <ul id="historyList" class="history-list"></ul>
-        <button id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn" hidden><svg class="icon" aria-hidden="true"><use href="#i-download" /></svg> Load more</button>
+        <p id="latestText" class="latest-text"></p>
+        <p id="latestMeta" class="text-meta latest-meta"></p>
+        <div class="latest-verbs">
+          <button id="latestCopy" type="button" class="button-primary text-verb latest-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          <button id="latestMore" type="button" class="icon-button history-more" aria-label="More actions"><svg class="icon" aria-hidden="true"><use href="#i-ellipsis-vertical" /></svg></button>
+        </div>
+        <p id="analyticsSummary" class="latest-foot"></p>
       </section>
+      <!-- Day groups (history.js renders them): an overline per day, then a
+           card of one-line take rows. -->
+      <div id="historyGroups" class="history-groups"></div>
+      <div class="history-foot">
+        <button id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn" hidden><svg class="icon" aria-hidden="true"><use href="#i-download" /></svg> Show older takes</button>
+        <button id="cleanAll" type="button" class="button-ghost compact history-clean"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes</button>
+      </div>
+      <!-- Select mode's bottom bar: the count, Cancel, and Copy (oldest first). -->
+      <div id="selectBar" class="select-bar" role="toolbar" aria-label="Selected takes" hidden>
+        <b id="selectCount">0 takes · oldest first</b>
+        <button id="selectCancel" type="button" class="button-ghost text-verb">Cancel</button>
+        <button id="copySelection" type="button" class="button-primary text-verb"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+      </div>
     </section>
 
     <section id="paneSettings" class="pane" aria-label="Settings" hidden>
