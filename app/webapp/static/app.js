@@ -33,10 +33,10 @@ import {
 import { closePartialStream } from './partials.js';
 import { acquireWakeLock } from './wakelock.js';
 import {
+  initSelectMode,
   initTakeSheet,
   loadMoreHistory,
   onCleanAll,
-  onCopySelection,
   refreshHistory,
 } from './history.js';
 import { onPolish, onReset, onSaveTranscript } from './polish.js';
@@ -166,8 +166,10 @@ function bindEvents() {
   initNavTabs({
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',
-    onChange: () => {
+    onChange: (tab) => {
       document.getElementById('paneSettings').hidden = true;
+      // History refreshes itself on open — no Refresh button (#264).
+      if (tab === 'history') refreshHistory();
     },
   });
   for (const gear of document.querySelectorAll('.home-settings')) {
@@ -175,10 +177,9 @@ function bindEvents() {
   }
   els.saveSettings.addEventListener('click', onSaveSettings);
 
-  els.refreshHistory.addEventListener('click', refreshHistory);
-  els.copySelection.addEventListener('click', onCopySelection);
   els.cleanAll.addEventListener('click', onCleanAll);
   els.loadMoreHistory.addEventListener('click', loadMoreHistory);
+  initSelectMode();
   initTakeSheet();
 
   // Fleet switches (vendored component): a tap flips the state through the

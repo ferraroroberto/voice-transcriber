@@ -32,8 +32,16 @@ export const els = {
 
   historyHeadLine:  document.getElementById('historyHeadLine'),
   analyticsSummary: document.getElementById('analyticsSummary'),
-  historyList:      document.getElementById('historyList'),
-  refreshHistory:   document.getElementById('refreshHistory'),
+  latestCard:       document.getElementById('latestCard'),
+  latestWhen:       document.getElementById('latestWhen'),
+  latestText:       document.getElementById('latestText'),
+  latestMeta:       document.getElementById('latestMeta'),
+  latestCopy:       document.getElementById('latestCopy'),
+  latestMore:       document.getElementById('latestMore'),
+  historyGroups:    document.getElementById('historyGroups'),
+  selectBar:        document.getElementById('selectBar'),
+  selectCount:      document.getElementById('selectCount'),
+  selectCancel:     document.getElementById('selectCancel'),
   copySelection:    document.getElementById('copySelection'),
   cleanAll:         document.getElementById('cleanAll'),
   loadMoreHistory:  document.getElementById('loadMoreHistory'),
@@ -97,6 +105,9 @@ export const state = {
   config:      null,
   services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
   historyTotal: null,         // the History list's `total`, which its header line counts
+  historyTakes: [],           // every loaded History row, newest first (#264)
+  historySelecting: false,    // History is in Select mode
+  historySelected: new Set(), // session ids picked in Select mode
   configIsFallback: false,  // true while running on applyConfigDefaults()'s
                             // offline defaults — a later visit re-fetches
                             // the real server config (issue #87)

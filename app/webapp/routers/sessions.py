@@ -496,25 +496,7 @@ async def list_sessions(
     sessions = page_plus_one[:limit]
     total = archive.count_sessions()
     return {
-        "sessions": [
-            {
-                "session_id": s.session_id,
-                "created_at": s.meta.created_at,
-                "language": s.meta.language,
-                "source": s.meta.source,
-                "transcript_chars": s.meta.transcript_chars,
-                "polish_model": s.meta.polish_model,
-                "polish_prompt_id": s.meta.polish_prompt_id,
-                "polish_succeeded": s.meta.polish_succeeded,
-                "raw_bytes": s.meta.raw_bytes,
-                "duration_seconds": s.meta.duration_seconds,
-                "served_model": s.meta.served_model,
-                "served_host": s.meta.served_host,
-                "transcript_preview": _preview(s.read_transcript(), 200),
-                "polished_preview": _preview(s.read_polished(), 200),
-            }
-            for s in sessions
-        ],
+        "sessions": [_list_row(s) for s in sessions],
         "total": total,
         "has_more": has_more,
         "offset": offset,
@@ -722,6 +704,30 @@ def humanize_backend_id(raw: str) -> str:
     if not raw:
         return ""
     return " ".join(word.capitalize() for word in re.split(r"[-_]+", raw) if word)
+
+
+def _list_row(s) -> Dict[str, Any]:
+    """One History row. ``word_count`` counts the text Copy takes (the
+    polished version when there is one), read once with the previews (#264)."""
+    transcript = s.read_transcript()
+    polished = s.read_polished()
+    return {
+        "session_id": s.session_id,
+        "created_at": s.meta.created_at,
+        "language": s.meta.language,
+        "source": s.meta.source,
+        "transcript_chars": s.meta.transcript_chars,
+        "polish_model": s.meta.polish_model,
+        "polish_prompt_id": s.meta.polish_prompt_id,
+        "polish_succeeded": s.meta.polish_succeeded,
+        "raw_bytes": s.meta.raw_bytes,
+        "duration_seconds": s.meta.duration_seconds,
+        "served_model": s.meta.served_model,
+        "served_host": s.meta.served_host,
+        "transcript_preview": _preview(transcript, 200),
+        "polished_preview": _preview(polished, 200),
+        "word_count": len((polished or transcript or "").split()),
+    }
 
 
 def _preview(text: Optional[str], n: int) -> Optional[str]:

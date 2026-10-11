@@ -637,21 +637,6 @@ textarea.text-out.editable::placeholder {
 .input-native:focus-visible,
 .select-native:focus-visible { outline-offset: calc(2px - var(--control-inset)); }
 
-/* ---------- history ---------- */
-.history-actions {
-  display: flex;
-  gap: var(--space-sm);
-  padding: var(--space-xs) 0 var(--space-sm);
-  justify-content: flex-end;
-  flex-wrap: wrap;
-}
-
-.load-more-btn {
-  display: flex;
-  width: 100%;
-  margin-top: var(--space-sm);
-}
-
 /* ---------- login dialog (shown on 401) ---------- */
 /* The shell is the vendored modal (.detail-dialog/.detail-card); only the
    auth-gate specifics — narrow width, centered column — are app-side. */
@@ -702,54 +687,106 @@ textarea.text-out.editable::placeholder {
   min-height: 18px;
 }
 
+/* ---------- History (#264) ---------- */
+/* The Latest take card: the newest take, one-tap Copy, today's numbers. */
+.latest-card .card-head { min-height: var(--row-sm); }
+.latest-text {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--font-body);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.latest-meta { display: flex; align-items: center; gap: var(--space-xs); }
+.latest-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--gap);
+}
+.latest-copy { flex: 1; }
+.latest-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: var(--gap) calc(-1 * var(--space-md)) 0;
+  padding: 10px var(--space-md) 0;
+  border-top: 1px solid var(--line-muted);
+  color: var(--muted);
+  font-size: var(--font-label);
+}
+.latest-foot:empty { display: none; }
+.latest-foot .icon { width: var(--icon-inline); height: var(--icon-inline); }
+
+/* Day groups: one overline per day (the one legal caps use), its count, and
+   on the first group the Select action. */
+.day-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: var(--row-sm);
+  margin: var(--space-sm) var(--space-xs) calc(-1 * var(--space-xs));
+  color: var(--muted);
+  font-size: var(--font-caption);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.day-count { font-variant-numeric: tabular-nums; }
+.day-select {
+  margin-left: auto;
+  min-height: var(--hit-min);
+  padding: 0 var(--space-xs);
+  border: 0;
+  background: transparent;
+  color: var(--accent-text);
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
 .history-list {
   list-style: none;
   margin: 0;
   padding: 0;
 }
-/* A take is an action-row (design.md): [tick] [tap-to-copy body] [overflow].
-   Flat separator rows (the app-launcher#365 canon, GitHub-issue-list style):
-   no per-row box — a hairline divider is the row boundary; the outer History
-   card keeps the boxed look, only the repeated rows inside it flatten. */
-.history-list li {
+/* A take is an action-row (design.md): [time] [tap-to-copy body] [kebab].
+   Flat rows on a hairline divider inside the day's card. */
+.history-list .take-row {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
+  gap: var(--space-sm);
   min-height: var(--row-md);
   margin: 0;
   padding: 0;
-  border-bottom: 1px solid var(--line-muted);
 }
-.history-list li:last-child { border-bottom: none; }
-.history-list li .select { display: flex; flex: none; cursor: pointer; }
-/* The "include in Copy selected" tick is a multi-select control, not a
-   boolean setting (that one is the vendored switch). Modelled on shadcn's
-   Checkbox (design.md Base UI): a hairline square that fills with the accent
-   and draws a check when ticked. `appearance: none` takes only the paint —
-   it stays a real <input type=checkbox>, so :checked, Space and the label
-   pairing are still the platform's. It has real 44px geometry: the element
-   box is --hit-min, the visible 20px square is its padding box inside a
-   transparent border, and the 1px boundary is an inset shadow on that box. */
-.history-list li .select-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
+.history-list .take-row + .take-row { border-top: 1px solid var(--line-muted); }
+.take-lead {
   flex: none;
+  min-width: 52px;               /* a 24-hour time; a 12-hour locale grows it */
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: var(--font-label);
+  font-variant-numeric: tabular-nums;
+}
+/* Select mode: the lead shows a tick box instead of the time (the time
+   moves to the front of the meta line). Modelled on shadcn's Checkbox. */
+.take-tick { display: none; }
+.selecting .take-time { display: none; }
+.selecting .take-tick {
   display: inline-grid;
   place-content: center;
-  width: var(--hit-min);
-  height: var(--hit-min);
-  margin: 0;
-  border: calc((var(--hit-min) - 20px) / 2) solid transparent;
-  /* half the smallest fleet radius — a fully rounded tick reads as a radio */
-  border-radius: calc((var(--hit-min) - 20px) / 2 + var(--radius-sm) / 2);
-  background: var(--card) padding-box;
+  width: 20px;
+  height: 20px;
+  border-radius: calc(var(--radius-sm) / 2);
   box-shadow: inset 0 0 0 1px var(--control-border);
-  cursor: pointer;
-  transition: background-color 0.12s ease, box-shadow 0.12s ease;
 }
-/* the check glyph: two borders of an empty box, rotated — no sprite lookup
-   in a control that repeats once per row */
-.history-list li .select-checkbox::before {
+.selecting .take-tick::before {
   content: "";
   width: 10px;
   height: 5px;
@@ -759,24 +796,19 @@ textarea.text-out.editable::placeholder {
   transform: translateY(-1px) rotate(-45deg);
   opacity: 0;
 }
-.history-list li .select-checkbox:checked {
-  background: var(--accent-fill) padding-box;
-  box-shadow: inset 0 0 0 1px var(--accent-fill);
-}
-.history-list li .select-checkbox:checked::before { opacity: 1; }
-.history-list li .select-checkbox:hover:not(:checked) { box-shadow: inset 0 0 0 1px var(--accent); }
-.history-list li .select-checkbox:focus-visible { outline-offset: calc(2px - (var(--hit-min) - 20px) / 2); }
+.selecting .picked .take-tick { background: var(--accent-fill); box-shadow: none; }
+.selecting .picked .take-tick::before { opacity: 1; }
 
-/* The row body — the primary action (tap = copy this take). */
-.history-list li .history-main {
+/* The row body — the primary action (tap = copy; in Select mode, tick). */
+.history-list .history-main {
   flex: 1;
   min-width: 0;
   align-self: stretch;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: var(--space-xs);
-  padding: 10px 0;
+  gap: 2px;
+  padding: 8px 0;
   text-align: left;
   font: inherit;
   color: var(--ink);
@@ -786,42 +818,76 @@ textarea.text-out.editable::placeholder {
   -webkit-user-select: none;
   user-select: none;
 }
-.history-list li .history-main:active .preview { color: var(--accent-text); }
-.history-list li .preview {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+.history-list .history-main:active .preview { color: var(--accent-text); }
+.history-list .preview {
   overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: var(--font-body);
   line-height: 1.4;
-  overflow-wrap: anywhere;
 }
-.history-list li .meta {
+.history-list .meta {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: var(--space-xs);
+  min-width: 0;
   color: var(--muted);
   font-size: var(--font-label);
   line-height: 1.45;
+  white-space: nowrap;
 }
-.history-list li .source-badge {
-  display: inline-block;
-  padding: 1px 7px;
+.history-list .meta-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.meta-time { flex: none; }
+/* A non-default language: the neutral chip (design.md chip). */
+.lang-chip {
+  flex: none;
+  padding: 2px var(--space-sm);
   border-radius: var(--radius-pill);
+  background: var(--neutral-soft);
+  color: var(--ink);
   font-size: var(--font-caption);
-  line-height: 1.5;
-  background: var(--card-off);
-  color: var(--muted);
-  border: 1px solid var(--line-muted);
+  font-weight: 600;
+  line-height: 1.1;
 }
 /* "Copied" confirmation (ui.js flashCopied); empty — and so invisible — at rest. */
-.history-list li .history-copied { margin-left: auto; font-weight: 600; }
-.history-list li .history-copied.copied { color: var(--on); }
-.history-list li .history-copied .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.history-list .history-copied { margin-left: auto; font-weight: 600; }
+.history-list .history-copied.copied { color: var(--ink); }
+.history-list .history-copied .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
-/* The one trailing accessory: a 44px overflow button (the vendored icon-button). */
-.history-list li .history-more { --icon-btn-box: var(--hit-min); }
+/* The one trailing accessory: a 44px kebab (the vendored icon-button). */
+.history-more { --icon-btn-box: var(--hit-min); }
+
+/* Show older takes, then the quiet delete-all (Step 5 moves it to Settings). */
+.history-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: var(--space-xs) 0 var(--gap);
+}
+.history-foot .button-ghost.compact { border-color: transparent; }
+.history-clean { color: var(--muted); }
+
+/* Select mode's bottom bar: sits above the floating nav on a phone. */
+.select-bar {
+  position: sticky;
+  bottom: var(--gap);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-sm) var(--space-sm) 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  box-shadow: var(--shadow);
+}
+@media (pointer: coarse) {
+  .select-bar {
+    bottom: calc(var(--bottom-tabs-height) + 2 * var(--bottom-tabs-margin) + env(safe-area-inset-bottom, 0px));
+  }
+}
+.select-bar b { flex: 1; font-size: var(--font-label); }
 
 /* The take sheet (#261) on the vendored modal shell: the full text (scrolls
    inside its own box), one full-width Copy, Redo as a plain row, the facts
@@ -900,10 +966,6 @@ textarea.text-out.editable::placeholder {
 .settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
-/* History's "Today: N takes" line is read, not a caption: body-sm, with its
-   glyph on the inline step of the icon scale (it inherited the 12px text size). */
-#analyticsSummary { font-size: var(--font-label); }
-#analyticsSummary .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
 /* Status readout dots — status colors signal state only. */
 .status-dot {

@@ -1,6 +1,11 @@
-/* History list — paginated take list, per-item copy, the take sheet
- * (full text, Copy, Redo, facts, Delete), multi-take copy-selection, and
- * the clean-all action.
+/* History — the Latest take card, the day-grouped take list (paged),
+ * Select mode for a multi-take copy, the take sheet (full text, Copy, Redo,
+ * facts, Delete) and the delete-all action.
+ *
+ * One in-memory list (state.historyTakes, newest first) is the source of
+ * truth: every page load, select toggle or refresh re-renders the card and
+ * the groups from it, so grouping across pages and Select mode never drift
+ * from what was fetched (#264).
  */
 
 'use strict';
@@ -17,20 +22,16 @@ import { mergeForAppend } from './recorder.js';
 const HISTORY_PAGE_SIZE = 10;
 
 export async function refreshHistory() {
-  // Reset to page 1.
-  els.historyList.innerHTML = '';
-  await fetchHistoryPage(0);
-  // After a fresh refresh, the newest take is at the top — default-check
-  // it so a single click on "Copy selection" copies the latest, while the
-  // user can extend the selection up the list to grab more takes.
-  const firstCheckbox = els.historyList.querySelector('input.select-checkbox');
-  if (firstCheckbox) firstCheckbox.checked = true;
+  // Back to page 1; a refresh also leaves Select mode.
+  state.historySelecting = false;
+  state.historySelected.clear();
+  await fetchHistoryPage(0, true);
   refreshAnalytics();
 }
 
-// Today's take count / words-per-minute / estimated time saved — a compact
-// line above the History actions row. Refreshed alongside History itself
-// since both change together (a new take affects both). See issue #95.
+// Today's take count / words-per-minute / estimated time saved, the foot of
+// the Latest take card. Refreshed alongside History itself since both
+// change together (a new take affects both). See issue #95.
 async function refreshAnalytics() {
   if (!els.analyticsSummary) return;
   try {
@@ -55,10 +56,10 @@ function formatAnalyticsSummary(s) {
 }
 
 export async function loadMoreHistory() {
-  await fetchHistoryPage(els.historyList.children.length);
+  await fetchHistoryPage(state.historyTakes.length, false);
 }
 
-async function fetchHistoryPage(offset) {
+async function fetchHistoryPage(offset, replace) {
   try {
     els.loadMoreHistory.disabled = true;
     const r = await authFetch(
@@ -67,19 +68,14 @@ async function fetchHistoryPage(offset) {
     if (!r.ok) throw new Error(`/api/sessions returned ${r.status}`);
     const data = await r.json();
     const list = data.sessions || [];
-    const total = typeof data.total === 'number' ? data.total : list.length;
-    for (const s of list) {
-      els.historyList.appendChild(renderHistoryItem(s));
-    }
-    const shown = els.historyList.children.length;
-    state.historyTotal = total;
-    renderHistoryHeadLine();
+    state.historyTakes = replace ? list : state.historyTakes.concat(list);
+    state.historyTotal = typeof data.total === 'number' ? data.total : state.historyTakes.length;
     // `has_more` is the authoritative, incognito-aware pagination signal
     // (the server derives it from a one-row-over probe); `total` is a
     // cheap folder count that may run slightly high, so don't gate the
-    // button on `shown >= total`. See #139.
+    // button on a shown/total comparison. See #139.
     els.loadMoreHistory.hidden = !data.has_more;
-    renderEmptyState(shown);
+    renderHistory();
   } catch (err) {
     console.warn('history page failed:', err);
     setHeadLine(els.historyHeadLine, "Couldn't load history", 'danger');
@@ -90,9 +86,14 @@ async function fetchHistoryPage(offset) {
 }
 
 // History's header line (#261): "N takes · kept D days", counted from the
-// same list `total` the pages draw from, with D the retention setting. Also
-// re-run when the config (and so the retention) reloads.
+// same list `total` the pages draw from, with D the retention setting; "N
+// selected" in Select mode. Also re-run when the config (and so the
+// retention) reloads.
 export function renderHistoryHeadLine() {
+  if (state.historySelecting) {
+    setHeadLine(els.historyHeadLine, `${state.historySelected.size} selected`);
+    return;
+  }
   const n = state.historyTotal;
   if (typeof n !== 'number') return;
   const days = state.config && state.config.history_retention_days;
@@ -100,36 +101,179 @@ export function renderHistoryHeadLine() {
   setHeadLine(els.historyHeadLine, days ? `${takes} · kept ${days} days` : takes);
 }
 
+// ------------------------------------------------------------ rendering
+
+function renderHistory() {
+  const takes = state.historyTakes;
+  const selecting = state.historySelecting;
+  els.historyGroups.classList.toggle('selecting', selecting);
+  renderLatestCard(selecting ? null : takes[0]);
+  // The newest take is the Latest card; in Select mode it is a row too.
+  const rows = selecting ? takes : takes.slice(1);
+  els.historyGroups.replaceChildren(...dayGroups(rows));
+  renderEmptyState(takes.length);
+  renderHistoryHeadLine();
+  renderSelectBar();
+}
+
 // The canonical fleet empty-state (vendored component) whenever the list can
 // legitimately render zero takes — never a silent blank area.
-function renderEmptyState(shown) {
-  const existing = els.historyList.parentElement.querySelector('.empty-state');
+function renderEmptyState(count) {
+  const existing = els.historyGroups.parentElement.querySelector(':scope > .empty-state');
   if (existing) existing.remove();
-  if (shown === 0) {
-    els.historyList.after(emptyStateEl('history', 'No takes yet — record something'));
+  if (count === 0) {
+    els.historyGroups.after(emptyStateEl('history', 'No takes yet — record something'));
   }
 }
 
-// One take is one action-row (design.md): tap the body to copy it, one
-// overflow control for everything else (Redo, Delete), and one leading tick
-// for the multi-take "Copy selected". No per-row button strip.
+// The Latest take card (#264): the newest take, whatever its source, with
+// one-tap Copy — the owner's most common History action.
+function renderLatestCard(s) {
+  els.latestCard.hidden = !s;
+  if (!s) return;
+  els.latestWhen.textContent = formatWhen(s.created_at).replace(',', '');
+  els.latestText.textContent = s.polished_preview || s.transcript_preview || '(no transcript)';
+  els.latestMeta.textContent = '';
+  els.latestMeta.append(...takeMeta(s));
+  els.latestCopy.onclick = () => copyTake(s.session_id, els.latestCopy);
+  els.latestMore.onclick = () => openTakeSheet(s);
+}
+
+const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+function dayLabel(d) {
+  const days = Math.round((midnight(new Date()) - midnight(d)) / 86400000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return d.toLocaleDateString([], { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
+// Rows grouped under one overline per day, in list order. Built from the
+// whole loaded list, so a page that continues a day extends its group.
+function dayGroups(rows) {
+  const groups = [];
+  let current = null;
+  for (const s of rows) {
+    const d = new Date(s.created_at);
+    const key = Number.isNaN(d.getTime()) ? 'unknown' : String(midnight(d));
+    if (!current || current.key !== key) {
+      current = { key, label: Number.isNaN(d.getTime()) ? 'Undated' : dayLabel(d), takes: [] };
+      groups.push(current);
+    }
+    current.takes.push(s);
+  }
+  const out = [];
+  groups.forEach((g, i) => {
+    const head = document.createElement('div');
+    head.className = 'day-head';
+    const label = document.createElement('span');
+    label.className = 'day-label';
+    label.textContent = g.label;
+    const n = document.createElement('span');
+    n.className = 'day-count';
+    n.textContent = String(g.takes.length);
+    head.append(label, n);
+    // Select mode is entered from the first group's head (not while in it:
+    // the bottom bar's Cancel leaves).
+    if (i === 0 && !state.historySelecting) {
+      const sel = document.createElement('button');
+      sel.type = 'button';
+      sel.id = 'selectTakes';
+      sel.className = 'day-select';
+      sel.textContent = 'Select';
+      sel.addEventListener('click', () => setSelecting(true));
+      head.append(sel);
+    }
+    const card = document.createElement('section');
+    card.className = 'card history-card';
+    const ul = document.createElement('ul');
+    ul.className = 'history-list';
+    ul.append(...g.takes.map(renderHistoryItem));
+    card.append(ul);
+    out.push(head, card);
+  });
+  return out;
+}
+
+// "webapp" is this app; "api" is the server's generic fallback, which names
+// the transport rather than the sending app, so a row hides it (the take
+// sheet shows it verbatim). Any other value is the caller's own label.
+function rowSourceLabel(src) {
+  if (src === 'webapp') return 'This app';
+  if (!src || src === 'api') return '';
+  return src;
+}
+
+function languageIso(lang) {
+  if (!lang) return '';
+  const wanted = String(lang).toLowerCase();
+  const hit = ((state.config && state.config.languages) || []).find(
+    (l) => typeof l === 'object' && (l.iso === wanted || String(l.label).toLowerCase() === wanted)
+  );
+  return hit ? hit.iso : '';
+}
+
+// A row's meta: "61 words · 0:27 · This app" as plain text, then a neutral
+// language chip only when the take is not in the default language.
+function takeMeta(s) {
+  const parts = [];
+  if (typeof s.word_count === 'number') parts.push(`${s.word_count} word${s.word_count === 1 ? '' : 's'}`);
+  if (typeof s.duration_seconds === 'number') parts.push(formatClock(s.duration_seconds));
+  const src = rowSourceLabel(s.source);
+  if (src) parts.push(src);
+  const nodes = [];
+  const text = document.createElement('span');
+  text.className = 'meta-text';
+  text.textContent = parts.join(' · ');
+  nodes.push(text);
+  const iso = languageIso(s.language);
+  const defaultIso = state.config && state.config.language_default;
+  if (iso && defaultIso && iso !== String(defaultIso).toLowerCase()) {
+    const chip = document.createElement('span');
+    chip.className = 'lang-chip';
+    chip.textContent = iso.toUpperCase();
+    chip.title = languageLabel(s.language);
+    nodes.push(chip);
+  }
+  return nodes;
+}
+
+function formatTime(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// One take is one action-row (design.md): the time as its lead, one line
+// of text, plain meta, and one trailing kebab to the take sheet. Tapping the
+// row copies the take; in Select mode it ticks it instead, and the lead
+// shows the tick.
 function renderHistoryItem(s) {
   const li = document.createElement('li');
+  li.className = 'take-row';
+  const picked = state.historySelected.has(s.session_id);
+  li.classList.toggle('picked', picked);
 
-  const selectLabel = document.createElement('label');
-  selectLabel.className = 'select';
-  selectLabel.title = 'Include this take in "Copy selected"';
-  const checkbox = document.createElement('input');
-  checkbox.type = 'checkbox';
-  checkbox.className = 'select-checkbox';
-  checkbox.dataset.sessionId = s.session_id;
-  checkbox.setAttribute('aria-label', 'Include in Copy selected');
-  selectLabel.append(checkbox);
+  const lead = document.createElement('span');
+  lead.className = 'take-lead';
+  const time = document.createElement('span');
+  time.className = 'take-time';
+  time.textContent = formatTime(s.created_at);
+  const tick = document.createElement('span');
+  tick.className = 'take-tick';
+  tick.setAttribute('aria-hidden', 'true');
+  lead.append(time, tick);
 
   const main = document.createElement('button');
   main.type = 'button';
   main.className = 'history-main';
-  main.title = 'Copy this take';
+  main.dataset.sessionId = s.session_id;
+  if (state.historySelecting) {
+    main.setAttribute('aria-pressed', String(picked));
+    main.title = 'Select this take';
+  } else {
+    main.title = 'Copy this take';
+  }
 
   const preview = document.createElement('span');
   preview.className = 'preview';
@@ -137,16 +281,13 @@ function renderHistoryItem(s) {
 
   const meta = document.createElement('span');
   meta.className = 'meta';
-  meta.append(formatWhen(s.created_at) + (s.language ? ` · ${s.language}` : ''));
-  // Attribution badge — who created the take. One muted pill for every
-  // source (issue #190): the accent is reserved for the contextually-next
-  // action, so a badge never competes with anything.
-  if (s.source) {
-    const badge = document.createElement('span');
-    badge.className = 'source-badge';
-    badge.textContent = s.source;
-    meta.append(' ', badge);
+  if (state.historySelecting) {
+    const when = document.createElement('span');
+    when.className = 'meta-time';
+    when.textContent = formatTime(s.created_at) + ' · ';
+    meta.append(when);
   }
+  meta.append(...takeMeta(s));
   // Where the "Copied" confirmation flashes (ui.js flashCopied restores the
   // empty idle state afterwards).
   const copiedFlag = document.createElement('span');
@@ -155,17 +296,48 @@ function renderHistoryItem(s) {
   meta.append(copiedFlag);
 
   main.append(preview, meta);
-  main.addEventListener('click', () => copyTake(s.session_id, copiedFlag));
+  main.addEventListener('click', () => {
+    if (state.historySelecting) toggleSelected(s.session_id);
+    else copyTake(s.session_id, copiedFlag);
+  });
+  li.append(lead, main);
 
-  const more = document.createElement('button');
-  more.type = 'button';
-  more.className = 'icon-button history-more';
-  more.setAttribute('aria-label', 'More actions');
-  more.innerHTML = icon('ellipsis-vertical');
-  more.addEventListener('click', () => openTakeSheet(s));
-
-  li.append(selectLabel, main, more);
+  if (!state.historySelecting) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'icon-button history-more';
+    more.setAttribute('aria-label', 'More actions');
+    more.innerHTML = icon('ellipsis-vertical');
+    more.addEventListener('click', () => openTakeSheet(s));
+    li.append(more);
+  }
   return li;
+}
+
+// ------------------------------------------------------------ Select mode
+
+function setSelecting(on) {
+  state.historySelecting = on;
+  state.historySelected.clear();
+  renderHistory();
+}
+
+function toggleSelected(id) {
+  if (state.historySelected.has(id)) state.historySelected.delete(id);
+  else state.historySelected.add(id);
+  renderHistory();
+}
+
+function renderSelectBar() {
+  els.selectBar.hidden = !state.historySelecting;
+  const n = state.historySelected.size;
+  els.selectCount.textContent = `${n} take${n === 1 ? '' : 's'} · oldest first`;
+  els.copySelection.disabled = n === 0;
+}
+
+export function initSelectMode() {
+  els.selectCancel.addEventListener('click', () => setSelecting(false));
+  els.copySelection.addEventListener('click', onCopySelection);
 }
 
 // Full text of a take. The list payload only carries 200-char previews, so
@@ -213,13 +385,11 @@ let sheetTake = null;
 let sheetText = '';
 let deleteArmTimer = null;
 
-// "webapp" is this app; "api" is the transport another app used, never a
-// name worth showing as such. Any other value is the caller's own label.
+// The sheet shows the stored source verbatim, "api" included (#264); only
+// this app's own "webapp" reads as a name.
 function sourceLabel(src) {
   if (!src) return NOT_RECORDED;
-  if (src === 'webapp') return 'This app';
-  if (src === 'api') return 'Another app';
-  return src;
+  return src === 'webapp' ? 'This app' : src;
 }
 
 function languageLabel(lang) {
@@ -348,52 +518,38 @@ export async function onCleanAll() {
   }
 }
 
-// Multi-take copy. The newest take is auto-checked on every refresh, so
-// a one-click flow ("just copy the last one") still works. Tick more
-// boxes to bundle older takes — the result is concatenated in
-// chronological order (oldest → newest of the selection) with a
-// blank-line separator so it's obvious where one take ends and the
-// next begins.
+// Multi-take copy (Select mode). The picked takes are joined in the order
+// people read them — oldest first — with a blank line between takes so it is
+// obvious where one ends and the next begins. A copy leaves Select mode.
 export async function onCopySelection() {
   const btn = els.copySelection;
-  // Captured up front (icon + text) so the "…" busy state can restore it.
+  if (!state.historySelected.size) return;
   const restoreLabel = btn.innerHTML;
-  const checked = Array.from(
-    els.historyList.querySelectorAll('input.select-checkbox:checked')
-  );
-  if (!checked.length) {
-    showToast('Tick at least one take first', 'error');
-    return;
-  }
   btn.disabled = true;
   btn.textContent = '…';
-  let copyDone = false;
   try {
-    // The list is rendered newest-first; reverse selection to get the
-    // chronological order the user reads: oldest piece first, latest last.
-    const idsChronOrder = checked.map(c => c.dataset.sessionId).reverse();
+    // The list is newest-first; reverse it for oldest-first.
+    const ids = state.historyTakes
+      .map((s) => s.session_id)
+      .filter((id) => state.historySelected.has(id))
+      .reverse();
     const parts = [];
-    for (const id of idsChronOrder) {
-      const r = await authFetch(`/api/sessions/${id}/text`);
-      if (!r.ok) continue;
-      const data = await r.json();
-      const text = (data.polished || data.transcript || '').trim();
+    for (const id of ids) {
+      const text = (await fetchTakeText(id).catch(() => '')).trim();
       if (text) parts.push(text);
     }
+    btn.innerHTML = restoreLabel;
     if (!parts.length) {
       showToast('Selected takes have no text', 'error');
       return;
     }
-    const combined = parts.join('\n\n');
-    // Restore the label before the green flash so flashCopied captures
-    // the idle icon+text as the original, not "…".
-    btn.innerHTML = restoreLabel;
-    await copyText(combined, btn);
-    copyDone = true;
+    await copyText(parts.join('\n\n'));
+    showToast(`Copied ${parts.length} take${parts.length === 1 ? '' : 's'}`);
+    setSelecting(false);
   } catch (err) {
-    showToast('Copy selected failed: ' + (err.message || err), 'error');
+    showToast('Copy failed: ' + (err.message || err), 'error');
   } finally {
-    btn.disabled = false;
-    if (!copyDone) btn.innerHTML = restoreLabel;
+    btn.innerHTML = restoreLabel;
+    btn.disabled = state.historySelected.size === 0;
   }
 }

@@ -751,26 +751,28 @@ days are auto-deleted on app start (configurable in
 `webapp_config.json`).
 
 History lives on its **own tab** in the bottom navigation (fleet nav
-contract), so the action row is always one tap away. It loads the
-**10 newest** entries and shows a **📥 Load more** button at the
-bottom for the next 10. The header count reads `(10/N)` while more
-pages exist and collapses to `(N)` once everything is loaded — keeps
-the page light even after weeks of daily use.
+contract) and refreshes itself every time you open it. It opens on the
+**Latest take** card: the newest take, whatever app it came from, with a
+full-width **Copy** (the full text from disk) and a ⋮ to its sheet.
+Below it, the other takes sit in **day groups** (Today, Yesterday, then
+weekday and date), one line each: the time, the start of the text, and a
+meta line such as `61 words · 0:27 · This app`. The list loads the **10
+newest** entries, and **Show older takes** at the bottom loads the next
+10, continuing a day's group rather than repeating its heading.
 
-Each row carries a small **source badge** on its meta line so
-you can tell where a take came from: `webapp` for ones dictated in
-this UI, or a consumer's own label (e.g. `app-launcher`) for
+Each row names its source in plain text: *This app* for takes dictated
+in this UI, or a consumer's own label (e.g. `app-launcher`) for
 transcriptions triggered by another app through the
-[session API](docs/consuming-the-session-api.md). Every source renders
-in the same muted pill — in History the accent colour is reserved for
-the contextually-next action (Refresh), the way the Record tab already
-reads. History is the
-single attributable source of truth for transcription across the
+[session API](docs/consuming-the-session-api.md). The server's generic
+fallback `api` names the transport rather than the app, so a row hides
+it, and the take's sheet shows it verbatim. A take in a language other
+than the default carries a small language chip (e.g. `ES`). History is
+the single attributable source of truth for transcription across the
 fleet — externally triggered takes are captured *and* identifiable,
 not just recoverable on disk.
 
-A small `📊 Today: N takes · X wpm · ~Y min saved` line sits above the
-action row — today's take count, an estimated dictation speed, and how
+A `Today: N takes · X wpm · ~Y min saved` line closes the Latest take
+card — today's take count, an estimated dictation speed, and how
 long that would have taken to type by hand (assuming a ~40 wpm typing
 baseline; both figures are estimates, not precise measurements). It
 reads `📊 No takes yet today` until the first completed take of the
@@ -796,27 +798,25 @@ something failed after its archive folder is long gone: `GET
 dedicated UI page for it yet — it's an API, curl or open it in a
 browser.
 
-Three buttons live above the list, all in a single right-aligned row:
+**Select** (on the first day's heading) turns the list into a picker:
+tapping a row ticks it instead of copying it, and a bar at the bottom
+offers **Copy**, which joins the picked takes' full text oldest first
+with a blank line between them, and **Cancel**. **Delete all takes**, a
+quiet action under the list, deletes every saved recording after a
+confirmation prompt.
 
-| Button | What it does |
-|---|---|
-| **🔄 Refresh** | Re-fetches the list from the server. Use this on a second device — the work PC, say — to pick up takes you just dictated from your phone into the home tray. |
-| **Copy selected** | Concatenates every checked take's full text in chronological order (oldest → newest of the selection) with a blank-line separator and writes the whole bundle to the clipboard. Each item has a checkbox on the left; the newest take is auto-checked on every refresh, so the "just grab the latest" flow stays one click. Tick more boxes above it to bundle older takes. |
-| **🗑️ Clean** | Deletes every saved recording with a confirmation prompt. Briefly flashes red on success. |
-
-Each row follows the fleet's action-row pattern — a tick on the left,
+Each row follows the fleet's action-row pattern — the time on the left,
 the take in the middle, one overflow button on the right:
 
 - **Tap the row** — copies the full text from disk (not the 200-char
   preview the list payload carries) and flashes *Copied* on the row.
-- **The tick** — includes the take in **Copy selected** above.
 - **⋮ sheet** — the take's full text with one **Copy**; *Redo
   transcription* re-runs whisper on the saved raw audio (useful when a
   phone died mid-record and you want to pull the transcript afterwards);
   the take's facts (*Length*, *Language*, *Source*, *Served by*); and
   *Delete take* last, as red text: the first tap turns it into *Tap again
   to delete*, the second calls `DELETE /api/sessions/{id}` to remove that
-  one take. Cleaner than nuking everything via the top-row Clean button.
+  one take. Cleaner than deleting every take.
 
 Every tab's header carries one live line beside its title: Record shows
 the dictation language, or the one exception that applies (in order:
