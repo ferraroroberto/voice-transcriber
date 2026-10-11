@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # Standard library imports
 import json
+import os
 from pathlib import Path
 
 # Third-party imports
@@ -132,7 +133,12 @@ class TestConfig:
     def test_hot_reload_picks_up_an_edit(self, isolate_config: Path):
         _write(isolate_config, {"fillers": ["uh"]})
         assert df.strip_disfluencies("well uh okay") == "well okay"
+        first_mtime = isolate_config.stat().st_mtime
         _write(isolate_config, {"enabled": False})
+        # Two writes can land in one Windows clock tick (~15.6 ms) and share
+        # an mtime, so move it on explicitly; an edit made by a person is
+        # always far apart in time (#271).
+        os.utime(isolate_config, (first_mtime + 1, first_mtime + 1))
         # mtime changed → the loader re-reads without a restart.
         assert df.strip_disfluencies("well uh okay") == "well uh okay"
 
