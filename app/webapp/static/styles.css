@@ -308,7 +308,7 @@ html, body {
   justify-items: center;
   gap: var(--space-xs);
 }
-.record-label .icon { width: 32px; height: 32px; }
+.record-label .icon { width: var(--icon-feature); height: var(--icon-feature); }
 .rec-stop {
   width: 26px;
   height: 26px;
@@ -329,7 +329,6 @@ html, body {
 /* Back from another app (#14): a smaller Record beside "Continue this text",
    the tint verb that starts a take appending onto the same text. */
 .record-buttons:has(.resume-btn:not([hidden])) .record-btn { width: 88px; height: 88px; }
-.record-buttons:has(.resume-btn:not([hidden])) .record-label .icon { width: 26px; height: 26px; }
 .resume-btn {
   display: inline-flex;
   align-items: center;

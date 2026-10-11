@@ -21,6 +21,16 @@ detail = "editor-modal header contract violated (design.md modal wants a heading
 reason = "#loginOverlay is a non-dismissable auth gate: a x close would be a no-op or a way past authentication"
 record = "https://github.com/ferraroroberto/voice-transcriber/issues/202"
 
+# The record circle is Record's one primary action (design.md glance card:
+# "the tab's one primary (Record)"), so its solid accent at rest is the
+# primary tier, not a stray. The owner chose accent at rest, red only while
+# the mic is live (#260, decision 1).
+[[design.accepted]]
+check  = "button-tiers"
+detail = "solid accent fill outside the primary: .record-btn"
+reason = "the record circle is the Record tab's one primary action"
+record = "https://github.com/ferraroroberto/voice-transcriber/issues/262"
+
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "727dfe8b9e4e625993c0e0286836e510015411cc", dest = "tests/e2e/_e2e_live_guard.py" }
 no_window = { src = "src/no_window.py", sha = "cb22565c62751b9db9411116eac0e80725015565", dest = "src/no_window.py" }
