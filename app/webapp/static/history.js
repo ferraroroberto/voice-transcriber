@@ -1,6 +1,6 @@
 /* History — the Latest take card, the day-grouped take list (paged),
  * Select mode for a multi-take copy, the take sheet (full text, Copy, Redo,
- * facts, Delete) and the delete-all action.
+ * facts, Delete) and Settings' delete-all action.
  *
  * One in-memory list (state.historyTakes, newest first) is the source of
  * truth: every page load, select toggle or refresh re-renders the card and
@@ -15,7 +15,7 @@ import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
 import {
-  capitalize, copyText, flashDanger, formatWhen, renderTranscript, setHeadLine, showToast,
+  capitalize, copyText, formatWhen, renderTranscript, setHeadLine, showToast,
 } from './ui.js';
 import { mergeForAppend } from './recorder.js';
 
@@ -504,18 +504,29 @@ async function retranscribe(id) {
   }
 }
 
-export async function onCleanAll() {
-  if (!confirm('Delete every saved recording and transcript?')) return;
+// Settings › History › Delete all takes (#265): confirmed in a sheet, never
+// the browser's confirm().
+async function deleteAllTakes() {
   try {
     const r = await authFetch('/api/sessions', { method: 'DELETE' });
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
-    showToast(`Removed ${data.removed}`);
-    flashDanger(els.cleanAll);
+    showToast(`Removed ${data.removed} take${data.removed === 1 ? '' : 's'}`);
     refreshHistory();
   } catch (err) {
-    showToast('Clean failed', 'error');
+    showToast("Couldn't delete the takes", 'error');
   }
+}
+
+export function initDeleteAll() {
+  const dlg = els.deleteAllSheet;
+  els.cleanAll.addEventListener('click', () => dlg.showModal());
+  dlg.querySelector('.detail-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  els.confirmDeleteAll.addEventListener('click', async () => {
+    dlg.close();
+    await deleteAllTakes();
+  });
 }
 
 // Multi-take copy (Select mode). The picked takes are joined in the order

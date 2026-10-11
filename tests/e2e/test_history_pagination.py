@@ -108,7 +108,8 @@ def test_latest_card_day_groups_and_paging(
     expect(heads).to_have_count(4)  # 8-11 is still one day: no repeated heading
     counts = [int(t) for t in heads.locator(".day-count").all_inner_texts()]
     assert counts == [3, 4, 4, 3], counts
-    expect(authed_page.locator("#cleanAll")).to_be_visible()
+    # Delete-all lives in Settings › History since #265, never beside Copy.
+    expect(authed_page.locator("#paneHistory #cleanAll")).to_have_count(0)
 
 
 def test_select_mode_copies_oldest_first(authed_page: Page, base_url: str) -> None:

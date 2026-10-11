@@ -28,6 +28,9 @@ export const els = {
   polishModel:        document.getElementById('polishModel'),
   polishStyle:        document.getElementById('polishStyle'),
   polishPromptPreview: document.getElementById('polishPromptPreview'),
+  promptSheet:        document.getElementById('promptSheet'),
+  promptSheetNote:    document.getElementById('promptSheetNote'),
+  openPromptSheet:    document.getElementById('openPromptSheet'),
   polishBtn:          document.getElementById('polishBtn'),
 
   historyHeadLine:  document.getElementById('historyHeadLine'),
@@ -44,6 +47,8 @@ export const els = {
   selectCancel:     document.getElementById('selectCancel'),
   copySelection:    document.getElementById('copySelection'),
   cleanAll:         document.getElementById('cleanAll'),
+  deleteAllSheet:   document.getElementById('deleteAllSheet'),
+  confirmDeleteAll: document.getElementById('confirmDeleteAll'),
   loadMoreHistory:  document.getElementById('loadMoreHistory'),
   takeSheet:        document.getElementById('takeSheet'),
   takeSheetTitle:   document.getElementById('takeSheetTitle'),
@@ -72,10 +77,8 @@ export const els = {
   gainBoostToggle:  document.getElementById('gainBoostToggle'),
   gainBoostDb:      document.getElementById('gainBoostDb'),
   vadAutoStopToggle:       document.getElementById('vadAutoStopToggle'),
-  autoStopSilenceMs:       document.getElementById('autoStopSilenceMs'),
+  autoStopSilence:  document.getElementById('autoStopSilence'),
   retentionDays:    document.getElementById('retentionDays'),
-  saveSettings:     document.getElementById('saveSettings'),
-  statusReadout:    document.getElementById('statusReadout'),
   settingsHeadLine: document.getElementById('settingsHeadLine'),
   buildInfo:        document.getElementById('buildInfo'),
 
@@ -104,6 +107,8 @@ export const state = {
   mode:        'idle',
   config:      null,
   services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
+  servicesFailed: false,      // the last /api/status poll failed (said as such, never as "up")
+  staleShell:  false,         // the loaded shell is older than the server's, after the one auto-reload (#265)
   historyTotal: null,         // the History list's `total`, which its header line counts
   historyTakes: [],           // every loaded History row, newest first (#264)
   historySelecting: false,    // History is in Select mode

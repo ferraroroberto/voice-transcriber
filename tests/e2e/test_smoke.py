@@ -147,6 +147,65 @@ def test_settings_gear_opens_settings(authed_page: Page, base_url: str) -> None:
     expect(authed_page.locator("#paneRecord")).to_be_visible()
 
 
+def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
+    """Settings (#265): inset groups with no Save button; each control posts
+    only its own field the moment it changes, and a refused save puts the
+    control back with an error toast. Delete all takes is a sheet, Services
+    shows the probes and About the build (the per-tab footer is gone)."""
+    import json
+
+    page = authed_page
+    posted: list[dict] = []
+
+    def _config(route):
+        if route.request.method != "POST":
+            route.continue_()
+            return
+        body = json.loads(route.request.post_data or "{}")
+        posted.append(body)
+        if "history_retention_days" in body:
+            route.fulfill(status=400, json={"detail": "invented refusal"})
+        else:
+            route.fulfill(json={"ok": True, "config": body})
+
+    page.route("**/api/config", _config)
+    page.route("**/api/status", lambda route: route.fulfill(json={
+        "whisper": {"running": False}, "llm_hub": {"reachable": True}, "ffmpeg_present": True,
+    }))
+    _navigate_collecting_errors(page, base_url)
+    page.click("#paneRecord .home-settings")
+    expect(page.locator("#saveSettings")).to_have_count(0)
+    expect(page.locator("#settingsPanel .settings-group-title")).to_have_count(7)
+
+    page.click("#gainBoostToggle")
+    page.wait_for_timeout(300)
+    assert len(posted) == 1 and set(posted[0]) == {"gain_boost_enabled"}, posted
+
+    retention = page.locator("#retentionDays")
+    before = retention.input_value()
+    retention.fill("7")
+    retention.press("Enter")
+    retention.blur()
+    expect(page.locator("#toast")).to_contain_text("Couldn't save")
+    expect(retention).to_have_value(before)
+
+    expect(page.locator("#svcFallbackValue")).to_have_text("Not running")
+    expect(page.locator("#svcFallback")).to_have_attribute("data-badge", "down")
+    expect(page.locator("#svcPolish")).to_have_attribute("data-badge", "alive")
+    expect(page.locator("#settingsHeadLine")).to_have_text("Local fallback down")
+    expect(page.locator("#buildInfo")).not_to_have_text("…")
+    expect(page.locator(".page-foot")).to_have_count(0)
+
+    deletes: list[str] = []
+    page.on("request", lambda r: deletes.append(r.url) if r.method == "DELETE" else None)
+    page.click("#cleanAll")
+    sheet = page.locator("#deleteAllSheet")
+    expect(sheet).to_be_visible()
+    sheet.locator(".detail-close").click()
+    expect(sheet).to_be_hidden()
+    assert deletes == []
+
+
 def test_login_dialog_dom_present(authed_page: Page, base_url: str) -> None:
     """The login gate is a native <dialog> wired for showModal().
 

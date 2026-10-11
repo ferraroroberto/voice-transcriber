@@ -558,8 +558,8 @@ which replays whisper on any saved take.
 
 #### Quiet-environment gain boost
 
-A distinct control from silence skip above: **Quiet-environment gain
-boost** in **Settings** amplifies captured audio by a configurable
+A distinct control from silence skip above: **Boost quiet audio** in
+**Settings › Sound** (with *Boost amount*) amplifies captured audio by a configurable
 amount (default `12` dB, range `0`–`24`) before it reaches whisper —
 helping a quiet mic or a quiet room transcribe more reliably. It runs
 *after* the silence gate, so a genuinely silent take still gets skipped
@@ -601,13 +601,13 @@ Config knobs in `config/webapp_config.json`:
 
 #### Auto-stop on silence
 
-An **Auto-stop on silence** toggle in the **Settings** panel —
+A **Stop after silence** toggle in **Settings › Sound** —
 when on, the page watches the mic energy floor and fires Stop after
-`auto_stop_silence_ms` of continuous near-silence (default `1500`).
+*Silence length* of continuous near-silence (`auto_stop_silence_ms`,
+default 1.5 s).
 A 500 ms "keep talking to cancel" banner appears first so a thinking
 pause doesn't cut you off. The toggle takes effect immediately on
-flip (same UX as Translate / Append / Incognito); **Save**
-persists it as the default for fresh page loads.
+flip and is saved at once as the default for fresh page loads.
 
 The detector runs on the existing `AnalyserNode` energy floor — no
 extra dependencies, no ONNX. A live `VAD peak=N (silence trips
@@ -695,10 +695,11 @@ tiers). These are stable version-free aliases — when the hub
 points an alias at a newer display_name nothing in this repo needs
 to change. Both surfaces (webapp and tk) expose a dropdown so
 you can pick per-take. In the webapp the dropdown lives under
-**Settings**; in the tk main window it sits inline on the polish
-row. **Save** in webapp settings (or **⭐ Save defaults** in the tk
-window) persists your choice to `config/webapp_config.json` so the next
-launch defaults to it. Both surfaces share that file, so the defaults
+**Settings › Polish** (*Model*, *Style*, and *Instructions* to read the
+prompt in a sheet); in the tk main window it sits inline on the polish
+row. The webapp saves a choice the moment you make it (the tk window
+uses **⭐ Save defaults**), persisting it to `config/webapp_config.json`
+so the next launch defaults to it. Both surfaces share that file, so the defaults
 sync between them.
 
 The dropdown values come from `config/webapp_config.sample.json` — not
@@ -801,9 +802,9 @@ browser.
 **Select** (on the first day's heading) turns the list into a picker:
 tapping a row ticks it instead of copying it, and a bar at the bottom
 offers **Copy**, which joins the picked takes' full text oldest first
-with a blank line between them, and **Cancel**. **Delete all takes**, a
-quiet action under the list, deletes every saved recording after a
-confirmation prompt.
+with a blank line between them, and **Cancel**. **Settings › History ›
+Delete all takes…** deletes every saved recording after a confirmation
+sheet.
 
 Each row follows the fleet's action-row pattern — the time on the left,
 the take in the middle, one overflow button on the right:
@@ -1007,9 +1008,9 @@ work in one foreground process.
 | Cloudflare Access blocks you | Email not on the policy allowlist | Zero Trust dashboard → Access → Applications → your app → Policies → edit Include rule, add your email, save. Effective immediately |
 | `Init failed: Load failed` toast | Network dropped while the page held a stale connection | Pull down on the page to reload — init retries automatically |
 | iOS prompts for mic on every record | Loaded from Safari URL bar, not from a Home Screen icon | **Add to Home Screen** and launch from the icon. Or whitelist the site under Settings → Safari → Settings for Websites → Microphone |
-| Not sure the phone is running the latest build | iOS cached an old copy of the webapp | The `Build:` footer under every tab shows the git SHA + build time the device loaded. Compare with `git rev-parse --short HEAD` on the PC, or `curl -k https://127.0.0.1:8443/api/version`. Asset URLs are content-hash stamped, and a stale iOS PWA shell auto-reloads once per deploy when the served asset hash changes (#109) — no manual cache-buster bumps |
+| Not sure the phone is running the latest build | iOS cached an old copy of the webapp | **Settings › About › Build** shows the git SHA + build time the device loaded; Settings' header line reads *New build, reload* when the loaded shell is older than the server's even after its one automatic reload. Compare with `git rev-parse --short HEAD` on the PC, or `curl -k https://127.0.0.1:8443/api/version`. Asset URLs are content-hash stamped, and a stale iOS PWA shell auto-reloads once per deploy when the served asset hash changes (#109) — no manual cache-buster bumps |
 | Polish fails with `502 hub returned…` from the `claude` or `gemini` CLI | Selected polish model's CLI isn't logged in, or the subscription is unreachable | Run `claude /login` (Claude subscription) or `gemini /auth login` (Google AI Pro) on the host running local-llm-hub. Or pick a different model in the dropdown — `gemini_flash` and `gemini_lite` are the cheapest tiers |
-| Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or toggle **Force built-in mic** in settings |
+| Microphone level meter stays at 0 | iOS routed the mic through Bluetooth headphones at the system level | Disconnect Bluetooth, retry. Or turn on **Settings › Dictation › Prefer the built-in mic** |
 | Pasted transcript has weird background colour or styling | The page's styled DOM was leaking into the clipboard alongside the plain text | Resolved — the Copy button writes a single `text/plain` MIME type via `ClipboardItem` |
 | Local cert warns in the browser | LAN IP or hostname changed since the cert was generated | Re-run `python scripts/gen_ssl_cert.py` and restart the tray |
 | Webapp port `:8443` busy after a crash | Old uvicorn still bound | `Get-NetTCPConnection -LocalPort 8443 -State Listen \| Stop-Process -Id $_.OwningProcess -Force` then restart the tray |

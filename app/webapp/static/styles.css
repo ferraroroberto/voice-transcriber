@@ -237,8 +237,16 @@ html, body {
 .app {
   max-width: 772px;
   margin: 0 auto;
-  padding: calc(env(safe-area-inset-top, 0px) + var(--gap)) var(--gap)
-    calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
+}
+/* Disjoint from the vendored nav's phone rule ((pointer: coarse) and
+   (max-width: 520px)), which owns .app's padding there: the safe-area top
+   and a bottom reserve for the floating bar. This shorthand used to load
+   after it and win, so the last card sat under the nav (#265). */
+@media (pointer: fine), (pointer: none), (min-width: 521px) {
+  .app {
+    padding: calc(env(safe-area-inset-top, 0px) + var(--gap)) var(--gap)
+      calc(env(safe-area-inset-bottom, 0px) + var(--space-lg));
+  }
 }
 
 /* Theme toggle — shows the glyph for the ACTION: moon in light (tap → dark),
@@ -542,20 +550,16 @@ textarea.text-out.editable::placeholder {
 .big-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* Accent-tinted ghost recipe — home-automation's canonical .big-btn
    (accent tint + accent text + soft accent border), applied to every
-   accent button in the app. The status-coloured exceptions are the record
-   circle's live state and the .copied / .danger-flash flashes. */
+   accent button in the app. The status-coloured exception is the record
+   circle's live state. */
 .big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent-text); flex: 1; }
 .big-btn:active { transform: scale(0.98); }
 .big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
 
-/* History's compact toolbar/row footprint, shared by both tiers it uses.
-   Color/border/radius/cursor come from the vendored tier (_vendored/button/
-   button.css); this block only restates the smaller footprint these
-   toolbar/row buttons have always used (the 14px/48px group base and the
-   vendored tint's own 13px/48px/font-body/700 are both too large here).
-   History is ghost-by-default and tints only the contextually-next action
-   — Refresh, and the newest take's Copy — the way the Record tab already
-   reads (issue #190); before that every button here was a tint. */
+/* The compact footprint for a quiet list-foot button (History's "Show
+   older takes"). Color/border/radius/cursor come from the vendored tier
+   (_vendored/button/button.css); this block only restates the smaller
+   footprint (the vendored tint's 48px/font-body/700 is too large here). */
 .button-tint.compact,
 .button-ghost.compact {
   display: inline-flex;
@@ -574,18 +578,6 @@ textarea.text-out.editable::placeholder {
 /* The vendored ghost tier ships no :active; restate the tint's scale so a
    ghost press feels the same as it did when these were all tints. */
 .button-ghost.compact:active { transform: scale(0.98); }
-.button-tint.compact.copied,
-.button-ghost.compact.copied {
-  background: var(--on-fill);
-  color: var(--accent-fg);
-  border-color: var(--on-fill);
-}
-.button-tint.compact.danger-flash,
-.button-ghost.compact.danger-flash {
-  background: var(--danger-fill);
-  color: var(--accent-fg);
-  border-color: var(--danger-fill);
-}
 
 .row {
   display: flex;
@@ -595,23 +587,24 @@ textarea.text-out.editable::placeholder {
 }
 .row > span:first-child { flex: 1; }
 
-.stacked {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-  margin: var(--space-sm) 0;
-}
-
+/* The polish prompt, read in its sheet (#265): prose, so body-sm in the
+   body face, on the text-area surface. */
 .prompt-preview {
   width: 100%;
+  min-height: 0;
   background: var(--input-bg);
-  color: var(--muted);
+  color: var(--ink);
   border: 1px solid var(--control-border);
   border-radius: var(--radius-md);
   padding: 10px var(--gap);
-  font-size: var(--font-caption);
-  line-height: 1.4;
+  font-size: var(--font-label);
+  line-height: 1.5;
   resize: vertical;
+}
+.sheet-note {
+  margin: 0 0 var(--gap);
+  color: var(--muted);
+  font-size: var(--font-label);
 }
 
 /* The shared 36px inline control comes from the vendored select-native.css; only the
@@ -946,49 +939,86 @@ textarea.text-out.editable::placeholder {
 /* Armed by the first tap: the label asks for the second. */
 .take-sheet-delete[data-armed] { font-weight: 700; }
 
-/* ---------- settings panel ---------- */
-/* The Text size row: the vendored range-tabs sit inline with their label, so
-   they drop the stacked-use bottom margin the component ships with. */
-.settings-card .range-tabs { margin: 0; }
-.settings-card hr { border: 0; border-top: 1px solid var(--line-muted); margin: 14px 0; }
-/* Every Settings control is right-anchored in its row, so its value reads
-   from that same edge — a left-aligned value inside a right-anchored box
-   floats away from it. The select's chevron clearance (.select-native
-   padding-right) reserves 32px for a chevron this app never draws
-   (appearance:none, no replacement background-image), so drop it back to
-   the inputs' 10px inset here — otherwise the selects' values would stop
-   short of the edge the number inputs hug. Issue #190. */
-.settings-card .input-native,
-.settings-card .select-native { text-align: right; }
-.settings-card .select-native { padding-right: 10px; }
-/* Each setting is a rows.md (52px) row — taller than its 44px control, so the
-   expanded hit rects of stacked rows never meet (TOUCH-02). */
-.settings-card .row { min-height: var(--row-md); margin: 0; }
-/* Save is a full-width bottom-of-card action like History's `Load more`;
-   it holds the 44px hit-target floor rather than the 48px group base, same
-   footprint the Text card verbs use. Issue #190. */
-.settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }
+/* ---------- Settings (#265) ---------- */
+/* Inset groups under overline headers (design.md settings group): each
+   row a lead glyph, a plain label, and its value or inline control. */
+.settings-group-title { margin: var(--space-md) var(--space-xs) calc(-1 * var(--space-xs)); }
+.settings-group { padding: 0 14px; }
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  width: 100%;
+  min-height: var(--row-md);
+  padding: var(--space-xs) 0;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+.setting-row + .setting-row { border-top: 1px solid var(--line-muted); }
+.setting-glyph { width: var(--icon-title); height: var(--icon-title); color: var(--muted); }
+.setting-label { flex: 1; min-width: 0; }
+.setting-sub {
+  display: block;
+  color: var(--muted);
+  font-size: var(--font-label);
+}
+.setting-value {
+  color: var(--muted);
+  font-size: var(--font-label);
+  text-align: right;
+}
+.setting-value[data-tone] { color: var(--tone); }
+.setting-chevron { width: var(--icon-inline); height: var(--icon-inline); color: var(--muted); }
+.setting-link { cursor: pointer; touch-action: manipulation; }
+.setting-danger .setting-label,
+.setting-danger .setting-glyph { color: var(--danger-text); }
+/* Every control is right-anchored in its row, so its value reads from that
+   edge. The select's chevron clearance (.select-native padding-right)
+   reserves 32px for a chevron this app never draws, so drop it back to the
+   inputs' 10px inset (issue #190). */
+.settings-group .input-native,
+.settings-group .select-native { text-align: right; }
+.settings-group .select-native { padding-right: 10px; max-width: 55%; }
+.settings-group .range-tabs { margin: 0; }
+/* A small number keeps its own width with the unit beside it ("+12 dB"),
+   rather than the 55% value column (design.md compact numeric field). */
+.setting-number { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
+.setting-number .input-native { width: 72px; }
+.setting-unit { font-size: var(--font-label); }
+
+/* The avatar (design.md avatar): a neutral squircle with one glyph and a
+   corner badge that means alive (success) or down (danger), nothing else —
+   success appears nowhere else in the app (the tone map). */
+.avatar {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: var(--neutral-soft);
+  color: var(--ink);
+}
+.avatar .icon { width: var(--bottom-tabs-icon); height: var(--bottom-tabs-icon); }
+.avatar[data-badge]::after {
+  content: "";
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--card);
+  box-sizing: border-box;
+  background: var(--on);
+}
+.avatar[data-badge="down"]::after { background: var(--danger); }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
 
-/* Status readout dots — status colors signal state only. */
-.status-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  vertical-align: baseline;
-}
-.status-dot.on { background: var(--on); }
-.status-dot.off { background: var(--danger); }
-
 /* The toast is the vendored component (_vendored/toast/toast.css): the nav's
    glass, neutral for every message, tinted only for a real error. */
-
-/* Build-identity footer (which build the PWA is running) — visible under
-   every tab; home-automation's .page-foot recipe. */
-.page-foot {
-  margin: var(--space-md) var(--space-xs);
-  text-align: center;
-}
-.page-foot p { margin: 2px 0; }

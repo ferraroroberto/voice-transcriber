@@ -1,13 +1,13 @@
-/* Config + settings — loads /api/config, renders the Settings panel
- * dropdowns, persists changes, polls /api/status, and draws the Record and
- * Settings header lines from them.
+/* Config + settings — loads /api/config, renders the Settings groups,
+ * saves each setting as it changes, polls /api/status (the Services group),
+ * and draws the Record and Settings header lines from them.
  */
 
 'use strict';
 
 import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state } from './state.js';
-import { authFetch, promptForPassword } from './api.js';
+import { authFetch, promptForPassword, readErrorMessage } from './api.js';
 import { capitalize, isOn, renderTextCard, setHeadLine, showToast } from './ui.js';
 import { renderHistoryHeadLine } from './history.js';
 
@@ -106,22 +106,81 @@ export function populateConfigUI() {
     if (iso === state.config.language_default) opt.selected = true;
     els.languageSelect.appendChild(opt);
   }
-  setSwitch(els.forceBuiltinMic, !!state.config.force_builtin_mic_default);
-  els.retentionDays.value = state.config.history_retention_days;
-  if (els.vadAutoStopToggle) {
-    setSwitch(els.vadAutoStopToggle, !!state.config.vad_auto_stop_enabled);
-  }
-  if (els.autoStopSilenceMs) {
-    els.autoStopSilenceMs.value = state.config.auto_stop_silence_ms || 1500;
-  }
-  if (els.gainBoostToggle) {
-    setSwitch(els.gainBoostToggle, !!state.config.gain_boost_enabled);
-  }
-  if (els.gainBoostDb) {
-    els.gainBoostDb.value = state.config.gain_boost_db ?? 12;
-  }
+  for (const setting of SETTINGS) setting.show(state.config[setting.key]);
   renderRecordHeadLine();
   renderHistoryHeadLine();
+}
+
+// The persisted settings (#265). Each control saves only its own field
+// through POST /api/config the moment it changes (numbers on change, i.e.
+// commit or blur); a failed save shows an error toast and puts the control
+// back to the stored value. Language and Translate are per-session choices
+// and stay out of this table. `show` writes a stored value into the
+// control, `read` turns the control back into the value to save.
+const asNumber = (el, parse) => {
+  const n = parse(el.value);
+  return Number.isFinite(n) ? n : undefined;
+};
+const SETTINGS = [
+  { key: 'polish_model_default', el: () => els.polishModel, event: 'change',
+    show: (v) => { els.polishModel.value = v || ''; }, read: () => els.polishModel.value },
+  { key: 'polish_prompt_default', el: () => els.polishStyle, event: 'change',
+    show: (v) => { els.polishStyle.value = v || ''; refreshPromptPreview(); },
+    read: () => els.polishStyle.value },
+  { key: 'preferred_mic_id', el: () => els.micSelect, event: 'change',
+    show: (v) => { els.micSelect.value = v || ''; }, read: () => els.micSelect.value || null },
+  { key: 'force_builtin_mic_default', el: () => els.forceBuiltinMic, event: 'click',
+    show: (v) => setSwitch(els.forceBuiltinMic, !!v), read: () => isOn(els.forceBuiltinMic) },
+  { key: 'gain_boost_enabled', el: () => els.gainBoostToggle, event: 'click',
+    show: (v) => setSwitch(els.gainBoostToggle, !!v), read: () => isOn(els.gainBoostToggle) },
+  { key: 'gain_boost_db', el: () => els.gainBoostDb, event: 'change',
+    show: (v) => { els.gainBoostDb.value = v ?? 12; }, read: () => asNumber(els.gainBoostDb, parseFloat) },
+  { key: 'vad_auto_stop_enabled', el: () => els.vadAutoStopToggle, event: 'click',
+    show: (v) => setSwitch(els.vadAutoStopToggle, !!v), read: () => isOn(els.vadAutoStopToggle) },
+  // Shown in seconds ("1.5 s"), stored in milliseconds.
+  { key: 'auto_stop_silence_ms', el: () => els.autoStopSilence, event: 'change',
+    show: (v) => { els.autoStopSilence.value = String((v || 1500) / 1000); },
+    read: () => {
+      const sec = asNumber(els.autoStopSilence, parseFloat);
+      return sec === undefined ? undefined : Math.round(sec * 1000);
+    } },
+  { key: 'history_retention_days', el: () => els.retentionDays, event: 'change',
+    show: (v) => { els.retentionDays.value = v ?? 30; },
+    read: () => asNumber(els.retentionDays, (x) => parseInt(x, 10)) },
+];
+
+async function saveSetting(setting) {
+  const value = setting.read();
+  const stored = state.config ? state.config[setting.key] : undefined;
+  if (value === undefined) {
+    setting.show(stored);
+    return;
+  }
+  if (value === stored) return;
+  try {
+    const r = await authFetch('/api/config', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ [setting.key]: value }),
+    });
+    if (!r.ok) throw new Error(await readErrorMessage(r));
+    const data = await r.json();
+    Object.assign(state.config, data.config || { [setting.key]: value });
+    setting.show(state.config[setting.key]);
+    if (setting.key === 'history_retention_days') renderHistoryHeadLine();
+  } catch (err) {
+    console.warn(`saving ${setting.key} failed:`, err);
+    setting.show(stored);
+    showToast("Couldn't save that setting: " + (err.message || err), 'error');
+  }
+}
+
+// Wire every persisted setting to save on change. Switches flip in app.js's
+// click handler first; this listener runs after it and saves the new state.
+export function bindSettings() {
+  for (const setting of SETTINGS) {
+    setting.el().addEventListener(setting.event, () => saveSetting(setting));
+  }
 }
 
 export function refreshPromptPreview() {
@@ -129,6 +188,20 @@ export function refreshPromptPreview() {
   const id = els.polishStyle.value;
   const hit = prompts.find(p => p.id === id);
   els.polishPromptPreview.value = hit ? hit.system : '';
+  const opt = els.polishStyle.selectedOptions[0];
+  els.promptSheetNote.textContent =
+    `Sent with your text when you tap Polish. Style: ${opt ? opt.textContent : 'none'}.`;
+}
+
+// Settings › Polish › Instructions: the prompt in a sheet (#265).
+export function initPromptSheet() {
+  const dlg = els.promptSheet;
+  els.openPromptSheet.addEventListener('click', () => {
+    refreshPromptPreview();
+    dlg.showModal();
+  });
+  dlg.querySelector('.detail-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
 // Transcription goes to the hub first and falls back to the local whisper
@@ -161,14 +234,40 @@ export function renderRecordHeadLine() {
 
 // Settings' header line (#261): "All services up", or the first failing
 // service by name. A status poll that fails is said as such, never as "up".
-function renderSettingsHeadLine(s) {
+// A stale loaded shell (#265) is said after any outage.
+export function renderSettingsHeadLine() {
+  const s = state.services;
   const line = els.settingsHeadLine;
-  if (!s) setHeadLine(line, "Couldn't check services", 'attention');
+  if (state.servicesFailed) setHeadLine(line, "Couldn't check services", 'attention');
+  else if (!s) return;
   else if (!s.whisper.running && !s.llm_hub.reachable) setHeadLine(line, 'Transcription offline', 'danger');
-  else if (!s.ffmpeg_present) setHeadLine(line, 'ffmpeg missing', 'danger');
+  else if (!s.ffmpeg_present) setHeadLine(line, 'Audio conversion missing', 'danger');
   else if (!s.llm_hub.reachable) setHeadLine(line, 'Polish unavailable: hub not reachable', 'attention');
-  else if (!s.whisper.running) setHeadLine(line, 'Whisper server down', 'attention');
+  else if (!s.whisper.running) setHeadLine(line, 'Local fallback down', 'attention');
+  else if (state.staleShell) setHeadLine(line, 'New build, reload', 'attention');
   else setHeadLine(line, 'All services up');
+}
+
+// Settings › Services (#265): one avatar row per probe, its corner badge
+// alive (success) or down (danger), the value in plain words. Unknown
+// (the poll failed) shows no badge and says so.
+function renderServices(s) {
+  const rows = s ? [
+    ['svcTranscription', s.llm_hub.reachable || s.whisper.running,
+      s.llm_hub.reachable ? 'Ready' : s.whisper.running ? 'On the local fallback' : 'Down'],
+    ['svcFallback', s.whisper.running, s.whisper.running ? 'Ready' : 'Not running'],
+    ['svcPolish', s.llm_hub.reachable, s.llm_hub.reachable ? 'Ready' : 'Not reachable'],
+    ['svcAudio', s.ffmpeg_present, s.ffmpeg_present ? 'Ready' : 'Missing'],
+  ] : ['svcTranscription', 'svcFallback', 'svcPolish', 'svcAudio'].map((id) => [id, null, 'Unknown']);
+  for (const [id, alive, value] of rows) {
+    const avatar = document.getElementById(id);
+    if (alive === null) delete avatar.dataset.badge;
+    else avatar.dataset.badge = alive ? 'alive' : 'down';
+    const v = document.getElementById(id + 'Value');
+    v.textContent = value;
+    if (alive === false) v.dataset.tone = 'danger';
+    else delete v.dataset.tone;
+  }
 }
 
 export async function refreshStatus() {
@@ -177,49 +276,14 @@ export async function refreshStatus() {
     if (!r.ok) throw new Error(`/api/status returned ${r.status}`);
     const s = await r.json();
     state.services = s;
-    renderSettingsHeadLine(s);
-    renderRecordHeadLine();
-    // Tokenized status dots (success/danger), not emoji — labels are the
-    // fixed strings below, so innerHTML is safe.
-    const dot = (ok, label) =>
-      `<span class="status-dot ${ok ? 'on' : 'off'}"></span> ${label}`;
-    els.statusReadout.innerHTML = [
-      dot(s.whisper.running, 'whisper'),
-      dot(s.llm_hub.reachable, 'hub'),
-      dot(s.ffmpeg_present, 'ffmpeg'),
-    ].join('&ensp;');
-    renderTextCard();
+    state.servicesFailed = false;
   } catch (err) {
     console.warn('status poll failed:', err);
     state.services = null;
-    renderSettingsHeadLine(null);
-    renderRecordHeadLine();
-    renderTextCard();
+    state.servicesFailed = true;
   }
-}
-
-export async function onSaveSettings() {
-  const patch = {
-    polish_model_default: els.polishModel.value,
-    polish_prompt_default: els.polishStyle.value,
-    force_builtin_mic_default: isOn(els.forceBuiltinMic),
-    preferred_mic_id: els.micSelect.value || null,
-    history_retention_days: parseInt(els.retentionDays.value, 10) || 30,
-    vad_auto_stop_enabled: isOn(els.vadAutoStopToggle),
-    auto_stop_silence_ms: parseInt((els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10),
-    gain_boost_enabled: isOn(els.gainBoostToggle),
-    gain_boost_db: parseFloat((els.gainBoostDb && els.gainBoostDb.value) || '12'),
-  };
-  try {
-    const r = await authFetch('/api/config', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(patch),
-    });
-    if (!r.ok) throw new Error(await r.text());
-    await loadConfig();
-    showToast('Settings saved');
-  } catch (err) {
-    showToast('Save failed: ' + err.message, 'error');
-  }
+  renderServices(state.services);
+  renderSettingsHeadLine();
+  renderRecordHeadLine();
+  renderTextCard();
 }
