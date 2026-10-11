@@ -101,21 +101,103 @@ export function flashDanger(btn) {
   }, 1400);
 }
 
-// Push a transcript into the DOM and re-derive the buttons that depend on
-// it. Shared by every "the transcript just changed" caller — a fresh take,
-// a retranscribe, Reset — so `els.transcript`/`els.polished` and the
-// derived copyTranscript/copyPolished/polishBtn/saveTranscript states are
-// owned in exactly one place. Always clears the polished pane: a new
-// transcript makes any prior polish stale. Pass '' to clear (Reset).
-export function renderTranscript(text) {
+// Push a transcript into the Text card. Shared by every "the transcript
+// just changed" caller — a fresh take, a retranscribe, Clear — so the two
+// textareas and everything derived from them are owned in one place. Always
+// drops the polished version (a new transcript makes it stale) and shows the
+// Transcript view. `take` ({at, seconds}) feeds the meta line; omit it for
+// text that is not a fresh take. Pass '' to clear.
+export function renderTranscript(text, take = null) {
   state.transcript = text || '';
   state.polished = '';
+  state.polishStyle = '';
+  state.take = take;
+  state.textView = 'transcript';
   els.transcript.value = state.transcript;
   els.polished.value = '';
-  els.copyTranscript.disabled = !state.transcript;
-  els.copyPolished.disabled = true;
-  els.polishBtn.disabled = !state.transcript;
-  els.saveTranscript.disabled = true;
+  renderTextCard();
+}
+
+// Show the polished result (#263): switch to the Polished view so the
+// result is what the user sees and what Copy takes.
+export function renderPolished(text, styleLabel) {
+  state.polished = text || '';
+  state.polishStyle = styleLabel || '';
+  els.polished.value = state.polished;
+  state.textView = 'polished';
+  renderTextCard();
+}
+
+export function setTextView(view) {
+  state.textView = view === 'polished' ? 'polished' : 'transcript';
+  renderTextCard();
+}
+
+// The text the Text card is showing — what Copy copies.
+export function shownText() {
+  return state.textView === 'polished' ? state.polished : state.transcript;
+}
+
+function countWords(text) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
+}
+
+function clock(sec) {
+  const total = Math.round(sec);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+}
+
+// The meta line under the text: "Today 08:48 · 212 words · 1:40" for a take,
+// the polish style for the Polished view, a note while the text is live.
+function textMetaLine() {
+  if (state.mode === 'recording' && state.transcript) return 'Live text · refined when you stop';
+  if (state.textView === 'polished') {
+    return state.polishStyle ? `Polished · ${state.polishStyle}` : 'Polished';
+  }
+  if (!state.transcript) return '';
+  const parts = [];
+  if (state.take && state.take.at) parts.push(formatWhen(state.take.at.toISOString()).replace(',', ''));
+  const words = countWords(state.transcript);
+  parts.push(`${words} word${words === 1 ? '' : 's'}`);
+  if (state.take && typeof state.take.seconds === 'number') parts.push(clock(state.take.seconds));
+  return parts.join(' · ');
+}
+
+// Re-derive the whole Text card from `state`: the Transcript · Polished
+// switch (only once a polish exists), which textarea shows, the meta line,
+// and the verbs. Every caller that changes the text, the view, the mode or
+// the hub status ends here, so no button state is owned anywhere else.
+export function renderTextCard() {
+  const hasPolish = !!state.polished || state.textView === 'polished';
+  if (!hasPolish) state.textView = 'transcript';
+  const polishedView = state.textView === 'polished';
+
+  els.textView.hidden = !hasPolish;
+  for (const seg of els.textView.querySelectorAll('.segment')) {
+    seg.setAttribute('aria-pressed', String(seg.dataset.view === state.textView));
+  }
+  els.transcript.hidden = polishedView;
+  els.polished.hidden = !polishedView;
+
+  const meta = textMetaLine();
+  els.textMeta.textContent = meta;
+  els.textMeta.hidden = !meta;
+
+  els.textVerbs.hidden = !state.transcript && !state.polished;
+  els.copyText.disabled = !shownText();
+
+  // Polish stays one tap away but says why it can't run: the hub is the
+  // only way to reach the LLM.
+  const hubDown = !!state.services && !state.services.llm_hub.reachable;
+  const label = els.polishBtn.querySelector('.polish-label');
+  if (state.polishing) label.textContent = 'Polishing…';
+  else if (hubDown) label.textContent = 'Polish unavailable';
+  else label.textContent = state.polished ? 'Polish again' : 'Polish';
+  els.polishBtn.title = hubDown ? 'Polish unavailable: hub not reachable' : '';
+  els.polishBtn.disabled = state.polishing || hubDown || !state.transcript || state.mode !== 'idle';
+
+  // Save only for text History does not hold yet (pasted, no session).
+  els.saveTranscript.hidden = !state.transcript || !!state.sessionId;
 }
 
 // The page header's one live context line (design.md page-header, #261): a

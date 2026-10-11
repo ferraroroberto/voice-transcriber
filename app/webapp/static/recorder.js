@@ -13,7 +13,9 @@
 import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
-import { formatBytes, isOn, renderTranscript, showToast, tryAutoCopy, truncate } from './ui.js';
+import {
+  formatBytes, isOn, renderTextCard, renderTranscript, showToast, tryAutoCopy, truncate,
+} from './ui.js';
 import { refreshHistory } from './history.js';
 import { setupLevelMeter, teardownLevelMeter } from './level.js';
 import { openPartialStream, closePartialStream } from './partials.js';
@@ -163,6 +165,9 @@ async function startRecording() {
 
   state.startedAt = Date.now();
   setMode('recording');
+  // Live partials land in the transcript, so show it (#263).
+  state.textView = 'transcript';
+  renderTextCard();
 
   // Reset latency-collapse plumbing per-take.
   state.partialVersion = 0;
@@ -349,13 +354,16 @@ async function onRecorderStopped(mimeType) {
     // already includes any partial that arrived via SSE — using it
     // would double-append the take onto the base prefix). The take
     // already lives on disk, so renderTranscript's saveTranscript
-    // disable is correct here too (saving again would duplicate it).
-    renderTranscript(mergeForAppend(state.partialBaseTranscript, data.transcript || ''));
+    // rule is correct here too (saving again would duplicate it).
+    renderTranscript(
+      mergeForAppend(state.partialBaseTranscript, data.transcript || ''),
+      { at: new Date(), seconds: elapsedSec },
+    );
     // Auto-copy reads from the textarea so what lands on the clipboard
     // is exactly what's on screen — including the merged accumulator
     // when Append is on.
     const transcriptForCopy = els.transcript.value;
-    if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyTranscript);
+    if (transcriptForCopy) await tryAutoCopy(transcriptForCopy, els.copyText);
     const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
     els.recordStatus.textContent = state.backgroundFinalized
       ? 'Saved while you were away — Continue adds to the same text'
@@ -373,6 +381,7 @@ async function onRecorderStopped(mimeType) {
     els.recordBtn.setAttribute('aria-pressed', 'false');
     els.levelFill.style.width = '0%';
     setMode('idle');
+    renderTextCard();
     state.backgroundFinalized = false;
     state.forceAppend = false;
     // Offer the one-tap continue only when this take ended because the

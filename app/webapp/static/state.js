@@ -18,15 +18,17 @@ export const els = {
   levelFill:        document.getElementById('levelFill'),
 
   transcript:       document.getElementById('transcript'),
-  copyTranscript:   document.getElementById('copyTranscript'),
+  polished:         document.getElementById('polished'),
+  textView:         document.getElementById('textView'),
+  textMeta:         document.getElementById('textMeta'),
+  textVerbs:        document.getElementById('textVerbs'),
+  copyText:         document.getElementById('copyText'),
   saveTranscript:   document.getElementById('saveTranscript'),
 
   polishModel:        document.getElementById('polishModel'),
   polishStyle:        document.getElementById('polishStyle'),
   polishPromptPreview: document.getElementById('polishPromptPreview'),
   polishBtn:          document.getElementById('polishBtn'),
-  copyPolished:       document.getElementById('copyPolished'),
-  polished:           document.getElementById('polished'),
 
   historyHeadLine:  document.getElementById('historyHeadLine'),
   analyticsSummary: document.getElementById('analyticsSummary'),
@@ -100,6 +102,10 @@ export const state = {
                             // the real server config (issue #87)
   transcript:  '',
   polished:    '',
+  textView:    'transcript',  // which version the Text card shows: 'transcript' | 'polished'
+  take:        null,          // {at: Date, seconds: number} for the take in the Text card, if any
+  polishStyle: '',            // label of the style the shown polish used
+  polishing:   false,         // a polish request is in flight
   mimeType:    null,
   // Latency-collapse plumbing (issue #5).
   eventSource: null,         // open SSE stream against /api/sessions/{id}/events
