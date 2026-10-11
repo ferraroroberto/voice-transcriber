@@ -222,7 +222,7 @@ export function renderRecordHeadLine() {
   if (s && transcriptionOffline(s)) {
     setHeadLine(els.recordHeadLine, 'Transcription offline', 'danger');
   } else if (isOn(els.incognitoToggle)) {
-    setHeadLine(els.recordHeadLine, "Incognito: this take won't be saved", 'neutral');
+    setHeadLine(els.recordHeadLine, "Incognito: not saved", 'neutral');
   } else if (isOn(els.translateToggle)) {
     setHeadLine(els.recordHeadLine, `${language} → English`, 'attention');
   } else if (s && !s.llm_hub.reachable) {
