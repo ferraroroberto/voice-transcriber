@@ -58,6 +58,12 @@ def _mock_sessions(page: Page) -> None:
     page.route("**/api/sessions**", _handler)
 
 
+def _phone(page: Page) -> None:
+    """These stories cover the phone layout; Chromium's default 1280px window
+    is the wide one (#266), whose take detail is a pane, not a sheet."""
+    page.set_viewport_size({"width": 390, "height": 844})
+
+
 def _texts(page: Page, ids: list[str]) -> None:
     for sid in ids:
         page.route(
@@ -72,6 +78,7 @@ def test_latest_card_day_groups_and_paging(
     """History opens on the Latest take card (one-tap Copy of the newest
     take), then one-line rows under a heading per day; "Show older takes"
     extends the day it continues instead of repeating its heading."""
+    _phone(authed_page)
     _mock_sessions(authed_page)
     _texts(authed_page, ["sess-00"])
     authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
@@ -115,6 +122,7 @@ def test_latest_card_day_groups_and_paging(
 def test_select_mode_copies_oldest_first(authed_page: Page, base_url: str) -> None:
     """Select mode replaces the checkbox column: rows tick instead of
     copying, the bar copies oldest first, and leaving restores the rows."""
+    _phone(authed_page)
     _mock_sessions(authed_page)
     _texts(authed_page, ["sess-00", "sess-02"])
     authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
@@ -156,6 +164,7 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     to copy, and the one trailing kebab opens the take sheet (#261): full
     text, Copy, Redo, the facts with Served by, and Delete last, which needs
     a second tap and never raises the browser's own confirm()."""
+    _phone(authed_page)
     _mock_sessions(authed_page)
     full = "take number 0, and the rest of it that the preview cut"
     authed_page.route(

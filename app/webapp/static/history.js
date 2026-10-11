@@ -21,6 +21,11 @@ import { mergeForAppend } from './recorder.js';
 
 const HISTORY_PAGE_SIZE = 10;
 
+// The wide layout (#266, design.md layout.wide): the same condition as the
+// vendored nav's left rail. There the take sheet's card is shown in place,
+// beside the list, instead of in a modal.
+const wideLayout = window.matchMedia('(min-width: 1100px) and (pointer: fine)');
+
 export async function refreshHistory() {
   // Back to page 1; a refresh also leaves Select mode.
   state.historySelecting = false;
@@ -114,6 +119,13 @@ function renderHistory() {
   renderEmptyState(takes.length);
   renderHistoryHeadLine();
   renderSelectBar();
+  // Wide: the detail pane always shows a take — the one picked, or else the
+  // newest — so the right column is never an empty hole.
+  if (wideLayout.matches && !state.historySelecting) {
+    const open = takes.find((t) => t.session_id === state.historyOpenId) || takes[0];
+    if (open) openTakeSheet(open);
+    else closeTakeSheet();
+  }
 }
 
 // The canonical fleet empty-state (vendored component) whenever the list can
@@ -251,8 +263,10 @@ function formatTime(iso) {
 function renderHistoryItem(s) {
   const li = document.createElement('li');
   li.className = 'take-row';
+  li.dataset.sessionId = s.session_id;
   const picked = state.historySelected.has(s.session_id);
   li.classList.toggle('picked', picked);
+  li.classList.toggle('open', s.session_id === state.historyOpenId);
 
   const lead = document.createElement('span');
   lead.className = 'take-lead';
@@ -429,7 +443,42 @@ function disarmDelete() {
   els.takeDelete.querySelector('.take-delete-label').textContent = 'Delete take';
 }
 
+// Mark the row whose take the wide layout's detail pane shows.
+function markOpenRow() {
+  for (const row of els.historyGroups.querySelectorAll('.take-row')) {
+    row.classList.toggle('open', row.dataset.sessionId === state.historyOpenId);
+  }
+}
+
+// Put the take card where the layout wants it: in the detail pane beside the
+// list on a wide window, in the modal sheet otherwise. Moving the one card
+// keeps one renderer and one set of handlers for both (#266).
+function placeTakeCard() {
+  if (wideLayout.matches) {
+    if (els.takeSheet.open) els.takeSheet.close();
+    if (els.takeCard.parentElement !== els.takeDetail) els.takeDetail.append(els.takeCard);
+  } else {
+    if (els.takeCard.parentElement !== els.takeSheet) els.takeSheet.append(els.takeCard);
+    els.takeDetail.hidden = true;
+    state.historyOpenId = null;
+    markOpenRow();
+  }
+}
+
+function closeTakeSheet() {
+  if (wideLayout.matches) {
+    els.takeDetail.hidden = true;
+    state.historyOpenId = null;
+    markOpenRow();
+    disarmDelete();
+    sheetTake = null;
+  } else {
+    els.takeSheet.close();
+  }
+}
+
 async function openTakeSheet(s) {
+  if (sheetTake && sheetTake.session_id === s.session_id && wideLayout.matches && !els.takeDetail.hidden) return;
   sheetTake = s;
   sheetText = '';
   disarmDelete();
@@ -441,7 +490,13 @@ async function openTakeSheet(s) {
   els.takeLanguage.textContent = languageLabel(s.language);
   els.takeSource.textContent = sourceLabel(s.source);
   els.takeServedBy.textContent = servedByLabel(s);
-  els.takeSheet.showModal();
+  if (wideLayout.matches) {
+    state.historyOpenId = s.session_id;
+    els.takeDetail.hidden = false;
+    markOpenRow();
+  } else {
+    els.takeSheet.showModal();
+  }
   try {
     const full = await fetchTakeText(s.session_id);
     if (sheetTake !== s) return;  // closed, or another take opened meanwhile
@@ -455,7 +510,12 @@ async function openTakeSheet(s) {
 
 export function initTakeSheet() {
   const dlg = els.takeSheet;
-  dlg.querySelector('.detail-close').addEventListener('click', () => dlg.close());
+  placeTakeCard();
+  wideLayout.addEventListener('change', () => {
+    placeTakeCard();
+    if (wideLayout.matches) renderHistory();
+  });
+  els.takeCard.querySelector('.detail-close').addEventListener('click', closeTakeSheet);
   // A tap on the backdrop (the dialog element itself, outside its card) dismisses.
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
   dlg.addEventListener('close', () => { disarmDelete(); sheetTake = null; });
@@ -468,7 +528,7 @@ export function initTakeSheet() {
   });
   els.takeRedo.addEventListener('click', () => {
     const id = sheetTake && sheetTake.session_id;
-    dlg.close();
+    closeTakeSheet();
     if (id) retranscribe(id);
   });
   // Two taps on the same row delete: the first arms it ("Tap again to
@@ -484,7 +544,7 @@ export function initTakeSheet() {
       deleteArmTimer = setTimeout(disarmDelete, DELETE_ARM_MS);
       return;
     }
-    dlg.close();
+    closeTakeSheet();
     await deleteTake(id);
   });
 }

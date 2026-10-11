@@ -890,7 +890,7 @@ textarea.text-out.editable::placeholder {
    inside its own box), one full-width Copy, Redo as a plain row, the facts
    as the modal's label/value rows, and Delete last as danger text with no
    fill. Nothing is pinned, so no footer can overlap the rows on a phone. */
-.take-sheet .detail-card { display: flex; flex-direction: column; }
+.take-card { display: flex; flex-direction: column; }
 .take-sheet-text {
   max-height: 168px;
   overflow-y: auto;
@@ -923,7 +923,7 @@ textarea.text-out.editable::placeholder {
 .take-sheet-action .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* The values read quieter than their labels (the modal styles every row
    span as a bold label). */
-.take-sheet .row .take-sheet-value {
+.take-card .row .take-sheet-value {
   min-width: 0;
   color: var(--muted);
   font-weight: 400;
@@ -1022,3 +1022,53 @@ textarea.text-out.editable::placeholder {
 
 /* The toast is the vendored component (_vendored/toast/toast.css): the nav's
    glass, neutral for every message, tinted only for a real error. */
+
+/* ---------- wide layout (#266) ---------- */
+/* design.md layout.wide — the same condition as the vendored nav's left
+   rail, which owns the rail and the content's left offset. Placement only:
+   below it, or on a touch screen, the phone layout above applies unchanged.
+   Record puts the recorder beside its text; History shows the list beside
+   the picked take (the take sheet's card, moved in by history.js) at the
+   list : detail 1 : 1.5 split; Settings keeps the centred measure. */
+.take-detail { display: none; }
+@media (min-width: 1100px) and (pointer: fine) {
+  .app { max-width: 1280px; }
+
+  #paneRecord:not([hidden]) {
+    display: grid;
+    grid-template-columns: 340px minmax(0, 1fr);
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  #paneRecord > .home-head { grid-column: 1 / -1; }
+  #paneRecord .text-card textarea.text-out { min-height: 300px; }
+
+  .history-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr);
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  .history-list-pane { min-width: 0; }
+  .take-detail:not([hidden]) {
+    display: block;
+    position: sticky;
+    top: var(--gap);
+    margin: var(--gap) 0;
+    padding: 0;
+  }
+  .take-detail .detail-card { background: transparent; }
+  .take-detail .take-sheet-text { max-height: 50vh; }
+  /* The row whose take the detail pane shows keeps the accent-soft tint, its
+     secondary text in accent-text (fg-muted on the tint is under AA). */
+  .history-list .take-row.open {
+    margin: 0 -14px;
+    padding: 0 14px;
+    background: var(--accent-soft);
+    border-radius: var(--radius-md);
+  }
+  .history-list .take-row.open .take-lead,
+  .history-list .take-row.open .meta { color: var(--accent-text); }
+
+  #paneSettings { max-width: 772px; margin: 0 auto; }
+}
