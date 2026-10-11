@@ -48,10 +48,9 @@ def test_polish_options_populated(authed_page: Page, base_url: str) -> None:
 
 
 def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
-    """The recorder is one untitled card (#262), followed by Transcript: an
-    accent "Record" circle in sentence case, then Append, Incognito and
-    Reset as labelled pills (no glyph-only toggle), Append and Incognito
-    keeping their switch semantics.
+    """The recorder is one untitled card (#262): an accent "Record" circle in
+    sentence case, then Append and Incognito as labelled switch pills (no
+    glyph-only toggle). Reset is the Text card's Clear since #263.
 
     We do NOT click Record — that would start real mic capture.
     """
@@ -59,9 +58,7 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
     recorder = authed_page.locator(".recorder-card")
     expect(recorder).to_have_class("card recorder-card")
     expect(recorder.locator(".card-title")).to_have_count(0)
-    for control_id, text in (
-        ("appendToggle", "Append"), ("incognitoToggle", "Incognito"), ("resetBtn", "Reset"),
-    ):
+    for control_id, text in (("appendToggle", "Append"), ("incognitoToggle", "Incognito")):
         expect(recorder.locator(f".record-modes #{control_id}")).to_have_text(text)
     for switch_id in ("appendToggle", "incognitoToggle"):
         expect(recorder.locator(f"#{switch_id}")).to_have_attribute("role", "switch")
@@ -80,9 +77,57 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
     assert fill == accent, (fill, accent)
     expect(authed_page.locator("#modelRoute")).to_have_count(0)
 
-    transcript_title = authed_page.locator(".transcript-card .card-title")
-    expect(transcript_title).to_contain_text("Transcript")
-    expect(transcript_title.locator("use")).to_have_attribute("href", "#i-file-text")
+
+def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None:
+    """One Text card (#263): no Polish card; the verbs appear with text;
+    Save only for text History doesn't hold; Polish is one tap away and the
+    Polished segment exists only once a polish does; Copy follows the view.
+    """
+    page = authed_page
+    page.route("**/api/status", lambda route: route.fulfill(json={
+        "whisper": {"running": True}, "llm_hub": {"reachable": True}, "ffmpeg_present": True,
+    }))
+    page.route("**/api/polish-text", lambda route: route.fulfill(json={
+        "session_id": "text-1", "polished": "A tidy invented sentence.",
+    }))
+    page.route("**/api/sessions?*", lambda route: route.fulfill(json={
+        "sessions": [], "total": 0, "has_more": False,
+    }))
+    _navigate_collecting_errors(page, base_url)
+    expect(page.locator(".text-card")).to_have_count(1)
+    expect(page.locator(".polish-card")).to_have_count(0)
+    title = page.locator(".text-card .card-title")
+    expect(title).to_have_text("Text")
+    expect(title.locator("use")).to_have_attribute("href", "#i-file-text")
+    expect(page.locator("#textVerbs")).to_be_hidden()
+    expect(page.locator("#textView")).to_be_hidden()
+
+    page.fill("#transcript", "uh so an invented sentence")
+    expect(page.locator("#textVerbs")).to_be_visible()
+    expect(page.locator("#saveTranscript")).to_be_visible()
+    expect(page.locator("#textMeta")).to_have_text("5 words")
+
+    page.click("#polishBtn")
+    expect(page.locator("#textView")).to_be_visible()
+    expect(page.locator("#polished")).to_be_visible()
+    expect(page.locator("#polished")).to_have_value("A tidy invented sentence.")
+    expect(page.locator("#transcript")).to_be_hidden()
+    expect(page.locator("#saveTranscript")).to_be_hidden()  # the polish made a session
+    expect(page.locator("#polishBtn")).to_have_text("Polish again")
+    copied = page.evaluate("""() => {
+        const shown = document.querySelector('#textView [aria-pressed="true"]').dataset.view;
+        return shown;
+    }""")
+    assert copied == "polished"
+
+    page.click('#textView .segment[data-view="transcript"]')
+    expect(page.locator("#transcript")).to_have_value("uh so an invented sentence")
+    expect(page.locator("#polished")).to_be_hidden()
+
+    page.click("#resetBtn")
+    expect(page.locator("#transcript")).to_have_value("")
+    expect(page.locator("#textVerbs")).to_be_hidden()
+    expect(page.locator("#textView")).to_be_hidden()
 
 
 def test_settings_gear_opens_settings(authed_page: Page, base_url: str) -> None:

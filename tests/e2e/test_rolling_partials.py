@@ -27,7 +27,7 @@ To watch this fail meaningfully: revert the ``openPartialStream`` gate in
 from __future__ import annotations
 
 import pytest
-from playwright.sync_api import Page
+from playwright.sync_api import Page, expect
 
 from tests.e2e._helpers import mock_session_apis, start_recording
 
@@ -44,6 +44,13 @@ def test_partials_subscribe_when_config_load_failed(
     # silently disable live partials).
     page.route("**/api/config", lambda route: route.abort())
     mock_session_apis(page, "final transcript text")
+    # The stream emits one partial, so it must land in the Text card,
+    # merged after the existing text because Append is on (#263).
+    page.route("**/api/sessions/*/events**", lambda route: route.fulfill(
+        status=200,
+        content_type="text/event-stream",
+        body='event: partial\ndata: {"version": 1, "transcript": "live words"}\n\n',
+    ))
 
     events_requests: list[str] = []
     page.on(
@@ -52,6 +59,9 @@ def test_partials_subscribe_when_config_load_failed(
     )
 
     page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    page.wait_for_selector("#transcript", state="visible")
+    page.fill("#transcript", "earlier text")
+    page.click("#appendToggle")
     start_recording(page)
     # openPartialStream() fires inside startRecording() before aria-pressed
     # flips (which start_recording already waited for); give the SSE request
@@ -63,3 +73,5 @@ def test_partials_subscribe_when_config_load_failed(
         "/api/config — openPartialStream() gated itself off on a fallback "
         "config (issue #87)"
     )
+    expect(page.locator("#transcript")).to_have_value("earlier text\n\nlive words")
+    expect(page.locator("#textMeta")).to_have_text("Live text · refined when you stop")

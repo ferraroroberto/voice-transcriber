@@ -465,25 +465,28 @@ between recordings, so back-to-back records never re-prompt.
 ### Daily use
 
 Open the home-screen icon → tap the big blue **Record** circle (it turns
-red while the mic is live) → speak → tap **Stop**. The transcript appears, auto-copied to the
-clipboard (the **Copy** button briefly flashes green to confirm),
-ready to paste anywhere. Optional second tap on **Polish** runs the
-transcript through the local LLM hub for filler-word removal,
-auto-copies the polished version (same green flash on its Copy button).
+red while the mic is live) → speak → tap **Stop**. The text appears in
+the **Text** card, auto-copied to the clipboard (its **Copy** button
+briefly reads *Copied* to confirm), ready to paste anywhere. Under the
+text, a meta line gives the take's time, word count and length.
 
-The transcript and polished boxes are both editable — fix a misheard
-word before polishing, or tweak the polished output before copying.
-Edits are sent to the server on the next polish call so History matches
-what's on screen. You can also skip recording entirely: paste any text
-into the transcript box and tap **Polish** — a text-only session is
-created and shows up in History alongside dictated takes. If you only
-want to save the pasted text for later (no polish yet), tap
-**Save** next to the transcript's Copy button — it creates a
-text-only session in History so you can polish or re-copy it from
-there, exactly as if you had dictated it. The
-**Reset** pill under the record button clears both boxes and the current
-session so the next record starts fresh. It sits after **Append** and
-**Incognito**.
+**Polish** sits in the Text card's verb row, after Copy. A tap runs the
+text through the local LLM hub (model and style from Settings), switches
+the card to its **Polished** view and auto-copies the result. A
+**Transcript · Polished** switch appears in the card head once a polish
+exists. Both versions are editable and keep their edits when you switch,
+and **Copy** always takes the version on screen. Edits are sent to the
+server on the next polish call so History matches what's on screen. When
+the hub is unreachable the button reads *Polish unavailable*.
+
+You can also skip recording entirely: paste any text into the Text card
+and tap **Polish** — a text-only session is created and shows up in
+History alongside dictated takes. If you only want to save the pasted
+text for later (no polish yet), tap **Save**, which appears only for text
+History doesn't hold yet. It creates a text-only session in History so
+you can polish or re-copy it from there, exactly as if you had dictated
+it. **Clear**, at the end of the verb row, clears the text and the
+current session so the next record starts fresh.
 
 #### Append mode
 
@@ -505,7 +508,7 @@ the **next recording** is flagged `incognito=true` server-side and
 never appears in the History list — useful for taking a private
 note that shouldn't sit on disk for the 30-day retention window.
 The session still works normally during its lifetime (record,
-transcribe, polish, copy); the moment you hit **Reset** or
+transcribe, polish, copy); the moment you hit **Clear** or
 start the next recording, the client sends `DELETE
 /api/sessions/{id}` so the folder is gone.
 
@@ -582,10 +585,10 @@ window and tray have no viewport zoom lock to escape.
 #### Rolling transcription
 
 Whisper runs every ~2 s on the audio you've already streamed, so the
-transcript box fills in live while you keep talking — no more black
+Text card fills in live while you keep talking — no more black
 box between "tap Stop" and "see text". The status line shows
 `Recording · partial v1 · …`, then `v2`, `v3`, as each pass lands.
-When the final `/finish` pass arrives the transcript box gets
+When the final `/finish` pass arrives the Text card gets
 replaced wholesale with the canonical version (whisper is a
 sliding-context model, so consecutive passes can disagree on earlier
 words as the take grows; the *final* pass wins).

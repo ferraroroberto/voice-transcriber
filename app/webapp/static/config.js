@@ -8,7 +8,7 @@
 import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state } from './state.js';
 import { authFetch, promptForPassword } from './api.js';
-import { capitalize, isOn, setHeadLine, showToast } from './ui.js';
+import { capitalize, isOn, renderTextCard, setHeadLine, showToast } from './ui.js';
 import { renderHistoryHeadLine } from './history.js';
 
 export async function loadConfig() {
@@ -188,12 +188,13 @@ export async function refreshStatus() {
       dot(s.llm_hub.reachable, 'hub'),
       dot(s.ffmpeg_present, 'ffmpeg'),
     ].join('&ensp;');
-    els.polishBtn.disabled = !s.llm_hub.reachable || !state.transcript;
+    renderTextCard();
   } catch (err) {
     console.warn('status poll failed:', err);
     state.services = null;
     renderSettingsHeadLine(null);
     renderRecordHeadLine();
+    renderTextCard();
   }
 }
 

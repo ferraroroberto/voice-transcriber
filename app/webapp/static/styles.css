@@ -453,9 +453,78 @@ textarea.text-out.editable::placeholder {
   color: var(--muted);
 }
 
+/* ---------- the Text card (#263) ---------- */
+.text-head { min-height: var(--row-sm); }
+/* The Transcript · Polished switch (design.md segmented): one neutral-soft
+   track, the selected segment raised on the card surface — the state is
+   the raised segment, never a colour. Segments are drawn at the control
+   height; ::before grows each target to 44px vertically only, so
+   neighbours never share a tappable pixel. */
+.segmented {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--neutral-soft);
+}
+.segment {
+  position: relative;
+  height: calc(var(--control-h) - 6px);
+  padding: 0 var(--gap);
+  border: 0;
+  border-radius: calc(var(--radius-md) - 3px);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.segment::before {
+  content: "";
+  position: absolute;
+  inset: calc((var(--control-h) - 6px - var(--hit-min)) / 2) 0;
+}
+.segment[aria-pressed="true"] {
+  background: var(--card);
+  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.18);
+}
+/* The take's facts under the text: body-sm in fg-muted. */
+.text-meta {
+  margin: var(--space-sm) 0 0;
+  color: var(--muted);
+  font-size: var(--font-label);
+}
+/* One verb row: Copy (primary), Polish and Save (surface), Clear (ghost)
+   pushed to the far end. Real 44px geometry, as an adjacent cluster; the
+   inset is tight enough that all four fit one row on a 390px phone. */
+.text-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--gap);
+}
+.text-verb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: var(--hit-min);
+  min-height: var(--hit-min);
+  padding: 0 10px;
+  font-family: var(--font);
+  font-size: var(--font-label);
+  font-weight: 600;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+.text-verb .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.text-clear { margin-left: auto; }
+
 /* ---------- buttons ---------- */
-.big-btn,
-.copy-btn {
+.big-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -470,8 +539,7 @@ textarea.text-out.editable::placeholder {
   cursor: pointer;
   touch-action: manipulation;
 }
-.big-btn .icon,
-.copy-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.big-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* Accent-tinted ghost recipe — home-automation's canonical .big-btn
    (accent tint + accent text + soft accent border), applied to every
    accent button in the app. The status-coloured exceptions are the record
@@ -479,16 +547,6 @@ textarea.text-out.editable::placeholder {
 .big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent-text); flex: 1; }
 .big-btn:active { transform: scale(0.98); }
 .big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
-
-.copy-btn {
-  background: var(--accent-soft);
-  border: 1px solid var(--accent-border-soft);
-  color: var(--accent-text);
-  min-width: 110px;
-}
-.copy-btn:active { transform: scale(0.98); }
-.copy-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
-.copy-btn.copied { background: var(--on-fill); border-color: var(--on-fill); color: var(--accent-fg); }
 
 /* History's compact toolbar/row footprint, shared by both tiers it uses.
    Color/border/radius/cursor come from the vendored tier (_vendored/button/
@@ -536,12 +594,6 @@ textarea.text-out.editable::placeholder {
   margin: var(--space-sm) 0;
 }
 .row > span:first-child { flex: 1; }
-
-/* Card-header actions row: shrink so it fits next to the title without
- * inheriting the form-row top/bottom margin. */
-.card-header-actions { margin: 0; }
-.card-header-actions .big-btn { flex: 0 0 auto; padding: 10px 18px; min-height: var(--hit-min); }
-.card-header-actions .copy-btn { min-width: 92px; padding: 10px 14px; min-height: var(--hit-min); }
 
 .stacked {
   display: flex;
@@ -844,7 +896,7 @@ textarea.text-out.editable::placeholder {
 .settings-card .row { min-height: var(--row-md); margin: 0; }
 /* Save is a full-width bottom-of-card action like History's `Load more`;
    it holds the 44px hit-target floor rather than the 48px group base, same
-   footprint override .card-header-actions already makes. Issue #190. */
+   footprint the Text card verbs use. Issue #190. */
 .settings-card .big-btn { padding: 10px var(--gap); min-height: var(--hit-min); }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }

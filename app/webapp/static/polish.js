@@ -1,12 +1,14 @@
-/* Polish flow + the text-entry actions that share its session model:
- * Polish (record-or-paste → LLM), Save (paste → history), Reset.
+/* Polish flow + the Text card actions that share its session model:
+ * Polish (record-or-paste → LLM), Save (paste → history), Clear.
  */
 
 'use strict';
 
 import { els, state } from './state.js';
 import { authFetch, readErrorMessage } from './api.js';
-import { renderTranscript, showToast, truncate, tryAutoCopy } from './ui.js';
+import {
+  renderPolished, renderTextCard, renderTranscript, showToast, truncate, tryAutoCopy,
+} from './ui.js';
 import { refreshHistory } from './history.js';
 import { cleanupIncognitoSession, hideResumeButton } from './recorder.js';
 import { closePartialStream } from './partials.js';
@@ -15,8 +17,9 @@ export async function onPolish() {
   if (!state.transcript) return;
   const model = els.polishModel.value;
   const promptId = els.polishStyle.value || undefined;
-  els.polishBtn.disabled = true;
-  els.polishBtn.textContent = '…';
+  const styleOpt = els.polishStyle.selectedOptions[0];
+  state.polishing = true;
+  renderTextCard();
   els.recordStatus.textContent = `LLM hub: ${model} · polishing…`;
   const t0 = Date.now();
   try {
@@ -51,11 +54,8 @@ export async function onPolish() {
     const data = await r.json();
     if (data.session_id) state.sessionId = data.session_id;
     const ms = Date.now() - t0;
-    state.polished = data.polished || '';
-    els.polished.value = state.polished;
-    els.copyPolished.disabled = !state.polished;
-    const polishedForCopy = els.polished.value;
-    if (polishedForCopy) await tryAutoCopy(polishedForCopy, els.copyPolished);
+    renderPolished(data.polished || '', styleOpt ? styleOpt.textContent : '');
+    if (state.polished) await tryAutoCopy(state.polished, els.copyText);
     els.recordStatus.textContent =
       `Polished in ${(ms / 1000).toFixed(1)} s — tap Copy`;
     showToast('Polish done');
@@ -64,11 +64,13 @@ export async function onPolish() {
     els.recordStatus.textContent = 'Polish failed — see toast';
     showToast('Polish failed: ' + truncate(err.message, 80), 'error');
   } finally {
-    els.polishBtn.disabled = false;
-    els.polishBtn.textContent = 'Go';
+    state.polishing = false;
+    renderTextCard();
   }
 }
 
+// Clear (formerly Reset): the text, the session and any lingering incognito
+// take, so the next record starts fresh.
 export function onReset() {
   // A tap mid-recording/upload/transcribe would null state.sessionId (and,
   // in incognito, DELETE the in-flight session) out from under the still-
@@ -107,6 +109,7 @@ export async function onSaveTranscript() {
     if (!r.ok) throw new Error(await readErrorMessage(r));
     const data = await r.json();
     if (data.session_id) state.sessionId = data.session_id;
+    renderTextCard();
     els.recordStatus.textContent = 'Saved to history — ready to polish or copy';
     showToast('Saved to history');
     refreshHistory();

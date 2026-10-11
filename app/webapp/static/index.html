@@ -221,7 +221,7 @@
       <!-- The recorder (#262): one circle in four states (idle accent "Record",
            live danger "Stop", finishing disabled, and back from another app
            a smaller Record beside "Continue this text"), the status line, the
-           level meter, then the labelled mode toggles and Reset. -->
+           level meter, then the labelled mode toggles. -->
       <section class="card recorder-card">
         <div id="recordZone" class="record-zone">
           <div class="record-buttons">
@@ -238,31 +238,33 @@
                     title="Append the next take to the current text instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
             <button id="incognitoToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
                     title="Don't save the next take to History"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg> Incognito</button>
-            <button id="resetBtn" type="button" class="mode-toggle" title="Clear both boxes and the current session"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg> Reset</button>
           </div>
         </div>
       </section>
 
-      <section class="card transcript-card">
-        <div class="card-head">
-          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-file-text" /></svg> Transcript</h2>
-          <div class="row card-header-actions">
-            <button id="saveTranscript" class="copy-btn" type="button" title="Save the pasted text to history without polishing" disabled><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
-            <button id="copyTranscript" class="copy-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+      <!-- The Text card (#263): one text in two versions. The Transcript ·
+           Polished switch appears once a polish exists; one textarea shows
+           at a time and both keep their edits. Under it, the take's meta line
+           and one verb row: Copy (the primary, copies the version shown),
+           Polish (tucked away on the surface tier), Save (only for text
+           History does not hold yet) and Clear. -->
+      <section class="card text-card">
+        <div class="card-head text-head">
+          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-file-text" /></svg> Text</h2>
+          <div id="textView" class="segmented" role="group" aria-label="Version shown" hidden>
+            <button type="button" class="segment" data-view="transcript" aria-pressed="true">Transcript</button>
+            <button type="button" class="segment" data-view="polished" aria-pressed="false">Polished</button>
           </div>
         </div>
-        <textarea id="transcript" class="text-out editable" placeholder="Your dictation will appear here — or paste text here and tap Save / Go" rows="4"></textarea>
-      </section>
-
-      <section class="card polish-card">
-        <div class="card-head">
-          <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> Polish</h2>
-          <div class="row card-header-actions">
-            <button id="polishBtn" class="big-btn polish-btn" type="button" disabled>Go</button>
-            <button id="copyPolished" class="copy-btn" type="button" disabled><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
-          </div>
+        <textarea id="transcript" class="text-out editable" aria-label="Transcript" placeholder="Your dictation appears here. You can also paste text to polish or save it." rows="4"></textarea>
+        <textarea id="polished" class="text-out editable" aria-label="Polished text" rows="4" hidden></textarea>
+        <p id="textMeta" class="text-meta" hidden></p>
+        <div id="textVerbs" class="text-verbs" hidden>
+          <button id="copyText" type="button" class="button-primary text-verb"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          <button id="polishBtn" type="button" class="button-surface text-verb"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> <span class="polish-label">Polish</span></button>
+          <button id="saveTranscript" type="button" class="button-surface text-verb" title="Save this text to History without polishing" hidden><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
+          <button id="resetBtn" type="button" class="button-ghost text-verb text-clear" title="Clear the text and start a fresh session"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg> Clear</button>
         </div>
-        <textarea id="polished" class="text-out editable" placeholder="Polished text will appear here — you can edit before copying" rows="3"></textarea>
       </section>
     </section>
 

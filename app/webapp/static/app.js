@@ -13,7 +13,7 @@ import { setSwitch } from './_vendored/switch/switch.js';
 import { bindTextSize } from './_vendored/text-size/text-size.js';
 import { els, state, captureTokenFromURL } from './state.js';
 import { authFetch } from './api.js';
-import { copyText, isOn, showToast } from './ui.js';
+import { copyText, isOn, renderTextCard, setTextView, shownText, showToast } from './ui.js';
 import { icon } from './_vendored/icons/icons.js';
 import {
   applyConfigDefaults,
@@ -137,21 +137,22 @@ async function loadVersion() {
 function bindEvents() {
   els.recordBtn.addEventListener('click', onRecordToggle);
   if (els.resumeBtn) els.resumeBtn.addEventListener('click', resumeRecording);
-  els.copyTranscript.addEventListener('click', () => copyText(state.transcript, els.copyTranscript));
-  els.copyPolished.addEventListener('click', () => copyText(state.polished, els.copyPolished));
+  // Copy takes whichever version the Text card is showing.
+  els.copyText.addEventListener('click', () => copyText(shownText(), els.copyText));
+  els.textView.addEventListener('click', (e) => {
+    const seg = e.target.closest('.segment');
+    if (seg) setTextView(seg.dataset.view);
+  });
 
-  // Keep state in sync with manual edits — paste, typing, deletion all flow through here.
+  // Keep state in sync with manual edits — paste, typing, deletion all flow
+  // through here; both versions keep their edits across a view switch.
   els.transcript.addEventListener('input', () => {
     state.transcript = els.transcript.value;
-    els.copyTranscript.disabled = !state.transcript;
-    els.polishBtn.disabled = !state.transcript;
-    // Save is only meaningful for pasted text that doesn't yet belong
-    // to a session — a real recording already lives in History.
-    els.saveTranscript.disabled = !state.transcript || !!state.sessionId;
+    renderTextCard();
   });
   els.polished.addEventListener('input', () => {
     state.polished = els.polished.value;
-    els.copyPolished.disabled = !state.polished;
+    renderTextCard();
   });
 
   els.resetBtn.addEventListener('click', onReset);
