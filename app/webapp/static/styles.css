@@ -721,19 +721,25 @@ textarea.text-out.editable::placeholder {
 .latest-foot:empty { display: none; }
 .latest-foot .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
-/* Day groups: one overline per day (the one legal caps use), its count, and
-   on the first group the Select action. */
+/* The overline role (design.md typography.overline): list group headers
+   only, the one legal caps use. */
+.overline {
+  color: var(--muted);
+  font-size: var(--font-caption);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Day groups: the day's overline and count, and on the first group the
+   Select action. */
 .day-head {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   min-height: var(--row-sm);
   margin: var(--space-sm) var(--space-xs) calc(-1 * var(--space-xs));
-  color: var(--muted);
-  font-size: var(--font-caption);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 .day-count { font-variant-numeric: tabular-nums; }
 .day-select {
@@ -746,8 +752,6 @@ textarea.text-out.editable::placeholder {
   font-family: var(--font);
   font-size: var(--font-label);
   font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
   cursor: pointer;
 }
 .history-list {

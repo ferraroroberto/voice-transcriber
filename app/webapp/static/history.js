@@ -167,10 +167,10 @@ function dayGroups(rows) {
     const head = document.createElement('div');
     head.className = 'day-head';
     const label = document.createElement('span');
-    label.className = 'day-label';
+    label.className = 'overline day-label';
     label.textContent = g.label;
     const n = document.createElement('span');
-    n.className = 'day-count';
+    n.className = 'overline day-count';
     n.textContent = String(g.takes.length);
     head.append(label, n);
     // Select mode is entered from the first group's head (not while in it:
