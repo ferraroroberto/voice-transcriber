@@ -247,6 +247,9 @@ async def finish_session(
         text = worker.partial_text
         session.write_transcript(text)
         session.meta.language = language or session.meta.language
+        # The partial passes ran on the same shared client, so its last
+        # served pair is the best answer available for this take.
+        served = _record_served(session, request.app.state.transcription_client)
         session.write_meta()
         activity_log.record_event(
             "transcribed", session_id=session.session_id, source=session.meta.source,
@@ -261,6 +264,7 @@ async def finish_session(
             "transcript": text,
             "language": session.meta.language,
             "from_partial": True,
+            **served,
         }
 
     result = await _transcribe_session_payload(
@@ -504,6 +508,8 @@ async def list_sessions(
                 "polish_succeeded": s.meta.polish_succeeded,
                 "raw_bytes": s.meta.raw_bytes,
                 "duration_seconds": s.meta.duration_seconds,
+                "served_model": s.meta.served_model,
+                "served_host": s.meta.served_host,
                 "transcript_preview": _preview(s.read_transcript(), 200),
                 "polished_preview": _preview(s.read_polished(), 200),
             }
@@ -673,6 +679,7 @@ async def _transcribe_session_payload(
     text = (text or "").strip()
     session.write_transcript(text)
     session.meta.language = chosen_lang
+    served = _record_served(session, client)
     session.write_meta()
     activity_log.record_event(
         "transcribed", session_id=session.session_id, source=session.meta.source,
@@ -685,9 +692,24 @@ async def _transcribe_session_payload(
         "session_id": session.session_id,
         "transcript": text,
         "language": chosen_lang,
-        "served_model": humanize_backend_id(client.last_served_model),
-        "served_host": humanize_backend_id(client.last_served_host),
+        **served,
     }
+
+
+def _record_served(session, client: TranscriptionClient) -> Dict[str, str]:
+    """Stamp the client's last served backend/host onto the take's meta
+    (the caller writes it) and return the display pair for the response.
+
+    Persisted so History's take sheet can say which service served a take
+    long after the ``/finish`` response is gone (#261). An empty pair (no
+    call recorded yet) leaves the meta at None, which the sheet shows as
+    "Not recorded".
+    """
+    model = humanize_backend_id(client.last_served_model)
+    host = humanize_backend_id(client.last_served_host)
+    session.meta.served_model = model or None
+    session.meta.served_host = host or None
+    return {"served_model": model, "served_host": host}
 
 
 def humanize_backend_id(raw: str) -> str:

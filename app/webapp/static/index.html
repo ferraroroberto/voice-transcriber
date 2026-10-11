@@ -182,6 +182,11 @@
       <path d="M18 6 6 18" />
       <path d="m6 6 12 12" />
     </symbol>
+    <symbol id="i-triangle-alert" viewBox="0 0 24 24" fill="none">
+      <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
+      <path d="M12 9v4" />
+      <path d="M12 17h.01" />
+    </symbol>
   </svg>
 
   <!-- Fleet nav contract: direct <body> child, sibling to <main class="app"> —
@@ -204,6 +209,7 @@
     <section id="paneRecord" class="pane" role="tabpanel" aria-labelledby="tabRecord" aria-label="Record">
       <div class="card home-head">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Record</span>
+        <span id="recordHeadLine" class="status" role="status"></span>
         <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
           <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
           <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
@@ -263,7 +269,7 @@
     <section id="paneHistory" class="pane" role="tabpanel" aria-labelledby="tabHistory" aria-label="History" hidden>
       <div class="card home-head">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</span>
-        <span class="status">Takes: <span id="historyCount">0</span></span>
+        <span id="historyHeadLine" class="status" role="status"></span>
         <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
           <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
           <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
@@ -287,6 +293,7 @@
     <section id="paneSettings" class="pane" aria-label="Settings" hidden>
       <div class="card home-head">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</span>
+        <span id="settingsHeadLine" class="status" role="status"></span>
         <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
           <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
           <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
@@ -401,18 +408,26 @@
     </form>
   </dialog>
 
-  <!-- A History row's overflow menu: the actions that are not the row's tap
-       (Copy). Redo, then the destructive Delete last, after a divider. -->
-  <dialog id="takeMenu" class="detail-dialog take-menu" aria-labelledby="takeMenuTitle">
+  <!-- A History take's sheet (#261, the vendored modal shell): the full text
+       and its one primary (Copy), Redo as a plain row, the take's facts, and
+       Delete last as danger text that a second tap confirms. Opened from the
+       row's kebab; the row's own tap still copies. -->
+  <dialog id="takeSheet" class="detail-dialog take-sheet" aria-labelledby="takeSheetTitle">
     <div class="detail-card">
       <div class="detail-header">
-        <h2 id="takeMenuTitle">Take</h2>
+        <h2 id="takeSheetTitle">Take</h2>
         <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
-      <p id="takeMenuWhen" class="muted take-menu-when"></p>
-      <button id="takeRedo" type="button" class="button-ghost take-menu-btn"><svg class="icon" aria-hidden="true"><use href="#i-rotate-cw" /></svg> Redo transcription</button>
-      <hr>
-      <button id="takeDelete" type="button" class="button-tint danger take-menu-btn"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete take</button>
+      <div id="takeSheetText" class="take-sheet-text" tabindex="0" aria-label="Full text"></div>
+      <button id="takeCopy" type="button" class="button-primary detail-save-btn take-sheet-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+      <button id="takeRedo" type="button" class="take-sheet-action"><svg class="icon" aria-hidden="true"><use href="#i-rotate-cw" /></svg> Redo transcription</button>
+      <div class="take-sheet-facts">
+        <div class="row"><span>Length</span><span id="takeLength" class="take-sheet-value"></span></div>
+        <div class="row"><span>Language</span><span id="takeLanguage" class="take-sheet-value"></span></div>
+        <div class="row"><span>Source</span><span id="takeSource" class="take-sheet-value"></span></div>
+        <div class="row"><span>Served by</span><span id="takeServedBy" class="take-sheet-value"></span></div>
+      </div>
+      <button id="takeDelete" type="button" class="take-sheet-action take-sheet-delete"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> <span class="take-delete-label">Delete take</span></button>
     </div>
   </dialog>
 

@@ -1,5 +1,6 @@
 /* Config + settings — loads /api/config, renders the Settings panel
- * dropdowns, persists changes, and polls /api/status.
+ * dropdowns, persists changes, polls /api/status, and draws the Record and
+ * Settings header lines from them.
  */
 
 'use strict';
@@ -7,7 +8,8 @@
 import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state } from './state.js';
 import { authFetch, promptForPassword } from './api.js';
-import { capitalize, isOn, showToast } from './ui.js';
+import { capitalize, isOn, setHeadLine, showToast } from './ui.js';
+import { renderHistoryHeadLine } from './history.js';
 
 export async function loadConfig() {
   // Single attempt first so we can detect 401 and prompt for the
@@ -118,6 +120,8 @@ export function populateConfigUI() {
   if (els.gainBoostDb) {
     els.gainBoostDb.value = state.config.gain_boost_db ?? 12;
   }
+  renderRecordHeadLine();
+  renderHistoryHeadLine();
 }
 
 export function refreshPromptPreview() {
@@ -127,11 +131,54 @@ export function refreshPromptPreview() {
   els.polishPromptPreview.value = hit ? hit.system : '';
 }
 
+// Transcription goes to the hub first and falls back to the local whisper
+// server, so it is offline only when both are down, or when ffmpeg (which
+// every take is transcoded through) is missing.
+function transcriptionOffline(s) {
+  return (!s.whisper.running && !s.llm_hub.reachable) || !s.ffmpeg_present;
+}
+
+// Record's header line (#261): the dictation language as one plain fact,
+// replaced by the single exception that matters most. Precedence, first
+// wins: transcription offline (danger), Incognito (neutral), the Translate
+// route (attention), Polish unavailable (attention).
+export function renderRecordHeadLine() {
+  const s = state.services;
+  const opt = els.languageSelect.selectedOptions[0];
+  const language = opt ? opt.textContent : '';
+  if (s && transcriptionOffline(s)) {
+    setHeadLine(els.recordHeadLine, 'Transcription offline', 'danger');
+  } else if (isOn(els.incognitoToggle)) {
+    setHeadLine(els.recordHeadLine, "Incognito: this take won't be saved", 'neutral');
+  } else if (isOn(els.translateToggle)) {
+    setHeadLine(els.recordHeadLine, `${language} → English`, 'attention');
+  } else if (s && !s.llm_hub.reachable) {
+    setHeadLine(els.recordHeadLine, 'Polish unavailable', 'attention');
+  } else {
+    setHeadLine(els.recordHeadLine, language);
+  }
+}
+
+// Settings' header line (#261): "All services up", or the first failing
+// service by name. A status poll that fails is said as such, never as "up".
+function renderSettingsHeadLine(s) {
+  const line = els.settingsHeadLine;
+  if (!s) setHeadLine(line, "Couldn't check services", 'attention');
+  else if (!s.whisper.running && !s.llm_hub.reachable) setHeadLine(line, 'Transcription offline', 'danger');
+  else if (!s.ffmpeg_present) setHeadLine(line, 'ffmpeg missing', 'danger');
+  else if (!s.llm_hub.reachable) setHeadLine(line, 'Polish unavailable: hub not reachable', 'attention');
+  else if (!s.whisper.running) setHeadLine(line, 'Whisper server down', 'attention');
+  else setHeadLine(line, 'All services up');
+}
+
 export async function refreshStatus() {
   try {
     const r = await authFetch('/api/status');
-    if (!r.ok) return;
+    if (!r.ok) throw new Error(`/api/status returned ${r.status}`);
     const s = await r.json();
+    state.services = s;
+    renderSettingsHeadLine(s);
+    renderRecordHeadLine();
     // Tokenized status dots (success/danger), not emoji — labels are the
     // fixed strings below, so innerHTML is safe.
     const dot = (ok, label) =>
@@ -142,7 +189,12 @@ export async function refreshStatus() {
       dot(s.ffmpeg_present, 'ffmpeg'),
     ].join('&ensp;');
     els.polishBtn.disabled = !s.llm_hub.reachable || !state.transcript;
-  } catch (err) { /* swallow */ }
+  } catch (err) {
+    console.warn('status poll failed:', err);
+    state.services = null;
+    renderSettingsHeadLine(null);
+    renderRecordHeadLine();
+  }
 }
 
 export async function onSaveSettings() {

@@ -100,6 +100,10 @@ class SessionMeta:
     error: Optional[str] = None
     incognito: bool = False  # filtered out of list_sessions when True
     source: Optional[str] = None  # who created it: "webapp", "api", caller label
+    # Which STT backend/host served the transcript (#156, persisted by #261 so
+    # History's take sheet can show it later). None on takes made before that.
+    served_model: Optional[str] = None
+    served_host: Optional[str] = None
     extra: dict = field(default_factory=dict)
 
 

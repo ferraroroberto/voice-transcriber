@@ -9,6 +9,7 @@
 'use strict';
 
 export const els = {
+  recordHeadLine:   document.getElementById('recordHeadLine'),
   recordBtn:        document.getElementById('recordBtn'),
   resumeBtn:        document.getElementById('resumeBtn'),
   recordLabel:      document.getElementById('recordLabel'),
@@ -28,16 +29,22 @@ export const els = {
   copyPolished:       document.getElementById('copyPolished'),
   polished:           document.getElementById('polished'),
 
-  historyCount:     document.getElementById('historyCount'),
+  historyHeadLine:  document.getElementById('historyHeadLine'),
   analyticsSummary: document.getElementById('analyticsSummary'),
   historyList:      document.getElementById('historyList'),
   refreshHistory:   document.getElementById('refreshHistory'),
   copySelection:    document.getElementById('copySelection'),
   cleanAll:         document.getElementById('cleanAll'),
   loadMoreHistory:  document.getElementById('loadMoreHistory'),
-  takeMenu:         document.getElementById('takeMenu'),
-  takeMenuWhen:     document.getElementById('takeMenuWhen'),
+  takeSheet:        document.getElementById('takeSheet'),
+  takeSheetTitle:   document.getElementById('takeSheetTitle'),
+  takeSheetText:    document.getElementById('takeSheetText'),
+  takeCopy:         document.getElementById('takeCopy'),
   takeRedo:         document.getElementById('takeRedo'),
+  takeLength:       document.getElementById('takeLength'),
+  takeLanguage:     document.getElementById('takeLanguage'),
+  takeSource:       document.getElementById('takeSource'),
+  takeServedBy:     document.getElementById('takeServedBy'),
   takeDelete:       document.getElementById('takeDelete'),
 
   resetBtn:         document.getElementById('resetBtn'),
@@ -60,6 +67,7 @@ export const els = {
   retentionDays:    document.getElementById('retentionDays'),
   saveSettings:     document.getElementById('saveSettings'),
   statusReadout:    document.getElementById('statusReadout'),
+  settingsHeadLine: document.getElementById('settingsHeadLine'),
   buildInfo:        document.getElementById('buildInfo'),
 
 };
@@ -86,6 +94,8 @@ export const state = {
   wakeLock:    null,        // active screen WakeLockSentinel while recording
   mode:        'idle',
   config:      null,
+  services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
+  historyTotal: null,         // the History list's `total`, which its header line counts
   configIsFallback: false,  // true while running on applyConfigDefaults()'s
                             // offline defaults — a later visit re-fetches
                             // the real server config (issue #87)

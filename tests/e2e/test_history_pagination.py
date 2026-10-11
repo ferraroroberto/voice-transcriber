@@ -10,6 +10,7 @@ real browser without seeding a large archive: page 0 reports
 
 from __future__ import annotations
 
+import re
 from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import Page, Route, expect
@@ -34,6 +35,10 @@ def _mock_sessions(page: Page) -> None:
                 "session_id": f"sess-{i:02d}",
                 "created_at": f"2026-05-{(i % 28) + 1:02d}T00:00:00",
                 "transcript_preview": f"take number {i}",
+                # The newest take carries the served-by stamp (#261); older
+                # ones predate it.
+                **({"served_model": "Speech Model A", "served_host": "Box One",
+                    "duration_seconds": 27} if i == 0 else {}),
             }
             for i in range(offset, min(offset + limit, _TOTAL))
         ]
@@ -61,8 +66,9 @@ def test_load_more_paginates_and_hides_at_end(
     expect(rows).to_have_count(_PAGE)  # first page rendered
     load_more = authed_page.locator("#loadMoreHistory")
     expect(load_more).to_be_visible()  # has_more=true → button shown
-    expect(authed_page.locator("#historyCount")).to_have_text(
-        f"{_PAGE}/{_TOTAL}"
+    # The header line counts the list's own `total` (#261), not the pages shown.
+    expect(authed_page.locator("#historyHeadLine")).to_have_text(
+        re.compile(rf"^{_TOTAL} takes · kept \d+ days$")
     )
 
     load_more.click()
@@ -70,28 +76,52 @@ def test_load_more_paginates_and_hides_at_end(
     expect(load_more).to_be_hidden()  # has_more=false → button hidden
 
 
-def test_row_taps_copy_and_overflow_opens_the_menu(
+def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     authed_page: Page, base_url: str
 ) -> None:
     """A take is an action-row (#213): tapping the body fetches the full text
-    to copy, and the one trailing overflow button opens the Redo / Delete
-    menu (Delete last)."""
+    to copy, and the one trailing kebab opens the take sheet (#261): full
+    text, Copy, Redo, the facts with Served by, and Delete last, which needs
+    a second tap and never raises the browser's own confirm()."""
     _mock_sessions(authed_page)
+    full = "take number 0, and the rest of it that the preview cut"
     authed_page.route(
         "**/api/sessions/sess-00/text",
-        lambda route: route.fulfill(json={"transcript": "take number 0"}),
+        lambda route: route.fulfill(json={"transcript": full}),
     )
+    native_dialogs: list[str] = []
+    authed_page.on("dialog", lambda d: (native_dialogs.append(d.message), d.dismiss()))
     authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
     authed_page.click("#tabHistory")
 
-    first = authed_page.locator("#historyList > li").first
+    rows = authed_page.locator("#historyList > li")
+    first = rows.first
     with authed_page.expect_request("**/api/sessions/sess-00/text"):
         first.locator(".history-main").click()
 
+    sheet = authed_page.locator("#takeSheet")
     first.locator(".history-more").click()
-    menu = authed_page.locator("#takeMenu")
-    expect(menu).to_be_visible()
-    expect(menu.locator("#takeRedo")).to_be_visible()
-    expect(menu.locator("#takeDelete")).to_be_visible()
-    menu.locator(".detail-close").click()
-    expect(menu).to_be_hidden()
+    expect(sheet).to_be_visible()
+    expect(sheet.locator("#takeSheetText")).to_have_text(full)
+    expect(sheet.locator("#takeServedBy")).to_have_text("Speech Model A · Box One")
+    expect(sheet.locator("#takeLength")).to_have_text("12 words · 0:27")
+    for control in ("#takeCopy", "#takeRedo", "#takeDelete"):
+        expect(sheet.locator(control)).to_be_visible()
+
+    delete = sheet.locator("#takeDelete")
+    deletes: list[str] = []
+    authed_page.on("request", lambda r: deletes.append(r.url) if r.method == "DELETE" else None)
+    delete.click()
+    expect(delete).to_have_text("Tap again to delete")
+    assert deletes == []
+    with authed_page.expect_request(lambda r: r.method == "DELETE" and r.url.endswith("/api/sessions/sess-00")):
+        delete.click()
+    expect(sheet).to_be_hidden()
+
+    # An older take predates the stamp; closing disarms the delete row.
+    rows.nth(1).locator(".history-more").click()
+    expect(sheet.locator("#takeServedBy")).to_have_text("Not recorded")
+    expect(delete).to_have_text("Delete take")
+    sheet.locator(".detail-close").click()
+    expect(sheet).to_be_hidden()
+    assert native_dialogs == []

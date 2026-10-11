@@ -38,6 +38,7 @@
   --deficit-soft: color-mix(in srgb, var(--danger) 12%, transparent);
   --deficit-border-soft: color-mix(in srgb, var(--danger) 30%, transparent);
   --attention: #9a6700;     /* attention — the resume affordance */
+  --attention-text: #7d4e00; /* attention text (5.75:1 on its tint) */
   /* derived surface roles (mapped onto the neutral tokens above) */
   --input-bg: var(--card-off);
   --control-border: #818b98; /* input/select boundary + switch off-track (3:1 vs card) */
@@ -122,6 +123,7 @@
   --on-fill: #238636;       /* white text 4.6:1 (on itself gives 2.3) */
   --deficit: var(--danger-fill);  /* the vendored error toast: white holds over near-black */
   --attention: #d29922;
+  --attention-text: #e3b341;
   --input-bg: var(--bg);
   --control-border: #6e7681;
   --toggle-knob: var(--ink);
@@ -158,6 +160,30 @@
    `[hidden]{display:none}` rule loses to author styles and "hidden"
    elements stay laid out — intercepting clicks. */
 [hidden] { display: none !important; }
+
+/* ============================================================ tone map (#261)
+   Each colour means one thing everywhere (design.md status chip tone map).
+   An element opts in with data-tone; a consumer reads --tone (text) or
+   --tone-base (a fill, dot or border) rather than naming a status token.
+     danger    — the live mic, a failed transcription, both services down
+     attention — the Translate route, "nothing heard", hub unreachable
+     accent    — a pressed mode toggle
+     neutral   — the Incognito line, a non-default language chip
+     success   — the Services avatar badge only: never a chip, fill or text,
+                 so it has no data-tone. */
+[data-tone="danger"]    { --tone: var(--danger-text);    --tone-base: var(--danger); }
+[data-tone="attention"] { --tone: var(--attention-text); --tone-base: var(--attention); }
+[data-tone="accent"]    { --tone: var(--accent-text);    --tone-base: var(--accent); }
+[data-tone="neutral"]   { --tone: var(--ink);            --tone-base: var(--muted); }
+
+/* The page header's context line (vendored home-head .status): fg-muted for
+   the plain fact, its tone for an exception (ui.js setHeadLine). */
+.home-head .status[data-tone] { color: var(--tone); }
+.home-head .status .icon {
+  width: var(--icon-inline);
+  height: var(--icon-inline);
+  vertical-align: -3px;
+}
 
 /* Canonical focus-visible ring (design.md v2 focus contract): one tokenized
    rule covers every interactive element app-wide. A control overrides this
@@ -750,24 +776,58 @@ textarea.text-out.editable::placeholder {
 /* The one trailing accessory: a 44px overflow button (the vendored icon-button). */
 .history-list li .history-more { --icon-btn-box: var(--hit-min); }
 
-/* The overflow menu (a <dialog> on the vendored modal shell): full-width
-   actions, the destructive one last, after a divider. */
-.take-menu { width: min(360px, 92vw); }
-.take-menu .detail-card { display: flex; flex-direction: column; }
-.take-menu-when { margin: 0 0 var(--space-sm); font-size: var(--font-label); }
-.take-menu hr { border: 0; border-top: 1px solid var(--line-muted); margin: var(--space-sm) 0; width: 100%; }
-.take-menu-btn {
-  display: inline-flex;
+/* The take sheet (#261) on the vendored modal shell: the full text (scrolls
+   inside its own box), one full-width Copy, Redo as a plain row, the facts
+   as the modal's label/value rows, and Delete last as danger text with no
+   fill. Nothing is pinned, so no footer can overlap the rows on a phone. */
+.take-sheet .detail-card { display: flex; flex-direction: column; }
+.take-sheet-text {
+  max-height: 168px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin-bottom: var(--gap);
+  font-size: var(--font-body);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.take-sheet-copy .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.take-sheet-action {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
+  gap: 10px;
   width: 100%;
-  min-height: 48px;
+  min-height: var(--hit-min);
+  margin-top: var(--space-xs);
+  padding: 0;
   font-family: var(--font);
   font-size: var(--font-label);
   font-weight: 600;
+  text-align: left;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  touch-action: manipulation;
 }
-.take-menu-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
+.take-sheet-action .icon { width: var(--icon-inline); height: var(--icon-inline); }
+/* The values read quieter than their labels (the modal styles every row
+   span as a bold label). */
+.take-sheet .row .take-sheet-value {
+  min-width: 0;
+  color: var(--muted);
+  font-weight: 400;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+.take-sheet-delete {
+  margin-top: 0;
+  padding-top: var(--space-xs);
+  border-top: 1px solid var(--line-muted);
+  color: var(--danger-text);
+}
+/* Armed by the first tap: the label asks for the second. */
+.take-sheet-delete[data-armed] { font-weight: 700; }
 
 /* ---------- settings panel ---------- */
 /* The Text size row: the vendored range-tabs sit inline with their label, so
