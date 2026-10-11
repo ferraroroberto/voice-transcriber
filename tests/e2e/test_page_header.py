@@ -100,6 +100,8 @@ def test_header_line_names_only_exceptions_and_never_wraps(
     expect(line).to_have_text("Incognito: not saved")
     expect(line).to_have_attribute("data-tone", "neutral")
     _assert_one_row(authed_page, "#paneRecord")
+    # Not clipped to an ellipsis (#275): the text fits its box at phone width.
+    assert line.evaluate("el => el.scrollWidth <= el.clientWidth")
     authed_page.click("#incognitoToggle")
     expect(line).to_have_text(language)
 
