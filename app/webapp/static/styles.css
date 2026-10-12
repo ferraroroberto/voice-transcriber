@@ -126,7 +126,7 @@
   --deficit: var(--danger-fill);  /* the vendored error toast: white holds over near-black */
   --attention: #d29922;
   --attention-text: #e3b341;
-  --input-bg: var(--bg);
+  --input-bg: var(--line-muted);
   --control-border: #6e7681;
   --toggle-knob: var(--ink);
   --close-bg: transparent;
