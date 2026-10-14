@@ -56,7 +56,7 @@ HTML_STAMPED_ASSETS = (
     "_vendored/home-head/home-head.css",
     "_vendored/toast/toast.css",
     "_vendored/text-size/text-size.css",
-    "_vendored/range-tab/range-tab.css",
+    "_vendored/segmented/segmented.css",
     "_vendored/switch/switch.css",
     "_vendored/select-native/select-native.css",
     "_vendored/modal/modal.css",

@@ -37,6 +37,9 @@ def _isolate_activity_log(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(
         activity_log_mod, "DEFAULT_DB_PATH", tmp_path / "activity.sqlite3"
     )
+    # Same for the usage log (#277): create_app() resolves its path from
+    # this env var, so an app built in any test lands in tmp_path.
+    monkeypatch.setenv("VT_USAGE_DB_PATH", str(tmp_path / "usage.sqlite3"))
 
 
 @pytest.fixture

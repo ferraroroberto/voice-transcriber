@@ -57,7 +57,11 @@ def uvicorn_proc(tmp_path: Path) -> Iterator[tuple[subprocess.Popen, int]]:
     # activity-log isolation cannot reach it — this boot would write into the
     # real store. `VT_ACTIVITY_DB_PATH` is the highest-precedence override
     # exactly for this case (see src/runtime_data.py).
-    env = {**os.environ, "VT_ACTIVITY_DB_PATH": str(tmp_path / "activity.sqlite3")}
+    env = {
+        **os.environ,
+        "VT_ACTIVITY_DB_PATH": str(tmp_path / "activity.sqlite3"),
+        "VT_USAGE_DB_PATH": str(tmp_path / "usage.sqlite3"),
+    }
     proc = subprocess.Popen(
         cmd,
         cwd=str(PROJECT_ROOT),

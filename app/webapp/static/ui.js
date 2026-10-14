@@ -8,6 +8,7 @@
 
 import { els, state } from './state.js';
 import { icon } from './_vendored/icons/icons.js';
+import { renderHeadStatus } from './_vendored/home-head/home-head.js';
 import { showToast } from './_vendored/toast/toast.js';
 
 // The one fleet toast (neutral frosted; only an error tints). Re-exported so
@@ -161,7 +162,7 @@ export function renderTextCard() {
   const polishedView = state.textView === 'polished';
 
   els.textView.hidden = !hasPolish;
-  for (const seg of els.textView.querySelectorAll('.segment')) {
+  for (const seg of els.textView.querySelectorAll('.segmented-item')) {
     seg.setAttribute('aria-pressed', String(seg.dataset.view === state.textView));
   }
   els.transcript.hidden = polishedView;
@@ -190,17 +191,17 @@ export function renderTextCard() {
 
 // The page header's one live context line (design.md page-header, #261): a
 // plain fact in fg-muted, or a single exception in its tone from the
-// styles.css tone map. An attention/danger exception leads with the warning
-// glyph. The slot is in the markup from first paint and ellipsizes, so a
-// line landing late never moves the row.
+// styles.css tone map. The vendored renderHeadStatus draws the line; an
+// attention/danger exception then leads with the warning glyph (the
+// non-colour cue, app-side). The slot is in the markup from first paint and
+// ellipsizes, so a line landing late never moves the row.
 export function setHeadLine(el, text, tone) {
   if (!el) return;
-  const alarm = tone === 'attention' || tone === 'danger';
-  el.innerHTML = alarm ? icon('triangle-alert') + ' ' : '';
-  el.append(text || '');
+  renderHeadStatus(el, tone ? [{ text, tone }] : [], text);
+  if (tone === 'attention' || tone === 'danger') {
+    el.insertAdjacentHTML('afterbegin', icon('triangle-alert') + ' ');
+  }
   el.title = text || '';
-  if (tone) el.dataset.tone = tone;
-  else delete el.dataset.tone;
 }
 
 export function capitalize(s) { return s ? s[0].toUpperCase() + s.slice(1) : s; }

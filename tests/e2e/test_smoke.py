@@ -120,7 +120,7 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     }""")
     assert copied == "polished"
 
-    page.click('#textView .segment[data-view="transcript"]')
+    page.click('#textView .segmented-item[data-view="transcript"]')
     expect(page.locator("#transcript")).to_have_value("uh so an invented sentence")
     expect(page.locator("#polished")).to_be_hidden()
 
