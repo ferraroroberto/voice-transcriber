@@ -36,7 +36,7 @@
   <link rel="stylesheet" href="/static/_vendored/card/card.css?v=__VENDORED_CARD_CARD_CSS__">
   <link rel="stylesheet" href="/static/_vendored/toast/toast.css?v=__VENDORED_TOAST_TOAST_CSS__">
   <link rel="stylesheet" href="/static/_vendored/text-size/text-size.css?v=__VENDORED_TEXT_SIZE_TEXT_SIZE_CSS__">
-  <link rel="stylesheet" href="/static/_vendored/range-tab/range-tab.css?v=__VENDORED_RANGE_TAB_RANGE_TAB_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/segmented/segmented.css?v=__VENDORED_SEGMENTED_SEGMENTED_CSS__">
   <link rel="stylesheet" href="/static/_vendored/home-head/home-head.css?v=__VENDORED_HOME_HEAD_HOME_HEAD_CSS__">
   <link rel="stylesheet" href="/static/_vendored/switch/switch.css?v=__VENDORED_SWITCH_SWITCH_CSS__">
   <link rel="stylesheet" href="/static/_vendored/select-native/select-native.css?v=__VENDORED_SELECT_NATIVE_SELECT_NATIVE_CSS__">
@@ -250,11 +250,11 @@
       <div class="card home-head">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Record</span>
         <span id="recordHeadLine" class="status" role="status"></span>
-        <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
+        <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode" data-track="theme.toggle">
           <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
           <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
         </button>
-        <button type="button" class="icon-button home-toggle home-settings" title="Settings" aria-label="Settings">
+        <button type="button" class="icon-button home-toggle home-settings" title="Settings" aria-label="Settings" data-track="settings.open">
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
@@ -265,19 +265,19 @@
       <section class="card recorder-card">
         <div id="recordZone" class="record-zone">
           <div class="record-buttons">
-            <button id="recordBtn" type="button" class="record-btn" aria-pressed="false">
+            <button id="recordBtn" type="button" class="record-btn" aria-pressed="false" data-track="record.toggle">
               <span id="recordLabel" class="record-label"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg>Record</span>
             </button>
-            <button id="resumeBtn" type="button" class="button-tint resume-btn" title="Start a new take that adds to this text" hidden><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg> Continue this text</button>
+            <button id="resumeBtn" type="button" class="button-tint resume-btn" title="Start a new take that adds to this text" hidden data-track="record.continue"><svg class="icon" aria-hidden="true"><use href="#i-play" /></svg> Continue this text</button>
           </div>
           <span id="recordTimer" class="record-timer" hidden>00:00</span>
           <div id="recordStatus" class="record-status">Tap to start</div>
           <div id="levelBar" class="level-bar"><div id="levelFill" class="level-fill"></div></div>
           <div class="record-modes">
             <button id="appendToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
-                    title="Append the next take to the current text instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
+                    title="Append the next take to the current text instead of replacing it" data-track="record.append"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
             <button id="incognitoToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
-                    title="Don't save the next take to History"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg> Incognito</button>
+                    title="Don't save the next take to History" data-track="record.incognito"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg> Incognito</button>
           </div>
         </div>
       </section>
@@ -292,18 +292,18 @@
         <div class="card-head text-head">
           <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-file-text" /></svg> Text</h2>
           <div id="textView" class="segmented" role="group" aria-label="Version shown" hidden>
-            <button type="button" class="segment" data-view="transcript" aria-pressed="true">Transcript</button>
-            <button type="button" class="segment" data-view="polished" aria-pressed="false">Polished</button>
+            <button type="button" class="segmented-item" data-view="transcript" aria-pressed="true" data-track="text.view-transcript">Transcript</button>
+            <button type="button" class="segmented-item" data-view="polished" aria-pressed="false" data-track="text.view-polished">Polished</button>
           </div>
         </div>
         <textarea id="transcript" class="text-out editable" aria-label="Transcript" placeholder="Your dictation appears here. You can also paste text to polish or save it." rows="4"></textarea>
         <textarea id="polished" class="text-out editable" aria-label="Polished text" rows="4" hidden></textarea>
         <p id="textMeta" class="text-meta" hidden></p>
         <div id="textVerbs" class="text-verbs" hidden>
-          <button id="copyText" type="button" class="button-primary text-verb"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
-          <button id="polishBtn" type="button" class="button-surface text-verb"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> <span class="polish-label">Polish</span></button>
-          <button id="saveTranscript" type="button" class="button-surface text-verb" title="Save this text to History without polishing" hidden><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
-          <button id="resetBtn" type="button" class="button-ghost text-verb text-clear" title="Clear the text and start a fresh session"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg> Clear</button>
+          <button id="copyText" type="button" class="button-primary text-verb" data-track="text.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          <button id="polishBtn" type="button" class="button-surface text-verb" data-track="text.polish"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> <span class="polish-label">Polish</span></button>
+          <button id="saveTranscript" type="button" class="button-surface text-verb" title="Save this text to History without polishing" hidden data-track="text.save"><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
+          <button id="resetBtn" type="button" class="button-ghost text-verb text-clear" title="Clear the text and start a fresh session" data-track="text.clear"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg> Clear</button>
         </div>
       </section>
     </section>
@@ -312,11 +312,11 @@
       <div class="card home-head">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</span>
         <span id="historyHeadLine" class="status" role="status"></span>
-        <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
+        <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode" data-track="theme.toggle">
           <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
           <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
         </button>
-        <button type="button" class="icon-button home-toggle home-settings" title="Settings" aria-label="Settings">
+        <button type="button" class="icon-button home-toggle home-settings" title="Settings" aria-label="Settings" data-track="settings.open">
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
@@ -334,8 +334,8 @@
         <p id="latestText" class="latest-text"></p>
         <p id="latestMeta" class="text-meta latest-meta"></p>
         <div class="latest-verbs">
-          <button id="latestCopy" type="button" class="button-primary text-verb latest-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
-          <button id="latestMore" type="button" class="icon-button history-more" aria-label="More actions"><svg class="icon" aria-hidden="true"><use href="#i-ellipsis-vertical" /></svg></button>
+          <button id="latestCopy" type="button" class="button-primary text-verb latest-copy" data-track="history.latest-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          <button id="latestMore" type="button" class="icon-button history-more" aria-label="More actions" data-track="history.latest-more"><svg class="icon" aria-hidden="true"><use href="#i-ellipsis-vertical" /></svg></button>
         </div>
         <p id="analyticsSummary" class="latest-foot"></p>
       </section>
@@ -343,13 +343,13 @@
            card of one-line take rows. -->
       <div id="historyGroups" class="history-groups"></div>
       <div class="history-foot">
-        <button id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn" hidden><svg class="icon" aria-hidden="true"><use href="#i-download" /></svg> Show older takes</button>
+        <button id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn" hidden data-track="history.load-more"><svg class="icon" aria-hidden="true"><use href="#i-download" /></svg> Show older takes</button>
       </div>
       <!-- Select mode's bottom bar: the count, Cancel, and Copy (oldest first). -->
       <div id="selectBar" class="select-bar" role="toolbar" aria-label="Selected takes" hidden>
         <b id="selectCount">0 takes · oldest first</b>
-        <button id="selectCancel" type="button" class="button-ghost text-verb">Cancel</button>
-        <button id="copySelection" type="button" class="button-primary text-verb"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+        <button id="selectCancel" type="button" class="button-ghost text-verb" data-track="history.select-cancel">Cancel</button>
+        <button id="copySelection" type="button" class="button-primary text-verb" data-track="history.select-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
       </div>
       </div>
       <aside id="takeDetail" class="card take-detail" aria-label="Picked take" hidden></aside>
@@ -360,11 +360,11 @@
       <div class="card home-head">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg> Settings</span>
         <span id="settingsHeadLine" class="status" role="status"></span>
-        <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode">
+        <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode" data-track="theme.toggle">
           <svg class="icon theme-icon-moon" aria-hidden="true" focusable="false"><use href="#i-moon" /></svg>
           <svg class="icon theme-icon-sun" aria-hidden="true" focusable="false"><use href="#i-sun" /></svg>
         </button>
-        <button type="button" class="icon-button home-toggle home-settings" title="Settings" aria-label="Settings">
+        <button type="button" class="icon-button home-toggle home-settings" title="Settings" aria-label="Settings" data-track="settings.open">
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
@@ -377,19 +377,19 @@
         <section class="card settings-group">
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Language</span><select id="languageSelect" class="select-native"></select></label>
           <div class="setting-row" title="Speak in the language above; the text comes out in English. The first take after a pause can take a few seconds longer."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Translate to English</span><button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Translate to English"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+                  aria-label="Translate to English" data-track="settings.translate"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-mic" /></svg><span class="setting-label">Microphone</span><select id="micSelect" class="select-native"></select></label>
           <div class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-smartphone" /></svg><span class="setting-label">Prefer the built-in mic<span class="setting-sub">Skips Bluetooth headsets</span></span><button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Prefer the built-in mic"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+                  aria-label="Prefer the built-in mic" data-track="settings.builtin-mic"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
         </section>
 
         <h2 class="overline settings-group-title">Sound</h2>
         <section class="card settings-group">
           <div class="setting-row" title="Makes a quiet recording louder before it is transcribed, for a quiet mic or room."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="setting-label">Boost quiet audio</span><button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Boost quiet audio"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+                  aria-label="Boost quiet audio" data-track="settings.gain-boost"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="setting-label">Boost amount</span><span class="setting-number"><span class="setting-unit">+</span><input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native" aria-label="Boost amount in decibels"><span class="setting-unit">dB</span></span></label>
           <div class="setting-row" title="Stops recording after a stretch of silence. A short notice shows first, so you can keep talking to cancel."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-timer" /></svg><span class="setting-label">Stop after silence</span><button id="vadAutoStopToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Stop after silence"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+                  aria-label="Stop after silence" data-track="settings.silence-stop"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-timer" /></svg><span class="setting-label">Silence length</span><span class="setting-number"><input id="autoStopSilence" type="number" min="0.2" max="10" step="0.1" class="input-native" aria-label="Silence length in seconds"><span class="setting-unit">s</span></span></label>
         </section>
 
@@ -397,23 +397,23 @@
         <section class="card settings-group">
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Model</span><select id="polishModel" class="select-native"></select></label>
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Style</span><select id="polishStyle" class="select-native"></select></label>
-          <button id="openPromptSheet" type="button" class="setting-row setting-link"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-file-text" /></svg><span class="setting-label">Instructions</span><span class="setting-value">View</span><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></button>
+          <button id="openPromptSheet" type="button" class="setting-row setting-link" data-track="settings.polish-prompt"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-file-text" /></svg><span class="setting-label">Instructions</span><span class="setting-value">View</span><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></button>
         </section>
 
         <h2 class="overline settings-group-title">History</h2>
         <section class="card settings-group">
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-clock" /></svg><span class="setting-label">Keep takes for</span><span class="setting-number"><input id="retentionDays" type="number" min="1" max="365" step="1" class="input-native" aria-label="Keep takes for, in days"><span class="setting-unit">days</span></span></label>
-          <button id="cleanAll" type="button" class="setting-row setting-link setting-danger"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-trash-2" /></svg><span class="setting-label">Delete all takes…</span></button>
+          <button id="cleanAll" type="button" class="setting-row setting-link setting-danger" data-track="settings.delete-all"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-trash-2" /></svg><span class="setting-label">Delete all takes…</span></button>
         </section>
 
         <h2 class="overline settings-group-title">Display</h2>
         <section class="card settings-group">
           <div class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-type" /></svg><span class="setting-label">Text size</span>
-            <nav class="range-tabs" id="textSizeControl" aria-label="Text size">
-              <button type="button" class="range-tab" data-textsize="small">Small</button>
-              <button type="button" class="range-tab" data-textsize="default">Default</button>
-              <button type="button" class="range-tab" data-textsize="large">Large</button>
-            </nav>
+            <div class="segmented" id="textSizeControl" role="group" aria-label="Text size">
+              <button type="button" class="segmented-item" aria-pressed="false" data-textsize="small" data-track="settings.textsize-small">Small</button>
+              <button type="button" class="segmented-item" aria-pressed="true" data-textsize="default" data-track="settings.textsize-default">Default</button>
+              <button type="button" class="segmented-item" aria-pressed="false" data-textsize="large" data-track="settings.textsize-large">Large</button>
+            </div>
           </div>
         </section>
 
@@ -487,19 +487,19 @@
   <dialog id="takeSheet" class="detail-dialog take-sheet" aria-labelledby="takeSheetTitle">
     <div id="takeCard" class="detail-card take-card">
       <div class="detail-header">
-        <h2 id="takeSheetTitle">Take</h2>
+        <h2 id="takeSheetTitle" tabindex="-1" autofocus>Take</h2>
         <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <div id="takeSheetText" class="take-sheet-text" tabindex="0" aria-label="Full text"></div>
-      <button id="takeCopy" type="button" class="button-primary detail-save-btn take-sheet-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
-      <button id="takeRedo" type="button" class="take-sheet-action"><svg class="icon" aria-hidden="true"><use href="#i-rotate-cw" /></svg> Redo transcription</button>
+      <button id="takeCopy" type="button" class="button-primary detail-save-btn take-sheet-copy" data-track="take.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+      <button id="takeRedo" type="button" class="take-sheet-action" data-track="take.redo"><svg class="icon" aria-hidden="true"><use href="#i-rotate-cw" /></svg> Redo transcription</button>
       <div class="take-sheet-facts">
         <div class="row"><span>Length</span><span id="takeLength" class="take-sheet-value"></span></div>
         <div class="row"><span>Language</span><span id="takeLanguage" class="take-sheet-value"></span></div>
         <div class="row"><span>Source</span><span id="takeSource" class="take-sheet-value"></span></div>
         <div class="row"><span>Served by</span><span id="takeServedBy" class="take-sheet-value"></span></div>
       </div>
-      <button id="takeDelete" type="button" class="take-sheet-action take-sheet-delete"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> <span class="take-delete-label">Delete take</span></button>
+      <button id="takeDelete" type="button" class="button-tint danger detail-save-btn" data-track="take.delete"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> <span class="take-delete-label">Delete take</span></button>
     </div>
   </dialog>
 
@@ -508,7 +508,7 @@
   <dialog id="promptSheet" class="detail-dialog prompt-sheet" aria-labelledby="promptSheetTitle">
     <div class="detail-card">
       <div class="detail-header">
-        <h2 id="promptSheetTitle">Polish instructions</h2>
+        <h2 id="promptSheetTitle" tabindex="-1" autofocus>Polish instructions</h2>
         <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <p id="promptSheetNote" class="sheet-note"></p>
@@ -521,11 +521,11 @@
   <dialog id="deleteAllSheet" class="detail-dialog" aria-labelledby="deleteAllTitle">
     <div class="detail-card">
       <div class="detail-header">
-        <h2 id="deleteAllTitle">Delete all takes?</h2>
+        <h2 id="deleteAllTitle" tabindex="-1" autofocus>Delete all takes?</h2>
         <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <p class="sheet-note">Every saved recording and transcript on this PC is removed. This can't be undone.</p>
-      <button id="confirmDeleteAll" type="button" class="button-tint danger detail-save-btn"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes</button>
+      <button id="confirmDeleteAll" type="button" class="button-tint danger detail-save-btn" data-track="settings.delete-all-confirm"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes</button>
     </div>
   </dialog>
 

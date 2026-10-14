@@ -463,41 +463,6 @@ textarea.text-out.editable::placeholder {
 
 /* ---------- the Text card (#263) ---------- */
 .text-head { min-height: var(--row-sm); }
-/* The Transcript · Polished switch (design.md segmented): one neutral-soft
-   track, the selected segment raised on the card surface — the state is
-   the raised segment, never a colour. Segments are drawn at the control
-   height; ::before grows each target to 44px vertically only, so
-   neighbours never share a tappable pixel. */
-.segmented {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: var(--radius-md);
-  background: var(--neutral-soft);
-}
-.segment {
-  position: relative;
-  height: calc(var(--control-h) - 6px);
-  padding: 0 var(--gap);
-  border: 0;
-  border-radius: calc(var(--radius-md) - 3px);
-  background: transparent;
-  color: var(--ink);
-  font-family: var(--font);
-  font-size: var(--font-label);
-  font-weight: 600;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.segment::before {
-  content: "";
-  position: absolute;
-  inset: calc((var(--control-h) - 6px - var(--hit-min)) / 2) 0;
-}
-.segment[aria-pressed="true"] {
-  background: var(--card);
-  box-shadow: 0 1px 3px rgba(31, 35, 40, 0.18);
-}
 /* The take's facts under the text: body-sm in fg-muted. */
 .text-meta {
   margin: var(--space-sm) 0 0;
@@ -930,14 +895,6 @@ textarea.text-out.editable::placeholder {
   text-align: right;
   overflow-wrap: anywhere;
 }
-.take-sheet-delete {
-  margin-top: 0;
-  padding-top: var(--space-xs);
-  border-top: 1px solid var(--line-muted);
-  color: var(--danger-text);
-}
-/* Armed by the first tap: the label asks for the second. */
-.take-sheet-delete[data-armed] { font-weight: 700; }
 
 /* ---------- Settings (#265) ---------- */
 /* Inset groups under overline headers (design.md settings group): each
@@ -982,7 +939,6 @@ textarea.text-out.editable::placeholder {
 .settings-group .input-native,
 .settings-group .select-native { text-align: right; }
 .settings-group .select-native { padding-right: 10px; max-width: 55%; }
-.settings-group .range-tabs { margin: 0; }
 /* A small number keeps its own width with the unit beside it ("+12 dB"),
    rather than the 55% value column (design.md compact numeric field). */
 .setting-number { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }

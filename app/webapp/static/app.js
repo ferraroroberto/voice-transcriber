@@ -10,8 +10,9 @@
 
 import { initNavTabs } from './_vendored/nav/nav-tabs.js';
 import { setSwitch } from './_vendored/switch/switch.js';
+import { initUsageLog } from './_vendored/usage-log/usage-log.js';
 import { bindTextSize } from './_vendored/text-size/text-size.js';
-import { els, state, captureTokenFromURL } from './state.js';
+import { els, state, captureTokenFromURL, getStoredToken } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, isOn, renderTextCard, setTextView, shownText, showToast } from './ui.js';
 import { icon } from './_vendored/icons/icons.js';
@@ -45,6 +46,17 @@ import { onPolish, onReset, onSaveTranscript } from './polish.js';
 
 captureTokenFromURL();
 
+// Local-only view/tap log (#277): records which views and controls get used
+// (never text, names or audio details) into this app's own SQLite file. The
+// bearer token rides in a header because a phone on the tunnel is not
+// loopback; data-track ids on the controls feed it.
+const usage = initUsageLog({
+  headers: () => {
+    const tok = getStoredToken();
+    return tok ? { Authorization: 'Bearer ' + tok } : {};
+  },
+});
+
 init().catch(err => {
   console.error(err);
   showToast('Init failed: ' + err.message + ' — pull down to retry', 'error');
@@ -56,6 +68,7 @@ init().catch(err => {
 // this one. The stored tab is untouched, so a reload from Settings reopens
 // the last real tab (same shape as app-launcher's openSettings).
 function openSettings() {
+  usage.trackView('settings');
   document.querySelectorAll('main.app > section.pane').forEach((pane) => {
     pane.hidden = pane.id !== 'paneSettings';
   });
@@ -148,7 +161,7 @@ function bindEvents() {
   // Copy takes whichever version the Text card is showing.
   els.copyText.addEventListener('click', () => copyText(shownText(), els.copyText));
   els.textView.addEventListener('click', (e) => {
-    const seg = e.target.closest('.segment');
+    const seg = e.target.closest('.segmented-item');
     if (seg) setTextView(seg.dataset.view);
   });
 
@@ -175,6 +188,7 @@ function bindEvents() {
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',
     onChange: (tab) => {
+      usage.trackView(tab);
       document.getElementById('paneSettings').hidden = true;
       // History refreshes itself on open — no Refresh button (#264).
       if (tab === 'history') refreshHistory();

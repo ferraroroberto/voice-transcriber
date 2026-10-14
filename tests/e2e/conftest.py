@@ -58,6 +58,7 @@ import signal
 import socket
 import subprocess
 import sys
+import tempfile
 import time
 import urllib3
 from pathlib import Path
@@ -154,7 +155,15 @@ def _spawn(cmd: list[str], log: IO[str]) -> subprocess.Popen:
         cwd=str(_REPO_ROOT),
         stdout=log,
         stderr=subprocess.STDOUT,
-        env={**os.environ, "PYTHONIOENCODING": "utf-8", "PYTHONUTF8": "1"},
+        env={
+            **os.environ,
+            "PYTHONIOENCODING": "utf-8",
+            "PYTHONUTF8": "1",
+            # Taps the suite makes must not land in the real usage log (#277).
+            "VT_USAGE_DB_PATH": str(
+                Path(tempfile.gettempdir()) / f"vt-e2e-usage-{os.getpid()}.sqlite3"
+            ),
+        },
     )
     if sys.platform == "win32":
         # New process group so we can deliver CTRL_BREAK for a clean stop;

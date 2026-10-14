@@ -266,6 +266,7 @@ voice-transcriber/
 │   ├── archive.py                 # dated session folders + 30-day cleanup
 │   ├── activity_log.py            # SQLite events log, 365-day retention
 │   ├── analytics.py               # today's take count / wpm / time-saved
+│   ├── usage_log.py               # vendored: local view/tap usage log (router + SQLite)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
 │   ├── vocabulary.py              # per-language vocab prompts + hot-reload
 │   ├── snippets.py                # word-boundary keyword expansion + hot-reload
@@ -323,7 +324,7 @@ voice-transcriber/
 │           ├── polish.js          # polish-text UI flow
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (base · nav · home-head · toast · text-size · range-tab · icons · card · switch · select-native · modal · empty-state · button)
+│                                  #   (base · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -804,6 +805,21 @@ something failed after its archive folder is long gone: `GET
 `limit` query params, newest first) returns the raw event trail. No
 dedicated UI page for it yet — it's an API, curl or open it in a
 browser.
+
+#### Usage log
+
+The app records which views and controls get used, and on which device
+class, so a design review reads real frequency instead of asking. The
+vendored `usage-log` client posts batched events to this app's own origin
+only; the vendored `src/usage_log.py` router stores them in
+`usage.sqlite3` beside the activity log (same runtime-data directory,
+override with `VT_USAGE_DB_PATH`). It sits behind the same bearer-token
+gate as every other `/api` route. Controls opt in with a constant
+`data-track="<id>"`; each tab and Settings is reported as a view. Never
+recorded: transcripts, file names, audio details, query strings, IPs or
+the raw user-agent (only event kind, view or control id, a per-visit
+session id, device class and timestamps). `GET /api/usage/summary`
+returns the counts.
 
 **Select** (on the first day's heading) turns the list into a picker:
 tapping a row ticks it instead of copying it, and a bar at the bottom

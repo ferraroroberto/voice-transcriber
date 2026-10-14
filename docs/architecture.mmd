@@ -63,7 +63,7 @@ flowchart TB
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
     EVENTLOOP["event_loop.py\nselector event-loop shim — every uvicorn spawn of\napp.webapp.server:app picks it (fixes the :8443 wedge, issue #113)"]
     STATIC["static/\nindex.html (Record · History tabs, Settings via the header gear) · app.js ·\nrecorder.js (record/upload/finish) · level.js (VU+VAD) ·\npartials.js (rolling SSE) · wakelock.js · api.js · state.js ·\nui.js · history.js · polish.js · styles.css (fleet tokens, light+dark)"]
-    VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nbase · nav · home-head · toast · text-size · range-tab · icons · card · switch · select-native · modal · empty-state · button"]
+    VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nbase · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button"]
   end
   WEBSERVER --> ROUTERS
   WEBSERVER --> MIDDLEWARE
@@ -84,6 +84,7 @@ flowchart TB
     ACTIVITYLOG["activity_log.py\nSQLite events log, 365-day retention —\nsurvives the archive's 30-day prune"]
     ANALYTICS["analytics.py\ntoday's take count / wpm / time-saved,\nread from activity_log"]
     RUNTIMEDATA["runtime_data.py\nresolves the activity DB path: VT_ACTIVITY_DB_PATH ->\nVOICE_TRANSCRIBER_DATA_DIR -> FLEET_DATA_ROOT ->\nC:/sqlite default (project-scaffolding#243)"]
+    USAGELOG["usage_log.py (vendored)\nlocal view/tap usage log: POST /api/usage/events,\nGET /api/usage/summary"]
     WEBAPPCFG["webapp_config.py\ntyped loader, config/webapp_config.json"]
     VOCAB["vocabulary.py"]
     SNIPPETS["snippets.py"]
@@ -120,6 +121,8 @@ flowchart TB
   ROUTERS --> ANALYTICS
   ANALYTICS --> ACTIVITYLOG
   ACTIVITYLOG --> RUNTIMEDATA
+  ROUTERS --> USAGELOG
+  USAGELOG --> RUNTIMEDATA
   ROUTERS --> WEBAPPCFG
   ROUTERS --> POLISH
   ROUTERS --> VOCAB
@@ -164,8 +167,10 @@ flowchart TB
 
   subgraph runtimeroot["C:/sqlite (fleet runtime-data root, outside the git checkout)"]
     ACTIVITYDB["voice-transcriber/activity.sqlite3\nevents table — outlives SESSIONS' 30-day prune"]
+    USAGEDB["voice-transcriber/usage.sqlite3\nview/tap events, device class only"]
   end
   RUNTIMEDATA --> ACTIVITYDB
+  RUNTIMEDATA --> USAGEDB
 
   subgraph tests["tests/ — pytest + Playwright e2e"]
     UNITTESTS["test_*.py — src/ + webapp routes + auth"]

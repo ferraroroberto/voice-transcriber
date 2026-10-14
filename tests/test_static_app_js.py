@@ -272,8 +272,8 @@ class TestHistoryButtonEmphasis:
         """A take is an action-row (design.md): tapping the body copies it and
         one overflow button opens the take sheet. The row builds no per-row
         button strip; in the sheet Copy is the one primary and Delete comes
-        last as unfilled danger text, confirmed by a second tap rather than
-        the browser's confirm() (#213, #261)."""
+        last as the outlined destructive button (unfilled at rest), confirmed
+        by a second tap rather than the browser's confirm() (#213, #261, #281)."""
         assert "main.className = 'history-main';" in app_js
         assert "more.className = 'icon-button history-more';" in app_js
         assert "button-ghost compact history-copy" not in app_js
@@ -284,7 +284,8 @@ class TestHistoryButtonEmphasis:
         order = ['id="takeSheetText"', 'id="takeCopy"', 'id="takeRedo"', 'id="takeServedBy"', 'id="takeDelete"']
         assert [body.index(i) for i in order] == sorted(body.index(i) for i in order)
         assert body.count("button-primary") == 1
-        assert 'id="takeDelete" type="button" class="take-sheet-action take-sheet-delete"' in body
+        assert re.search(r'id="takeDelete"[^>]*class="button-tint danger detail-save-btn"', body)
+        assert "take-sheet-delete" not in body
         assert "confirm('Delete this take?')" not in app_js
 
     def test_source_badge_has_one_style_for_every_source(

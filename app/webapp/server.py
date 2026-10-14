@@ -49,7 +49,9 @@ from src import build_transcription_client, load_app_config
 from src import activity_log
 from src.archive import SessionArchive
 from src.polish import PolishClient
+from src.runtime_data import runtime_db_path
 from src.static_versioning import BuildInfo
+from src.usage_log import usage_router
 from src.webapp_config import WebappConfig, load_webapp_config
 from src.whisper_server import WhisperServerManager
 
@@ -238,6 +240,16 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(activity.router)
     app.include_router(analytics.router)
+    # Local-only view/tap log (#277): the vendored usage_router stores
+    # events in this app's runtime-data SQLite file and sits behind the
+    # same bearer-token middleware as every other /api route. The env var
+    # is the highest-precedence override, as for the activity log.
+    app.include_router(usage_router(
+        runtime_db_path(
+            "voice-transcriber", "usage.sqlite3",
+            env_var="VT_USAGE_DB_PATH", create=True,
+        ),
+    ))
 
     logger.info(
         f"ℹ️  webapp build {BUILD_INFO.git_sha} "
