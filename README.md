@@ -786,6 +786,32 @@ baseline; both figures are estimates, not precise measurements). It
 reads `📊 No takes yet today` until the first completed take of the
 day. See issue #95.
 
+**Select** (on the first day's heading) turns the list into a picker:
+tapping a row ticks it instead of copying it, and a bar at the bottom
+offers **Copy**, which joins the picked takes' full text oldest first
+with a blank line between them, and **Cancel**. **Settings › History ›
+Delete all takes…** deletes every saved recording after a confirmation
+sheet.
+
+Each row follows the fleet's action-row pattern — the time on the left,
+the take in the middle, one overflow button on the right:
+
+- **Tap the row** — copies the full text from disk (not the 200-char
+  preview the list payload carries) and flashes *Copied* on the row.
+- **⋮ sheet** — the take's full text with one **Copy**; *Redo
+  transcription* re-runs whisper on the saved raw audio (useful when a
+  phone died mid-record and you want to pull the transcript afterwards);
+  the take's facts (*Length*, *Language*, *Source*, *Served by*); and
+  *Delete take* last, as red text: the first tap turns it into *Tap again
+  to delete*, the second calls `DELETE /api/sessions/{id}` to remove that
+  one take. Cleaner than deleting every take.
+
+Every tab's header carries one live line beside its title: Record shows
+the dictation language, or the one exception that applies (in order:
+*Transcription offline*, Incognito, the Translate route, *Polish
+unavailable*); History shows *N takes · kept D days*; Settings shows *All
+services up* or names the first failing service.
+
 #### Persistent activity log
 
 Unlike `archive/` (pruned after 30 days), every session-lifecycle event
@@ -820,32 +846,6 @@ recorded: transcripts, file names, audio details, query strings, IPs or
 the raw user-agent (only event kind, view or control id, a per-visit
 session id, device class and timestamps). `GET /api/usage/summary`
 returns the counts.
-
-**Select** (on the first day's heading) turns the list into a picker:
-tapping a row ticks it instead of copying it, and a bar at the bottom
-offers **Copy**, which joins the picked takes' full text oldest first
-with a blank line between them, and **Cancel**. **Settings › History ›
-Delete all takes…** deletes every saved recording after a confirmation
-sheet.
-
-Each row follows the fleet's action-row pattern — the time on the left,
-the take in the middle, one overflow button on the right:
-
-- **Tap the row** — copies the full text from disk (not the 200-char
-  preview the list payload carries) and flashes *Copied* on the row.
-- **⋮ sheet** — the take's full text with one **Copy**; *Redo
-  transcription* re-runs whisper on the saved raw audio (useful when a
-  phone died mid-record and you want to pull the transcript afterwards);
-  the take's facts (*Length*, *Language*, *Source*, *Served by*); and
-  *Delete take* last, as red text: the first tap turns it into *Tap again
-  to delete*, the second calls `DELETE /api/sessions/{id}` to remove that
-  one take. Cleaner than deleting every take.
-
-Every tab's header carries one live line beside its title: Record shows
-the dictation language, or the one exception that applies (in order:
-*Transcription offline*, Incognito, the Translate route, *Polish
-unavailable*); History shows *N takes · kept D days*; Settings shows *All
-services up* or names the first failing service.
 
 ### Bearer-token auth (required for the tunnel)
 
