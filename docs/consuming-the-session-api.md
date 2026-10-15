@@ -15,9 +15,10 @@ First consumer: **grocery-shopping-automation**'s Audio Audit
 (companion issue `ferraroroberto/grocery-shopping-automation#30`).
 
 > **Contract status.** The `/api/sessions*` routes documented here are
-> a **stable contract**. Breaking changes are recorded in the
-> [Changelog](#changelog) at the bottom of this file. Pin the build you
-> tested against via `GET /api/version` (`git_sha`) if you need
+> a **stable contract**, kept current with the sections above rather
+> than a separate changelog — history lives in `git log --
+> app/webapp/routers/sessions.py` and the issue/PR trail. Pin the build
+> you tested against via `GET /api/version` (`git_sha`) if you need
 > certainty across upgrades.
 
 ---
@@ -206,13 +207,19 @@ Response:
   "session_id": "14-32-07-a1b2c3d4",
   "transcript": "the canonical text",
   "language": "en",
-  "from_partial": true
+  "from_partial": true,
+  "served_model": "Parakeet",
+  "served_host": "Mac Mini M4"
 }
 ```
 
 `from_partial` is present and `true` when the last rolling partial
-already covered the whole take, so whisper was not re-run. On
-**near-silent** audio the response is instead:
+already covered the whole take, so whisper was not re-run.
+`served_model`/`served_host` (#156) are the humanized hub backend/host
+that served the transcription (e.g. a raw `mac-mini-m4` becomes `Mac
+Mini M4`); both are `null` when nothing was recorded. They're also
+persisted onto the take's meta (#261), so `GET /api/sessions` rows carry
+the same two fields. On **near-silent** audio the response is instead:
 
 ```json
 { "session_id": "...", "transcript": "", "language": "en", "silent": true, "dbfs": -57.3 }
@@ -261,8 +268,10 @@ after the fact. Same query params and response shape as `/finish`.
 - `GET /api/sessions?limit=10&offset=0` → `{sessions: [...], total, has_more, offset, limit}`
   — history list with per-session metadata + previews. Each session
   entry carries its `source` (see [History attribution](#history-attribution))
-  alongside `created_at`, `language`, and the transcript/polished previews.
-  `has_more` is the authoritative "another page exists" flag — the server
+  and the `served_model`/`served_host` pair `/finish` returns (`null`
+  when nothing was recorded) alongside `created_at`, `language`, and the
+  transcript/polished previews. `has_more` is the authoritative
+  "another page exists" flag — the server
   derives it from an incognito-aware one-row-over probe, so page on it
   rather than on `offset + len(sessions) < total`. `total` is a **cheap
   folder count** kept O(directory-walk) so the list stays fast as the
@@ -395,8 +404,11 @@ indistinguishable from a manual one:
 - A create with no `source` defaults to `"api"`.
 
 `source` is surfaced in `GET /api/sessions` (per-session field) and in
-the webapp's History panel as a small badge, one muted pill style for
-every source.
+the webapp's History panel as plain meta text beside the word count and
+duration (e.g. `61 words · 0:27 · app-launcher`) — `"webapp"` renders as
+*This app*, and the generic `"api"` fallback is hidden from the row
+entirely since it names the transport rather than the caller; a take's
+own sheet still shows it verbatim.
 
 The guarantee is **attribution, not retention exemption**: an
 attributed take still obeys the 30-day retention window and the
@@ -500,32 +512,7 @@ with httpx.Client(base_url=BASE, verify=False, timeout=None) as c:
 | `502` | whisper transcription error | |
 | `503` | ffmpeg not installed | install ffmpeg, retry |
 
----
-
-## Changelog
-
-Breaking changes to the `/api/sessions*` contract are recorded here.
-Pin a build via `GET /api/version` (`git_sha`) if you need certainty.
-
-- **2026-07-17** — `GET /api/sessions` gains a `has_more` boolean in the
-  response — the authoritative pagination signal (see the list section).
-  The list/count internals were rewritten to page lazily instead of
-  hydrating every session per request, so History load time no longer
-  grows with the archive (issue #139). Additive — existing `total`/
-  `sessions`/`offset`/`limit` fields are unchanged; `total` is now a
-  cheap folder count that may run slightly high when incognito takes
-  linger on disk.
-- **2026-06-12** — `POST /api/sessions` accepts an optional `source`
-  label (caller self-identification, e.g. `"app-launcher"`; defaults to
-  `"api"`), echoed in the create response and surfaced per-session in
-  `GET /api/sessions` and the History UI badge. Blesses History as the
-  attributable single-source-of-truth for cross-fleet transcription
-  (issue #59). Additive — existing callers are unaffected.
-- **2026-06-11** — `GET /api/sessions` gains optional `days`/`since`
-  date-window params; new `GET /api/sessions/transcripts` bulk
-  full-transcript export over the same window. Additive — existing
-  callers are unaffected. Blesses transcript mining as a supported
-  downstream use-case (issue #60, for hub miner #94).
-- **2026-06-11** — Initial publication of the session API as a supported
-  consumable surface (issue #57). No behavioural change; the routes
-  already worked over loopback.
+For the contract's history — what changed, when, and why — see `git log
+-- app/webapp/routers/sessions.py` and the closing issue/PR for each
+change; pin the build you integration-tested against via `GET
+/api/version` (`git_sha`).
