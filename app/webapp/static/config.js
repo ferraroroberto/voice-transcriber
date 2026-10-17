@@ -224,7 +224,7 @@ export function renderRecordHeadLine() {
   } else if (isOn(els.incognitoToggle)) {
     setHeadLine(els.recordHeadLine, "Incognito: not saved", 'neutral');
   } else if (isOn(els.translateToggle)) {
-    setHeadLine(els.recordHeadLine, `${language} → English`, 'attention');
+    setHeadLine(els.recordHeadLine, `${language} to English`, 'attention');
   } else if (s && !s.llm_hub.reachable) {
     setHeadLine(els.recordHeadLine, 'Polish unavailable', 'attention');
   } else {

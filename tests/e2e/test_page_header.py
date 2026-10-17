@@ -109,8 +109,10 @@ def test_header_line_names_only_exceptions_and_never_wraps(
     expect(authed_page.locator("#settingsHeadLine")).to_have_text("All services up")
     authed_page.click("#translateToggle")
     authed_page.click("#tabRecord")
-    expect(line).to_have_text(f"{language} → English")
+    expect(line).to_have_text(f"{language} to English")
     expect(line).to_have_attribute("data-tone", "attention")
+    _assert_one_row(authed_page, "#paneRecord")
+    assert line.evaluate("el => el.scrollWidth <= el.clientWidth")
 
     status["reply"] = _DOWN
     authed_page.click("#paneRecord .home-settings")
