@@ -12,6 +12,7 @@
 
 import { els, state } from './state.js';
 import { formatBytes, isOn } from './ui.js';
+import { silenceTriggerMs } from './vad.js';
 
 export function setupLevelMeter(stream, onAutoStop) {
   try {
@@ -65,8 +66,7 @@ function maybeFireAutoStop(loudness, threshold, onAutoStop) {
   // Pillar 3 — client-side VAD auto-stop. The toggle in the Settings
   // panel is the live source of truth (like the existing Translate /
   // Append / Incognito toggles): flip it and the next take honours
-  // it without tapping Save. Save persists the choice as the default
-  // for fresh page loads.
+  // it. Settings apply instantly, so there is no Save button.
   const enabled = isOn(els.vadAutoStopToggle);
   if (!enabled) return;
   if (state.mode !== 'recording' || state.vadStopFired) return;
@@ -74,9 +74,7 @@ function maybeFireAutoStop(loudness, threshold, onAutoStop) {
   // Ignore the first ~600 ms — the AnalyserNode warms up and a fresh
   // mic stream can flat-line briefly before audio reaches it.
   if (now - state.startedAt < 600) return;
-  const trigger = parseInt(
-    (els.autoStopSilenceMs && els.autoStopSilenceMs.value) || '1500', 10,
-  ) || 1500;
+  const trigger = silenceTriggerMs(state.config);
   if (loudness > threshold) {
     if (state.vadSilenceSince) state.vadSilenceSince = 0;
     // Live peak readout — once a second so the user can see the mic
