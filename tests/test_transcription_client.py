@@ -21,6 +21,7 @@ from src.transcription_client import (
     _flatten,
     build_transcription_client,
     samples_to_wav_bytes,
+    transcription_unavailable_reason,
 )
 
 
@@ -367,3 +368,41 @@ class TestBuildTranscriptionClient:
         assert c.base_url == "http://hub:8000"
         assert c.fallback_base_url == "http://whisper:8090"
         assert c.translate_base_url == "http://tr:8091"
+
+
+class TestTranscriptionUnavailableReason:
+    """The shared record gate (#283): hub reachable OR local whisper running."""
+
+    @staticmethod
+    def _cfg() -> AppConfig:
+        return AppConfig(transcribe_base_url="http://hub:8000")
+
+    def test_hub_up_whisper_down_is_available(self, mocker):
+        mocker.patch("src.transcription_client.requests.get")
+        assert transcription_unavailable_reason(self._cfg(), False) is None
+
+    def test_whisper_up_hub_down_is_available(self, mocker):
+        get = mocker.patch(
+            "src.transcription_client.requests.get",
+            side_effect=requests.ConnectionError("refused"),
+        )
+        assert transcription_unavailable_reason(self._cfg(), True) is None
+        get.assert_not_called()  # a running whisper needs no hub probe
+
+    def test_both_down_names_both(self, mocker):
+        mocker.patch(
+            "src.transcription_client.requests.get",
+            side_effect=requests.ConnectionError("refused"),
+        )
+        reason = transcription_unavailable_reason(self._cfg(), False)
+        assert reason is not None
+        assert "http://hub:8000" in reason and "unreachable" in reason
+        assert "whisper-server is not running" in reason
+
+    def test_a_non_200_hub_answer_still_counts_as_reachable(self, mocker):
+        # The client only falls back on a transport failure, so a hub that
+        # answers (even 5xx) is the endpoint that will serve the request.
+        resp = MagicMock(spec=requests.Response)
+        resp.status_code = 503
+        mocker.patch("src.transcription_client.requests.get", return_value=resp)
+        assert transcription_unavailable_reason(self._cfg(), False) is None

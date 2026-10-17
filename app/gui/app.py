@@ -34,6 +34,7 @@ from src import (
     resolve_iso,
     TranscriptionError,
     build_transcription_client,
+    transcription_unavailable_reason,
 )
 from src.gain import MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
 from src.recording_pipeline import finalize_transcript, handle_take
@@ -394,12 +395,11 @@ class TranscriberApp:
             self._current_recorder.request_stop()
             return
 
-        status = self.server.status()
-        if not status.running:
-            messagebox.showwarning(
-                "Server not running",
-                "Start the whisper-server first (▶ Start server).",
-            )
+        reason = transcription_unavailable_reason(
+            self.config, self.server.status().running
+        )
+        if reason:
+            messagebox.showwarning("Transcription unavailable", reason)
             return
 
         recorder = AudioRecorder(
@@ -514,9 +514,11 @@ class TranscriberApp:
     # ---------------------------------------------------------- file flow
 
     def _transcribe_file_dialog(self) -> None:
-        status = self.server.status()
-        if not status.running:
-            messagebox.showwarning("Server not running", "Start the whisper-server first.")
+        reason = transcription_unavailable_reason(
+            self.config, self.server.status().running
+        )
+        if reason:
+            messagebox.showwarning("Transcription unavailable", reason)
             return
         path = filedialog.askopenfilename(
             title="Select audio file",

@@ -265,6 +265,38 @@ def build_transcription_client(
     )
 
 
+def hub_reachable(base_url: str, timeout: float = 2.0) -> bool:
+    """Whether the transcribe endpoint answers at all.
+
+    Mirrors the client's own fallback rule: only a *transport* failure sends
+    it to the local whisper-server, so any HTTP response (even an error)
+    means the hub is the one that will serve the request.
+    """
+    try:
+        requests.get(base_url.rstrip("/") + "/v1/models", timeout=timeout)
+        return True
+    except requests.RequestException:
+        return False
+
+
+def transcription_unavailable_reason(
+    config: AppConfig, whisper_running: bool
+) -> Optional[str]:
+    """Why a record/transcribe attempt cannot work right now, else ``None``.
+
+    The record gate shared by the tray, tk window and CLI. Transcription is
+    hub-first with the local whisper-server as fallback, so it is unavailable
+    only when *both* are down — the same rule the webapp applies. When both
+    are down the message names both.
+    """
+    if whisper_running or hub_reachable(config.transcribe_base_url):
+        return None
+    return (
+        f"The transcription hub ({config.transcribe_base_url}) is unreachable "
+        "and the local whisper-server is not running."
+    )
+
+
 # --------------------------------------------------------------------- helpers
 
 

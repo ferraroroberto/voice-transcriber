@@ -52,6 +52,7 @@ from src import (
     AudioRecorder,
     TranscriptionClient,
     build_transcription_client,
+    transcription_unavailable_reason,
 )
 from src.inject import paste_at_caret
 from src.mic_glyph import draw_mic
@@ -380,9 +381,11 @@ class TrayApp:
             self._current_recorder.request_stop()
             return
 
-        status = self.services.server.status()
-        if not status.running:
-            self._notify("Server not running", "Start the whisper-server from the tray menu first.")
+        reason = transcription_unavailable_reason(
+            self.config, self.services.server.status().running
+        )
+        if reason:
+            self._notify("Transcription unavailable", reason)
             return
 
         recorder = AudioRecorder(
