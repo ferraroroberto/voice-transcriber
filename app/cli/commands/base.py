@@ -12,7 +12,7 @@ from typing import Optional, Tuple
 # Third-party imports
 import pyperclip
 
-from src import AppConfig, resolve_iso
+from src import AppConfig, resolve_iso, transcription_unavailable_reason
 from src.whisper_server import OWNERSHIP_OURS, ServerStatus, WhisperServerManager
 
 logger = logging.getLogger(__name__)
@@ -67,19 +67,24 @@ class BaseCommand(ABC):
         spawned_here = False
         status = manager.status()
         if not status.running:
-            if not (args.start_server or self.config.auto_start_server):
-                logger.error(
-                    f"❌ Whisper server is not running at {status.base_url}. "
-                    "Pass --start-server or set auto_start_server:true in config."
-                )
-                return None
-            try:
-                manager.start()
-                spawned_here = True
-            except RuntimeError as e:
-                logger.error(str(e))
-                return None
-            status = manager.status()
+            if args.start_server or self.config.auto_start_server:
+                try:
+                    manager.start()
+                    spawned_here = True
+                except RuntimeError as e:
+                    logger.error(str(e))
+                    return None
+                status = manager.status()
+            else:
+                # Hub-first transcription: the local server is only the
+                # fallback, so a reachable hub is enough to proceed.
+                reason = transcription_unavailable_reason(self.config, False)
+                if reason:
+                    logger.error(
+                        f"❌ {reason} (whisper-server expected at {status.base_url}). "
+                        "Pass --start-server or set auto_start_server:true in config."
+                    )
+                    return None
         return manager, spawned_here, status
 
     def _release_server(self, manager: WhisperServerManager, spawned_here: bool) -> None:

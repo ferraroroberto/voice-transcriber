@@ -27,6 +27,7 @@ from .transcription_client import (
     TranscriptionClient,
     TranscriptionError,
     build_transcription_client,
+    transcription_unavailable_reason,
 )
 
 __all__ = [
@@ -42,6 +43,7 @@ __all__ = [
     "TranscriptionError",
     "WHISPER_LANGUAGES",
     "build_transcription_client",
+    "transcription_unavailable_reason",
     "resolve_iso",
     "app_log_handler",
     "attach_app_log_handler",
