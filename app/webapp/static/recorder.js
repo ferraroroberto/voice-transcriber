@@ -126,22 +126,29 @@ async function startRecording() {
   await cleanupIncognitoSession();
 
   const incognito = isOn(els.incognitoToggle);
-  const sessionRes = await authFetch('/api/sessions', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({
-      language: els.languageSelect.value,
-      incognito,
-      source: 'webapp',
-    }),
-  });
-  if (!sessionRes.ok) {
+  let session;
+  try {
+    const sessionRes = await authFetch('/api/sessions', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        language: els.languageSelect.value,
+        incognito,
+        source: 'webapp',
+      }),
+    });
+    if (!sessionRes.ok) throw new Error(`HTTP ${sessionRes.status}`);
+    session = await sessionRes.json();
+  } catch (err) {
+    // A rejected fetch (tunnel blip) must not leave the mode on
+    // 'starting' — onRecordToggle only acts on idle/recording (#283).
+    console.warn('creating the session failed:', err);
     stream.getTracks().forEach(t => t.stop());
     setMode('idle');
+    els.recordStatus.textContent = '';
     showToast('Could not create session', 'error');
     return;
   }
-  const session = await sessionRes.json();
   state.sessionId = session.session_id;
   if (incognito) state.incognitoSessionId = session.session_id;
 
