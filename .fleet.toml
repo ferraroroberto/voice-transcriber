@@ -45,9 +45,9 @@ select-native = { src = "app/webapp/static/_vendored/select-native", sha = "4c69
 switch = { src = "app/webapp/static/_vendored/switch", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/switch" }
 button = { src = "app/webapp/static/_vendored/button", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/button" }
 modal = { src = "app/webapp/static/_vendored/modal", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/modal" }
-icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/icon-button" }
+icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "79cf814d3e1cc6b6a6880929718a097619729a21", dest = "app/webapp/static/_vendored/icon-button" }
 empty-state = { src = "app/webapp/static/_vendored/empty-state", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/empty-state" }
-segmented = { src = "app/webapp/static/_vendored/segmented", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/segmented" }
+segmented = { src = "app/webapp/static/_vendored/segmented", sha = "79cf814d3e1cc6b6a6880929718a097619729a21", dest = "app/webapp/static/_vendored/segmented" }
 usage-log = { src = "app/webapp/static/_vendored/usage-log", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/usage-log" }
 usage_log = { src = "src/usage_log.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "src/usage_log.py" }
 
