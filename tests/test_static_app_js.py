@@ -16,8 +16,10 @@ behaviour from the Python side too:
 from __future__ import annotations
 
 # Standard library imports
+import json
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 # Third-party imports
@@ -324,6 +326,39 @@ class TestNeutralToast:
     ):
         assert "from './_vendored/toast/toast.js'" in app_js
         assert "'success'" not in app_js
+
+
+class TestAutoStopSilenceLength:
+    """Settings › Sound › Silence length must drive the VAD auto-stop
+    trigger (#283). The control was renamed in #265 and the stale DOM
+    lookup silently fell back to 1500 ms."""
+
+    def test_level_reads_the_stored_value_not_a_dom_key(self):
+        level = (STATIC_DIR / "level.js").read_text(encoding="utf-8")
+        assert "silenceTriggerMs(state.config)" in level
+        assert "autoStopSilenceMs" not in level
+
+    def test_trigger_follows_the_stored_silence_length(self):
+        node = shutil.which("node")
+        if node is None:
+            pytest.skip("Node.js not on PATH")
+        script = (
+            "import { silenceTriggerMs } from './vad.js';"
+            "console.log(JSON.stringify(["
+            "silenceTriggerMs({auto_stop_silence_ms: 3000}),"
+            "silenceTriggerMs({auto_stop_silence_ms: 700}),"
+            "silenceTriggerMs({}),"
+            "silenceTriggerMs(null),"
+            "silenceTriggerMs({auto_stop_silence_ms: 0})]));"
+        )
+        result = subprocess.run(
+            [node, "--input-type=module", "-e", script],
+            cwd=str(STATIC_DIR),
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 0, result.stderr
+        assert json.loads(result.stdout) == [3000, 700, 1500, 1500, 1500]
 
 
 # ---------------------------------------------------------------------------
