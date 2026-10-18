@@ -69,6 +69,7 @@ import requests
 from playwright.sync_api import BrowserContext, Page
 
 from app.webapp.event_loop import LOOP_FACTORY
+from src.runtime_data import app_dir_env_var
 from tests.e2e._e2e_live_guard import require_disposable_instance
 
 logger = logging.getLogger(__name__)
@@ -150,20 +151,31 @@ def _cert_paths() -> Optional[tuple[Path, Path]]:
     return (cert, key) if cert.exists() and key.exists() else None
 
 
+def _spawn_env() -> dict[str, str]:
+    """The child's environment, with every runtime-data path off the real folder."""
+    return {
+        **os.environ,
+        "PYTHONIOENCODING": "utf-8",
+        "PYTHONUTF8": "1",
+        # Taps the suite makes must not land in the real usage log (#277).
+        "VT_USAGE_DB_PATH": str(
+            Path(tempfile.gettempdir()) / f"vt-e2e-usage-{os.getpid()}.sqlite3"
+        ),
+        # A per-file override covers only the file it names; the directory
+        # variable catches every file the app resolves through runtime_data
+        # (the activity log leaked into the real folder without it, #295).
+        app_dir_env_var("voice-transcriber"): tempfile.mkdtemp(
+            prefix="vt-e2e-data-"
+        ),
+    }
+
+
 def _spawn(cmd: list[str], log: IO[str]) -> subprocess.Popen:
     kwargs: dict = dict(
         cwd=str(_REPO_ROOT),
         stdout=log,
         stderr=subprocess.STDOUT,
-        env={
-            **os.environ,
-            "PYTHONIOENCODING": "utf-8",
-            "PYTHONUTF8": "1",
-            # Taps the suite makes must not land in the real usage log (#277).
-            "VT_USAGE_DB_PATH": str(
-                Path(tempfile.gettempdir()) / f"vt-e2e-usage-{os.getpid()}.sqlite3"
-            ),
-        },
+        env=_spawn_env(),
     )
     if sys.platform == "win32":
         # New process group so we can deliver CTRL_BREAK for a clean stop;
