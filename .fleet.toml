@@ -49,7 +49,7 @@ icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "79cf814d
 empty-state = { src = "app/webapp/static/_vendored/empty-state", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/empty-state" }
 segmented = { src = "app/webapp/static/_vendored/segmented", sha = "79cf814d3e1cc6b6a6880929718a097619729a21", dest = "app/webapp/static/_vendored/segmented" }
 usage-log = { src = "app/webapp/static/_vendored/usage-log", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/usage-log" }
-usage_log = { src = "src/usage_log.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "src/usage_log.py" }
+usage_log = { src = "src/usage_log.py", sha = "a457e41cd3004d8b9493408498eb9e3d51cdc9c3", dest = "src/usage_log.py" }
 
 # Diff-proportionate e2e routing (project-scaffolding docs/e2e-routing.md).
 # Rules are evaluated top-to-bottom; first match wins. Unmatched paths fall
