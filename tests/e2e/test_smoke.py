@@ -11,6 +11,8 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests.e2e._surface import surface
+
 pytestmark = pytest.mark.smoke
 
 
@@ -76,6 +78,7 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
     }""")
     assert fill == accent, (fill, accent)
     expect(authed_page.locator("#modelRoute")).to_have_count(0)
+    surface(authed_page, "record.idle")
 
 
 def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None:
@@ -106,6 +109,7 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     expect(page.locator("#textVerbs")).to_be_visible()
     expect(page.locator("#saveTranscript")).to_be_visible()
     expect(page.locator("#textMeta")).to_have_text("5 words")
+    surface(page, "record.text")
 
     page.click("#polishBtn")
     expect(page.locator("#textView")).to_be_visible()
@@ -119,6 +123,7 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
         return shown;
     }""")
     assert copied == "polished"
+    surface(page, "record.text-polished")
 
     page.click('#textView .segmented-item[data-view="transcript"]')
     expect(page.locator("#transcript")).to_have_value("uh so an invented sentence")
@@ -142,6 +147,7 @@ def test_settings_gear_opens_settings(authed_page: Page, base_url: str) -> None:
     authed_page.click("#paneRecord .home-settings")
     expect(panel).to_be_visible()
     expect(authed_page.locator("#paneRecord")).to_be_hidden()
+    surface(authed_page, "settings.pane")
     authed_page.click("#tabRecord")
     expect(panel).to_be_hidden()
     expect(authed_page.locator("#paneRecord")).to_be_visible()
@@ -201,6 +207,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     page.click("#cleanAll")
     sheet = page.locator("#deleteAllSheet")
     expect(sheet).to_be_visible()
+    surface(page, "settings.delete-all-sheet")
     sheet.locator(".detail-close").click()
     expect(sheet).to_be_hidden()
     assert deletes == []
@@ -224,8 +231,24 @@ def test_login_dialog_dom_present(authed_page: Page, base_url: str) -> None:
     expect(pw).to_be_editable()
     pw.fill("dummy")
     expect(pw).to_have_value("dummy")
+    surface(authed_page, "login.dialog")
     # Esc is suppressed (api.js cancel handler): a closed gate != unlocked app.
     authed_page.keyboard.press("Escape")
     expect(dialog).to_be_visible()
     authed_page.evaluate("document.getElementById('loginOverlay').close()")
     expect(dialog).to_be_hidden()
+
+
+def test_polish_prompt_sheet_opens_from_settings(authed_page: Page, base_url: str) -> None:
+    """Settings › Polish › Instructions shows the prompt a Polish sends in a
+    sheet (#265): it names the chosen style and closes from its x."""
+    _navigate_collecting_errors(authed_page, base_url)
+    authed_page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
+    authed_page.click("#paneRecord .home-settings")
+    authed_page.click("#openPromptSheet")
+    sheet = authed_page.locator("#promptSheet")
+    expect(sheet).to_be_visible()
+    expect(authed_page.locator("#promptSheetNote")).to_contain_text("Style:")
+    surface(authed_page, "settings.prompt-sheet")
+    sheet.locator(".detail-close").click()
+    expect(sheet).to_be_hidden()

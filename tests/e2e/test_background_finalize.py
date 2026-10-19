@@ -24,6 +24,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e._helpers import mock_session_apis, start_recording
+from tests.e2e._surface import surface
 
 pytestmark = [pytest.mark.smoke, pytest.mark.desktop_only]
 
@@ -42,6 +43,7 @@ def test_visibility_hidden_mid_record_finalizes_the_take(
     page.goto(f"{base_url}/", wait_until="domcontentloaded")
     start_recording(page)
     page.wait_for_timeout(1300)
+    surface(page, "record.recording")
 
     # App switch / screen lock: visibilityState flips to 'hidden'. Force
     # the getter, then fire the event the handler listens for.

@@ -9,6 +9,8 @@ See `README.md` for setup, layout, and usage.
 ## Internal architecture
 `docs/architecture.mmd` is a hand-authored Mermaid diagram of this repo's internal structure — key modules/scripts (launcher, CLI, tray, GUI, webapp, `src/` logic layer), data flow, external dependencies (whisper.cpp, local-llm-hub, Cloudflare); convention: `ferraroroberto/fleet-config#256`. Not crawlable, so **update it in the same PR as any material structural change** (new UI surface, router added or moved, `src/` module relocated).
 
+**Design inventory (fleet-config#1383):** every surface an e2e test opens carries `surface(page, "<tab>.<surface>")` (vendored `tests/e2e/_surface.py`, `[vendored] surface_capture`; `[design.review] theme_storage_key` lets it flip this app's explicit theme). It is inert on every normal run. `/design-review measure voice-transcriber --e2e` arms it on the disposable instance `scripts/design_review_synthetic.py` boots (declared in `.fleet.toml [design.review.synthetic]`; the suite runs with `--e2e-autoboot` so the live-tray guard never fires) and keeps only the tests whose **own body** calls `surface(`. Put the call **after** the test's assertions: the capture flips the theme in place and a colour transition in flight reads as the other theme to a later computed-style assertion. Where both projections run, the first one to reach a surface wins (Chromium desktop).
+
 **CI:** the `e2e` workflow's typical green run is ~2m35s; investigate at >6 min; the job self-caps at `timeout-minutes: 15`.
 
 Before declaring any webapp-touching change done, run the pre-ship gate:

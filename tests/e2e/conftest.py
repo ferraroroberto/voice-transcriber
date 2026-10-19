@@ -71,6 +71,7 @@ from playwright.sync_api import BrowserContext, Page
 from app.webapp.event_loop import LOOP_FACTORY
 from src.runtime_data import app_dir_env_var
 from tests.e2e._e2e_live_guard import require_disposable_instance
+from tests.e2e._surface import pytest_collection_modifyitems  # noqa: F401
 
 logger = logging.getLogger(__name__)
 

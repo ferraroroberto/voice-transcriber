@@ -33,6 +33,7 @@ record = "https://github.com/ferraroroberto/voice-transcriber/issues/262"
 
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "tests/e2e/_e2e_live_guard.py" }
+surface_capture = { src = "tests/e2e/_surface.py", sha = "5c4d3a7947dae8b3b4a028bf636c0f052ea3b1f7", dest = "tests/e2e/_surface.py" }
 no_window = { src = "src/no_window.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "src/no_window.py" }
 runtime_data = { src = "src/runtime_data.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "src/runtime_data.py" }
 classify_e2e = { src = "scripts/classify_e2e.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "scripts/classify_e2e.py" }
@@ -131,3 +132,22 @@ path = ".gitignore"
 [[e2e.rule]]             # sample config the e2e run never reads -> none
 tier = "none"
 path = "config/disfluencies.sample.json"
+
+# /design-review (fleet-config skills/design-review). The app stamps html[data-theme]
+# at load from voice-transcriber.theme (else the OS scheme), so the e2e capture hook
+# (tests/e2e/_surface.py) has to set that key too or its dark shots stay light (#297).
+[design.review]
+theme_storage_key = "voice-transcriber.theme"
+
+# The throwaway instance `measure --e2e` walks: the e2e suite's own disposable
+# webapp on a free loopback port with every runtime-data path in a temp dir, never
+# the live tray on :8443 (#297).
+[design.review.synthetic]
+command = ["scripts/design_review_synthetic.py"]
+startup_timeout_s = 90
+
+# `measure --e2e` runs the suite with the surface() hook armed. A bare run would meet
+# the live-tray guard (it refuses while :8443 is occupied), so autoboot is explicit.
+[design.review.e2e]
+command = ["-m", "pytest", "tests/e2e", "--e2e-autoboot", "-q"]
+timeout_s = 900
