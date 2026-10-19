@@ -15,6 +15,8 @@ from urllib.parse import parse_qs, urlparse
 
 from playwright.sync_api import Page, Route, expect
 
+from tests.e2e._surface import surface
+
 _TOTAL = 15
 _PAGE = 10
 
@@ -108,6 +110,7 @@ def test_latest_card_day_groups_and_paging(
     )
     heads = authed_page.locator("#historyGroups .day-head")
     expect(heads).to_have_count(3)  # days of takes 1-3, 4-7, 8-9
+    surface(authed_page, "history.list")
 
     load_more.click()
     expect(rows).to_have_count(_TOTAL - 1)  # second page appended
@@ -139,6 +142,7 @@ def test_select_mode_copies_oldest_first(authed_page: Page, base_url: str) -> No
     rows.nth(2).locator(".history-main").click()
     expect(authed_page.locator("#selectCount")).to_have_text("2 takes · oldest first")
     expect(authed_page.locator("#historyHeadLine")).to_have_text("2 selected")
+    surface(authed_page, "history.select-mode")
 
     fetched: list[str] = []
     authed_page.on(
@@ -190,6 +194,7 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     expect(sheet.locator("#takeSource")).to_have_text("api")  # verbatim in the sheet
     for control in ("#takeCopy", "#takeRedo", "#takeDelete"):
         expect(sheet.locator(control)).to_be_visible()
+    surface(authed_page, "history.take-sheet")
 
     delete = sheet.locator("#takeDelete")
     deletes: list[str] = []
@@ -208,3 +213,16 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     sheet.locator(".detail-close").click()
     expect(sheet).to_be_hidden()
     assert native_dialogs == []
+
+
+def test_empty_history_shows_the_empty_state(authed_page: Page, base_url: str) -> None:
+    """No takes yet: the Latest card stays hidden and the vendored empty state
+    says so, instead of a blank pane."""
+    authed_page.route("**/api/sessions?*", lambda route: route.fulfill(json={
+        "sessions": [], "total": 0, "has_more": False, "offset": 0, "limit": _PAGE,
+    }))
+    authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    authed_page.click("#tabHistory")
+    expect(authed_page.locator("#paneHistory .empty-state")).to_contain_text("No takes yet")
+    expect(authed_page.locator("#latestCard")).to_be_hidden()
+    surface(authed_page, "history.empty")

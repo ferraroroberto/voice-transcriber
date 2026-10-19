@@ -26,6 +26,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e._helpers import mock_session_apis, start_recording
+from tests.e2e._surface import surface
 
 pytestmark = [pytest.mark.smoke, pytest.mark.desktop_only]
 
@@ -66,6 +67,7 @@ def test_resume_button_continues_a_backgrounded_take(
     expect(resume).to_be_visible()
     expect(resume).to_have_text("Continue this text")
     expect(page.locator("#recordLabel")).to_have_text("Record")
+    surface(page, "record.resume")
 
     # Tapping Resume reattaches: a fresh take starts, the button hides,
     # and the earlier transcript stays on screen for the new take to

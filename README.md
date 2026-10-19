@@ -345,6 +345,7 @@ voice-transcriber/
 │   ├── set_password.py            # set/clear the login-overlay password
 │   ├── gen_app_icons.py           # regenerate PWA/favicon/Stream Deck icons from the fleet brand SVG
 │   ├── run_named_tunnel.py        # headless uvicorn + named cloudflared tunnel (no tray)
+│   ├── design_review_synthetic.py # throwaway webapp for `/design-review` (synthetic and `--e2e` runs)
 │   ├── run-e2e.ps1                # Playwright e2e suite against the live tray
 │   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, pytest, disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
@@ -1104,6 +1105,8 @@ C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-b
 ```
 
 It byte-compiles `app src tests`, runs the non-e2e pytest suite, then runs the Playwright e2e suite (Chromium + WebKit/iPhone) against a **disposable webapp it boots on a free port** and tears down — so a running tray on :8443 is left untouched, and a forgotten tray can't let a regression pass silently. Exits non-zero on the first failure; a green run ends with `✅ Ready to ship.`
+
+**Design inventory.** Every surface an e2e test opens carries one `surface(page, "<tab>.<surface>")` call (the vendored `tests/e2e/_surface.py`, tracked as `surface_capture` in `.fleet.toml [vendored]`). It is a no-op on every normal run. `/design-review measure voice-transcriber --e2e` arms it on a disposable instance (`scripts/design_review_synthetic.py`, never the live tray) and measures each tagged surface in light and dark. A new overlay or state takes one `surface(...)` call in the test that opens it, placed after its assertions and directly in the test body (a call inside a helper does not select the test).
 
 ### Optional: JS tests via Vitest
 

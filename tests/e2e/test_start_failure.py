@@ -20,6 +20,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e._helpers import mock_session_apis, start_recording
+from tests.e2e._surface import surface
 
 pytestmark = [pytest.mark.smoke, pytest.mark.desktop_only]
 
@@ -38,6 +39,7 @@ def test_failed_session_create_leaves_record_usable(
     expect(page.locator("#toast")).to_contain_text("Could not create session")
     expect(page.locator("#recordBtn")).to_have_attribute("aria-pressed", "false")
     expect(page.locator("#recordStatus")).to_have_text("")
+    surface(page, "record.start-failure")
 
     # The network is back: the very same button must record again.
     page.unroute("**/api/sessions")

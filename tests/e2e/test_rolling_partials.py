@@ -30,6 +30,7 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from tests.e2e._helpers import mock_session_apis, start_recording
+from tests.e2e._surface import surface
 
 pytestmark = [pytest.mark.smoke, pytest.mark.desktop_only]
 
@@ -75,3 +76,4 @@ def test_partials_subscribe_when_config_load_failed(
     )
     expect(page.locator("#transcript")).to_have_value("earlier text\n\nlive words")
     expect(page.locator("#textMeta")).to_have_text("Live text · refined when you stop")
+    surface(page, "record.live-partial")
