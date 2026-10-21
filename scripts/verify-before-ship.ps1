@@ -1,7 +1,9 @@
 # Pre-ship verification gate (issue #17).
 #
 # Runs the full validation pipeline locally before a change is declared
-# "done": byte-compile, the non-e2e pytest suite, then the Playwright e2e
+# "done": byte-compile, the static ratchet (no new duplicate block or unused
+# import/variable beyond .static-ratchet-baseline.json; exit 3 = a detector could
+# not run = NOT CONFIRMED, which fails), the non-e2e pytest suite, then the Playwright e2e
 # suite (Chromium + WebKit/iPhone projections) against a disposable webapp
 # the script boots itself on a free port.
 #
@@ -35,6 +37,12 @@ try {
     Write-Host "==> py_compile (app, src, tests)..." -ForegroundColor Cyan
     & $python -m compileall -q app src tests
     if ($LASTEXITCODE -ne 0) { Fail "byte-compile failed." }
+
+    # Call the wrapper, never scripts/static_ratchet.py: the wrapper maps exit 3 to a
+    # failure (tests/test_static_ratchet_gate.py pins it). Whole tree, never routed.
+    Write-Host "==> static ratchet (duplicates, unused imports/variables)..." -ForegroundColor Cyan
+    & $python -m scripts.static_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "static ratchet failed (new finding, or a detector could not run)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e

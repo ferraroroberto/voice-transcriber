@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "tools": {"jscpd": "5.4.0", "ruff": "0.17.1"},
+  "entries": [
+    {"key": "unused:F401:app/gui/tray.py:sys", "files": ["app/gui/tray.py"]},
+    {"key": "unused:F401:app/gui/tray.py:time", "files": ["app/gui/tray.py"]},
+    {"key": "unused:F401:src/activity_log.py:os", "files": ["src/activity_log.py"]},
+    {"key": "unused:F401:src/archive.py:datetime.timedelta", "files": ["src/archive.py"]},
+    {"key": "unused:F401:src/inject.py:typing.Optional", "files": ["src/inject.py"]},
+    {"key": "unused:F401:src/whisper_server/manager.py:dataclasses.field", "files": ["src/whisper_server/manager.py"]},
+    {"key": "unused:F401:tests/test_app_config.py:pathlib.Path", "files": ["tests/test_app_config.py"]},
+    {"key": "unused:F401:tests/test_archive.py:src.archive.Session", "files": ["tests/test_archive.py"]},
+    {"key": "unused:F401:tests/test_archive.py:src.archive.SessionMeta", "files": ["tests/test_archive.py"]},
+    {"key": "unused:F401:tests/test_process_supervisor.py:time", "files": ["tests/test_process_supervisor.py"]},
+    {"key": "unused:F401:tests/test_recorder.py:unittest.mock.MagicMock", "files": ["tests/test_recorder.py"]},
+    {"key": "unused:F401:tests/test_webapp_api_basics.py:json", "files": ["tests/test_webapp_api_basics.py"]},
+    {"key": "unused:F401:tests/test_webapp_api_sessions.py:unittest.mock.MagicMock", "files": ["tests/test_webapp_api_sessions.py"]},
+    {"key": "unused:F401:tests/test_webapp_smoke.py:sys", "files": ["tests/test_webapp_smoke.py"]}
+  ]
+}

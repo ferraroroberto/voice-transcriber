@@ -64,3 +64,8 @@ def test_real_rules_route_representative_paths() -> None:
 
     # Mixed real diff (gui + webapp) -> full.
     assert tier("app/gui/service_supervisor.py", "app/webapp/static/app.js") == "full"
+
+
+def test_ratchet_baseline_routes_to_skip() -> None:
+    cfg = load_config(REAL_FLEET_TOML)
+    assert classify([".static-ratchet-baseline.json"], cfg).tier == "skip"
