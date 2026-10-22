@@ -13,7 +13,6 @@ from __future__ import annotations
 import socket
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest

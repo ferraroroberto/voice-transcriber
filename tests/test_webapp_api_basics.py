@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 # Standard library imports
-import json
 import re
 from pathlib import Path
 

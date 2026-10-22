@@ -10,7 +10,7 @@ before giving up.
 from __future__ import annotations
 
 # Standard library imports
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # Third-party imports
 import numpy as np
