@@ -113,8 +113,10 @@ voice-transcriber/
 │   ├── run-e2e.ps1                # Playwright e2e suite against the live tray
 │   ├── static_ratchet.py          # vendored static-analysis ratchet (duplicates, unused imports/variables)
 │   ├── static_ratchet_gate.py     # the gate's wrapper around it: exit 3 (a detector could not run) fails
+│   ├── docs_ratchet.py            # vendored docs ratchet (README size, history markers in README/docs)
+│   ├── docs_ratchet_gate.py       # the gate's wrapper around it: exit 3 (the docs could not be read) fails
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static ratchet, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static ratchet, docs ratchet, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/

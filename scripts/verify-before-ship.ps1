@@ -3,7 +3,9 @@
 # Runs the full validation pipeline locally before a change is declared
 # "done": byte-compile, the static ratchet (no new duplicate block or unused
 # import/variable beyond .static-ratchet-baseline.json; exit 3 = a detector could
-# not run = NOT CONFIRMED, which fails), the non-e2e pytest suite, then the Playwright e2e
+# not run = NOT CONFIRMED, which fails), the docs ratchet (README within 40 KiB and no
+# new history marker in README/docs beyond .docs-ratchet-baseline.json; same exit-3
+# rule), the non-e2e pytest suite, then the Playwright e2e
 # suite (Chromium + WebKit/iPhone projections) against a disposable webapp
 # the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -46,6 +48,12 @@ try {
     Write-Host "==> static ratchet (duplicates, unused imports/variables)..." -ForegroundColor Cyan
     & $python -m scripts.static_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "static ratchet failed (new finding, or a detector could not run)." }
+
+    # Same rule for the docs ratchet: the wrapper maps exit 3 (docs unreadable) to a
+    # failure (tests/test_docs_ratchet_gate.py pins it). Whole tree, never routed.
+    Write-Host "==> docs ratchet (README size, history markers in docs)..." -ForegroundColor Cyan
+    & $python -m scripts.docs_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "docs ratchet failed (README grew, a doc gained a history marker, or the docs could not be read)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e
