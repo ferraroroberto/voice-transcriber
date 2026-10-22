@@ -5,7 +5,6 @@ from __future__ import annotations
 
 # Standard library imports
 from datetime import datetime
-from unittest.mock import MagicMock
 
 # Local imports
 from src.polish import PolishError, PolishResult

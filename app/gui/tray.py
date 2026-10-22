@@ -30,9 +30,7 @@ from __future__ import annotations
 import logging
 import os
 import queue
-import sys
 import threading
-import time
 import tkinter as tk
 from pathlib import Path
 from typing import Optional

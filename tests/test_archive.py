@@ -18,9 +18,7 @@ from src.archive import (
     POLISH_REQUEST_FILENAME,
     POLISH_RESPONSE_FILENAME,
     RAW_AUDIO_FILENAME,
-    Session,
     SessionArchive,
-    SessionMeta,
     TRANSCRIPT_FILENAME,
 )
 
