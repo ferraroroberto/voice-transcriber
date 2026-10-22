@@ -5,7 +5,10 @@
 # import/variable beyond .static-ratchet-baseline.json; exit 3 = a detector could
 # not run = NOT CONFIRMED, which fails), the non-e2e pytest suite, then the Playwright e2e
 # suite (Chromium + WebKit/iPhone projections) against a disposable webapp
-# the script boots itself on a free port.
+# the script boots itself on a free port. The e2e stage is routed by the diff
+# (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
+# docs/backend-only diff, a smoke target or one surface's slice for a narrow one,
+# and the whole suite for anything the router cannot read.
 #
 # Usage:
 #   C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1
@@ -48,16 +51,52 @@ try {
     & $python -m pytest -q --ignore=tests/e2e
     if ($LASTEXITCODE -ne 0) { Fail "non-e2e pytest suite failed." }
 
-    Write-Host "==> pytest e2e (Chromium + WebKit/iPhone, auto-booted)..." -ForegroundColor Cyan
-    $env:VT_E2E_AUTOBOOT = "1"
-    try {
-        # Per-test timing for /e2e-audit: the path is gitignored (.pytest_cache/)
-        # and mirrors `[e2e] junit_xml` in .fleet.toml (#216).
-        & $python -m pytest tests/e2e -q --junitxml=.pytest_cache/e2e-junit.xml
-        $e2eExit = $LASTEXITCODE
+    # Diff-proportionate e2e (#302): scripts/e2e_route.py wraps classify_e2e.py and
+    # owns the fail-safe -- a router error, no verdict or an unknown tier is `full`,
+    # never less. The only doubt left here is the wrapper dying before it prints a
+    # tier, which also runs the whole suite. CI always runs the whole suite.
+    $tier = "full"; $e2eTarget = "tests/e2e"; $e2eBrowsers = ""
+    if ($env:CI -eq "true") {
+        $routeReason = "CI always runs the full e2e suite"
+    } else {
+        $routeReason = "e2e router gave no verdict -- running the full suite (fail-safe)"
+        $routeOut = & $python -m scripts.e2e_route
+        $routeExit = $LASTEXITCODE
+        $kv = @{}
+        foreach ($line in $routeOut) {
+            if ($line -match '^(E2E_[A-Z_]+)=(.*)$') { $kv[$matches[1]] = $matches[2] }
+        }
+        if ($routeExit -eq 0 -and $kv["E2E_TIER"]) {
+            $tier = $kv["E2E_TIER"]
+            $e2eTarget = $kv["E2E_PYTEST_TARGET"]
+            $e2eBrowsers = $kv["E2E_BROWSERS"]
+            $routeReason = $kv["E2E_REASON"]
+        }
     }
-    finally {
-        Remove-Item Env:\VT_E2E_AUTOBOOT -ErrorAction SilentlyContinue
+
+    if ($tier -eq "skip") {
+        Write-Host "==> pytest e2e: skipped, diff touches no e2e surface" -ForegroundColor Cyan
+        Write-Host "    reason: $routeReason" -ForegroundColor DarkGray
+        $e2eExit = 0
+    } else {
+        Write-Host "==> pytest e2e ($tier, Chromium + WebKit/iPhone unless narrowed, auto-booted)..." -ForegroundColor Cyan
+        Write-Host "    reason: $routeReason" -ForegroundColor DarkGray
+        # A `surface` slice over several modules arrives space-joined; pytest needs
+        # each as its own argument. No browser named = the conftest's both projections.
+        $e2eArgs = @($e2eTarget -split '\s+' | Where-Object { $_ })
+        foreach ($b in ($e2eBrowsers -split ',' | Where-Object { $_ })) {
+            $e2eArgs += @("--browser", $b)
+        }
+        $env:VT_E2E_AUTOBOOT = "1"
+        try {
+            # Per-test timing for /e2e-audit: the path is gitignored (.pytest_cache/)
+            # and mirrors `[e2e] junit_xml` in .fleet.toml (#216).
+            & $python -m pytest @e2eArgs -q --junitxml=.pytest_cache/e2e-junit.xml
+            $e2eExit = $LASTEXITCODE
+        }
+        finally {
+            Remove-Item Env:\VT_E2E_AUTOBOOT -ErrorAction SilentlyContinue
+        }
     }
     if ($e2eExit -ne 0) { Fail "Playwright e2e suite failed." }
 }

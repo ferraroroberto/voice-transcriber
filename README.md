@@ -349,7 +349,8 @@ voice-transcriber/
 │   ├── run-e2e.ps1                # Playwright e2e suite against the live tray
 │   ├── static_ratchet.py          # vendored static-analysis ratchet (duplicates, unused imports/variables)
 │   ├── static_ratchet_gate.py     # the gate's wrapper around it: exit 3 (a detector could not run) fails
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static ratchet, pytest, disposable-instance e2e
+│   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static ratchet, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
@@ -1106,7 +1107,7 @@ For any change touching the webapp, run the pre-ship gate before declaring it do
 C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1
 ```
 
-It byte-compiles `app src tests`, runs the **static ratchet** (no new duplicate block or unused import/variable beyond `.static-ratchet-baseline.json`; needs Node for `npx jscpd`, and `ruff` from `requirements-dev.txt` in the `.venv`), runs the non-e2e pytest suite, then runs the Playwright e2e suite (Chromium + WebKit/iPhone) against a **disposable webapp it boots on a free port** and tears down — so a running tray on :8443 is left untouched, and a forgotten tray can't let a regression pass silently. Exits non-zero on the first failure; a green run ends with `✅ Ready to ship.`
+It byte-compiles `app src tests`, runs the **static ratchet** (no new duplicate block or unused import/variable beyond `.static-ratchet-baseline.json`; needs Node for `npx jscpd`, and `ruff` from `requirements-dev.txt` in the `.venv`), runs the non-e2e pytest suite, then runs the Playwright e2e suite (Chromium + WebKit/iPhone) against a **disposable webapp it boots on a free port** and tears down. The e2e stage is **routed by the diff** (`scripts/e2e_route.py` over the `.fleet.toml [e2e]` rules): a docs- or backend-only diff skips it and prints the router's reason, a static asset runs the smoke target, one surface runs its slice, and anything the router cannot read (error, empty diff, unclassified path) runs the whole suite; CI always runs the whole suite — so a running tray on :8443 is left untouched, and a forgotten tray can't let a regression pass silently. Exits non-zero on the first failure; a green run ends with `✅ Ready to ship.`
 
 **Design inventory.** Every surface an e2e test opens carries one `surface(page, "<tab>.<surface>")` call (the vendored `tests/e2e/_surface.py`, tracked as `surface_capture` in `.fleet.toml [vendored]`). It is a no-op on every normal run. `/design-review measure voice-transcriber --e2e` arms it on a disposable instance (`scripts/design_review_synthetic.py`, never the live tray) and measures each tagged surface in light and dark. A new overlay or state takes one `surface(...)` call in the test that opens it, placed after its assertions and directly in the test body (a call inside a helper does not select the test).
 
