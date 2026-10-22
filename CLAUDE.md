@@ -4,7 +4,7 @@ Canonical instructions for AI coding agents working in this repository. Claude C
 
 ## This repository
 Tray-resident local voice-to-text app powered by a bundled whisper.cpp server, with a global hotkey workflow.
-See `README.md` for setup, layout, and usage.
+See `README.md` for setup and usage; it indexes the topic docs under `docs/` (layout in `docs/layout.md`).
 
 ## Internal architecture
 `docs/architecture.mmd` is a hand-authored Mermaid diagram of this repo's internal structure — key modules/scripts (launcher, CLI, tray, GUI, webapp, `src/` logic layer), data flow, external dependencies (whisper.cpp, local-llm-hub, Cloudflare); convention: `ferraroroberto/fleet-config#256`. Not crawlable, so **update it in the same PR as any material structural change** (new UI surface, router added or moved, `src/` module relocated).

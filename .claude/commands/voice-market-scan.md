@@ -12,7 +12,7 @@ Goal: refresh the single durable comparison note (`docs/market-scan/initial-scan
 
 1. **Read the existing doc.** `docs/market-scan/initial-scan.md` — its "What this repo currently has" and comparison table are the baseline to diff against, not a file to replace wholesale.
 
-2. **Read the current state of this repo.** At minimum: `README.md`, `config/config.json` (or `.sample.json`), `config/webapp_config.sample.json`, `config/polish_prompts.json`. The README's feature surface is the source of truth — do not rely on memory or trust the doc's own claims about this repo without checking.
+2. **Read the current state of this repo.** At minimum: `README.md` and the `docs/*.md` it indexes, `config/config.json` (or `.sample.json`), `config/webapp_config.sample.json`, `config/polish_prompts.json`. The README and the docs it indexes are the source of truth for the feature surface — do not rely on memory or trust the doc's own claims about this repo without checking.
 
 3. **Web-search the three reference apps**, in parallel, with the current year in the query:
    - Wispr Flow features / changelog / what's new
