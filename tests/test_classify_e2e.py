@@ -69,3 +69,4 @@ def test_real_rules_route_representative_paths() -> None:
 def test_ratchet_baseline_routes_to_skip() -> None:
     cfg = load_config(REAL_FLEET_TOML)
     assert classify([".static-ratchet-baseline.json"], cfg).tier == "skip"
+    assert classify([".docs-ratchet-baseline.json"], cfg).tier == "skip"

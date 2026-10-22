@@ -15,6 +15,8 @@ See `README.md` for setup and usage; it indexes the topic docs under `docs/` (la
 
 The pre-ship gate includes the **static ratchet** (`scripts/static_ratchet.py`, vendored; `.fleet.toml [static_ratchet]`, baseline `.static-ratchet-baseline.json`): it fails on a duplicate block (jscpd via `npx`, so Node is a prerequisite) or an unused import/variable (ruff `F401,F841`) that is not in the baseline. It reads the whole tree, so it is never path-routed, and the gate calls it only through `python -m scripts.static_ratchet_gate`, which fails exit 3 (a detector could not run) as NOT CONFIRMED, never a pass or a skip. Shrink the baseline in the PR that removes debt (`--update-baseline`); adding to it needs `--allow-additions` and shows in review.
 
+The gate also runs the **docs ratchet** (`scripts/docs_ratchet.py`, vendored; `.fleet.toml [docs_ratchet]`, baseline `.docs-ratchet-baseline.json`): it fails when `README.md` passes 40 KiB or its baselined size, or when `README.md` or `docs/**/*.md` gains an issue reference, a dated heading or a changelog heading. It reads the whole tree, so it is never path-routed, and the gate calls it only through `python -m scripts.docs_ratchet_gate`, which fails exit 3 (the docs could not be read) as NOT CONFIRMED. Lower the baseline in the PR that rewords a marker away (`--update-baseline`); adding to it needs `--allow-additions`.
+
 Before declaring any webapp-touching change done, run the pre-ship gate:
 `C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1`
 (never bare `pwsh` — a 0-byte WindowsApps reparse stub that fails non-interactively).
