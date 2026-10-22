@@ -51,7 +51,7 @@ One context per launcher, both live from the same `tray.bat`:
 Tailscale support (a third, direct-to-`:8443` tunnel context) was
 dropped in favor of Cloudflare-only remote access (`2611178`,
 2026-05-09) — the tray no longer offers a "Copy Tailscale URL" entry,
-and the README's routing table only documents the loopback and
+and the [launch table](webapp-usage.md#where-to-launch-from-where-to-reach-it) only documents the loopback and
 Cloudflare rows above. The PC may still run Tailscale for unrelated
 reasons, and a tailnet peer that knows the machine's Tailscale IP can
 still technically reach `:8443` directly — the bearer-token middleware
@@ -98,7 +98,7 @@ The other repos in `automation/` (`local-llm-hub`,
 
 voice-transcriber was the odd one out with `core/`, `gui/`, `cli/`,
 `whisper_server/` flat at root; it now follows the same `src/` + `app/`
-split. The canonical, up-to-date directory tree lives in `README.md` —
+split. The canonical, up-to-date directory tree lives in [layout.md](layout.md) —
 this section records *why* the split exists, not the current file list.
 
 ## Decisions and tradeoffs
@@ -120,7 +120,7 @@ Web `navigator.mediaDevices.enumerateDevices()` selector with a
 pins the iPhone's built-in mic by `deviceId`. iOS caveat: device labels
 are obscured until permission is granted, and iOS sometimes routes
 audio through Bluetooth at the system level regardless. Best-effort —
-documented in the README.
+documented in [webapp-usage.md](webapp-usage.md).
 
 ### History
 30-day auto-cleanup on app start (cron-on-boot pattern), plus a
