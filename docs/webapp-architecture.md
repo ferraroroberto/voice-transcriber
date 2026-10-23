@@ -64,10 +64,10 @@ provisions a self-signed CA + leaf cert used *only* for that loopback
 endpoint; the webapp also serves a `voice-transcriber-ca.mobileconfig`
 profile at `/install-ca` for anyone trusting that cert manually.
 
-The `/install-ca` link was removed from the Settings pane in issue #109
-— phones reach the app over Cloudflare, which terminates real TLS at
-the edge, so they never need the local-CA trust dance at all. The
-endpoint itself still serves, for legacy direct-`:8443` setups.
+The Settings pane does not surface the `/install-ca` link — phones
+reach the app over Cloudflare, which terminates real TLS at the edge,
+so they never need the local-CA trust dance at all. The endpoint
+itself still serves, for legacy direct-`:8443` setups.
 
 For the Cloudflare path the certificate question goes away entirely —
 Cloudflare terminates TLS — but a bearer token is enforced, since the
@@ -161,8 +161,8 @@ path — but a built-in, dormant-by-default token gate covers it.
 - **Default off, loopback/Tailscale only.** `auth_token` defaults to
   `""`. With an empty token the middleware short-circuits for the tk
   window and Tailscale callers — those flows keep working unchanged,
-  zero config required. The Cloudflare tunnel is the exception: since
-  #182, `src/tunnel.py`'s `publish_refusal_reason` refuses to spawn
+  zero config required. The Cloudflare tunnel is the exception:
+  `src/tunnel.py`'s `publish_refusal_reason` refuses to spawn
   cloudflared at all while `auth_token` is empty, so the tunnel will
   not publish without a token configured first (`scripts/gen_token.py`).
 - **Loopback always bypasses.** `client.host in {"127.0.0.1", "::1"}`

@@ -1,9 +1,7 @@
 # Debugging real-iPhone Safari from the Windows PC
 
-**Issue:** [#17](https://github.com/ferraroroberto/voice-transcriber/issues/17)
-
-The phone-validation pipeline — cache hygiene (#13), the WebKit/iPhone
-Playwright projection and regression net (#16), the pre-ship gate
+The phone-validation pipeline — cache-busting verification, the WebKit/iPhone
+Playwright projection and regression net, the pre-ship gate
 (`scripts/verify-before-ship.ps1`) — catches the large majority of iPhone
 regressions on Windows before they ship. This document covers the residual
 ~15% that genuinely need a real iPhone, and makes that manual loop fast by
@@ -24,8 +22,8 @@ logic — exactly what Playwright's bundled WebKit on Windows cannot reproduce:
 - **iOS keyboard** — real keyboard rendering and the accessory bar (the login
   password field, transcript editing).
 - **Real WKWebView limits** — memory pressure over long takes, background-tab
-  suspension policy (the exact territory of the #12 background-finalize and
-  #14 resume work).
+  suspension policy (the exact territory of the background-finalize and
+  resume work).
 - **Microphone + media** — real `getUserMedia` permission prompts, the iOS
   recording indicator, `MediaRecorder` codec support (`audio/mp4` vs
   `audio/webm`), screen-lock mid-record.
@@ -34,7 +32,7 @@ logic — exactly what Playwright's bundled WebKit on Windows cannot reproduce:
   build doesn't ship.
 
 If the bug also reproduces in the WebKit projection, it belongs in the
-regression net (the issue #16 pattern), not here.
+regression net, not here.
 
 ## A. DevTools against the live iPhone — `ios-webkit-debug-proxy`
 
@@ -92,14 +90,14 @@ When a phone-only bug turns up — reported or self-spotted — work the loop:
    - The Network waterfall.
    - The JS modules actually loaded — URL **and** the `?v=<hash>` content hash
      visible in the Network tab. A matching hash proves the phone is on the
-     new build (the cache-busting from issue #13 worked); a stale hash means
+     new build (the cache-busting worked); a stale hash means
      the cache bust is the bug, not the symptom you were chasing. Cross-check
      against the build line in the Settings panel and `/api/version`.
 4. **If it only happens in the installed PWA**, debug the PWA target (Section
    A) — its container quirks won't show in a plain Safari tab.
 5. **File it.** If the bug *does* reproduce in the WebKit projection but isn't
    yet handled, add an `xfail` test under `tests/e2e/` citing the new issue
-   number (the issue #16 pattern). If it is genuinely iOS-shell-only and can't
+   number (the regression-net pattern). If it is genuinely iOS-shell-only and can't
    be reproduced under Playwright at all, record it as a documented
    manual-only check in the issue — don't fake an automated test for it.
 

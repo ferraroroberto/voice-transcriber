@@ -12,7 +12,7 @@ is the canonical LLM hub — downstream apps proxy to it over loopback
 rather than duplicating the capture/transcribe stack.
 
 First consumer: **grocery-shopping-automation**'s Audio Audit
-(companion issue `ferraroroberto/grocery-shopping-automation#30`).
+integration.
 
 > **Contract status.** The `/api/sessions*` routes documented here are
 > a **stable contract**, kept current with the sections above rather
@@ -215,10 +215,10 @@ Response:
 
 `from_partial` is present and `true` when the last rolling partial
 already covered the whole take, so whisper was not re-run.
-`served_model`/`served_host` (#156) are the humanized hub backend/host
+`served_model`/`served_host` are the humanized hub backend/host
 that served the transcription (e.g. a raw `mac-mini-m4` becomes `Mac
 Mini M4`); both are `null` when nothing was recorded. They're also
-persisted onto the take's meta (#261), so `GET /api/sessions` rows carry
+persisted onto the take's meta, so `GET /api/sessions` rows carry
 the same two fields. On **near-silent** audio the response is instead:
 
 ```json
@@ -275,7 +275,7 @@ after the fact. Same query params and response shape as `/finish`.
   derives it from an incognito-aware one-row-over probe, so page on it
   rather than on `offset + len(sessions) < total`. `total` is a **cheap
   folder count** kept O(directory-walk) so the list stays fast as the
-  archive grows (#139); it counts every session folder, so with incognito
+  archive grows; it counts every session folder, so with incognito
   takes on disk it can read a few higher than the number of rows you can
   actually page to. The listing itself still excludes incognito sessions.
 - `DELETE /api/sessions/{id}` → `{removed: "<id>"}` — drop one session
@@ -321,8 +321,7 @@ curl -sk "https://127.0.0.1:8443/api/sessions/transcripts?days=7" \
   | jq '.count'
 ```
 
-> **Blessed use-case: transcript mining.** The hub dictionary miner
-> ([`ferraroroberto/local-llm-hub#94`](https://github.com/ferraroroberto/local-llm-hub/issues/94))
+> **Blessed use-case: transcript mining.** The hub's dictionary miner
 > consumes this window/bulk surface over loopback to infer recurring
 > domain vocabulary and mis-transcriptions, then suggests glossary
 > updates. The corpus stays here (provider-agnostic ownership); the hub

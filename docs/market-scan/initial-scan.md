@@ -73,9 +73,9 @@ Sources used for the initial comparison are listed at the bottom.
 | Polish / filler removal | Yes, configurable | Yes | Yes | Yes |
 | Type-at-caret injection | Yes | Yes | Yes | Yes |
 | Custom vocabulary / dictionary | Yes | Yes | Yes | Yes |
-| Voice command mode on the previous take | No — [tracked in #93](https://github.com/ferraroroberto/voice-transcriber/issues/93) | Yes | Yes | Yes |
+| Voice command mode on the previous take | No | Yes | Yes | Yes |
 | Auto-snippets / text replacements | Yes | Yes | Yes | No |
-| App-aware polish style (per foreground app) | No — [tracked in #94](https://github.com/ferraroroberto/voice-transcriber/issues/94) | Yes | Partial | Yes |
+| App-aware polish style (per foreground app) | No | Yes | Partial | Yes |
 | All 99 Whisper languages in picker | Yes | Yes | Yes | Yes |
 | Translation mode | Yes | Yes | Yes | No |
 | Live streaming preview (text appears as you speak) | Yes | Partial | No | Yes (killer feature) |
@@ -83,7 +83,7 @@ Sources used for the initial comparison are listed at the bottom.
 | Auto-stop on silence | Yes | Yes | Yes | Yes |
 | Quiet-environment gain boost (distinct from anti-hallucination silence gate) | Yes | Yes | Yes | — |
 | Usage analytics (words/min, daily count, time saved) | Yes | Yes | Yes | Yes |
-| Cross-device sync of dictionary/snippets | No — [tracked in #96](https://github.com/ferraroroberto/voice-transcriber/issues/96) | Yes (cloud) | Yes (iCloud) | Yes |
+| Cross-device sync of dictionary/snippets | No | Yes (cloud) | Yes (iCloud) | Yes |
 | Privacy mode / no-storage toggle | Yes (incognito mode) | Yes | Always private | — |
 | Cloudflare-tunnel public URL with iOS PWA | Yes | No | No | No |
 | Multi-surface (webapp + tk + tray + CLI) | Yes | Desktop + mobile | Desktop only | Desktop + iOS |
@@ -91,14 +91,13 @@ Sources used for the initial comparison are listed at the bottom.
 
 ## Open ideas
 
-Everything marked "No" above with a tracked issue is a candidate for future
-work, not a commitment — pick them up like any other issue when priority
-allows. Nothing here should be treated as a build order; each issue stands on
-its own and is independently shippable.
+Everything marked "No" above is a known gap against the three competitors,
+not a commitment — none is currently a queued issue. File one (and link it
+here) when priority allows:
 
-- [#93 — Voice command mode](https://github.com/ferraroroberto/voice-transcriber/issues/93)
-- [#94 — App-aware polish style](https://github.com/ferraroroberto/voice-transcriber/issues/94)
-- [#96 — Cross-device sync of vocabulary/snippets](https://github.com/ferraroroberto/voice-transcriber/issues/96)
+- Voice command mode on the previous take
+- App-aware polish style (per foreground app)
+- Cross-device sync of dictionary/snippets
 
 ## Where this repo already wins
 
