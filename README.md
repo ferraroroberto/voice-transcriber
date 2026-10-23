@@ -58,7 +58,7 @@ Before declaring any webapp-touching change done, run the pre-ship gate:
 C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1
 ```
 
-It byte-compiles, runs the static and docs ratchets and the non-e2e pytest suite, then the diff-routed Playwright e2e on a disposable instance. A green run ends with `✅ Ready to ship.` Details: [docs/testing.md](docs/testing.md).
+It byte-compiles, runs the static, docs and structure ratchets and the non-e2e pytest suite, then the diff-routed Playwright e2e on a disposable instance. A green run ends with `✅ Ready to ship.` Details: [docs/testing.md](docs/testing.md).
 
 ## 📚 Documentation
 
@@ -67,7 +67,7 @@ One line per feature; each links to its reference doc.
 | Topic | What it covers |
 |---|---|
 | [Configuration](docs/configuration.md) | `config/config.json`, the optional companion files (vocabulary, snippets, speaker blocklist, disfluencies), `whisper_server.yaml` (`local` vs `external` mode), which model is serving, GPU / CPU build choice, first-run checklist |
-| [Repository layout](docs/layout.md) | The `src/` (logic) + `app/` (UI surfaces) tree, file by file |
+| [Repository layout](docs/layout.md) | The `src/` (logic) + `app/` (UI surfaces) tree, file by file, the declared `webapp-tray` shape and its exceptions |
 | [Mobile web app](docs/webapp-usage.md) | Where to launch from, local HTTPS cert, iPhone Home Screen install, daily use, Append / Incognito / Tk controls, silence skip, gain boost, text size, rolling transcription, auto-stop, switching apps, the status line |
 | [Translation and polish](docs/polish-and-translation.md) | 🌐 Translate toggle and the second whisper-server, polish models, the polish style library |
 | [History, cleanup and logs](docs/history-and-logs.md) | History tab, retention, the persistent activity log, the usage log |

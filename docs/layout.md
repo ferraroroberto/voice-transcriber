@@ -1,6 +1,6 @@
 # Repository layout
 
-The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — same convention used by `local-llm-hub`, `grocery-shopping-automation`, and `facilitation-shuffle`.
+The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — same convention used by `local-llm-hub`, `grocery-shopping-automation`, and `facilitation-shuffle`. Its shape is `webapp-tray` (declared in `.fleet.toml`); the canonical tree and the placement rules for new code are in project-scaffolding's `docs/repo-layout.md`, and the structure ratchet holds this repo to them. The exceptions are listed at the end.
 
 ```
 voice-transcriber/
@@ -82,6 +82,9 @@ voice-transcriber/
 │           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
 │                                  #   (base · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button)
+├── assets/                        # static files the apps ship: tray icon, Stream Deck icon
+├── webapp/
+│   └── cloudflared.sample.yml     # committed template for the gitignored webapp/cloudflared.yml (named tunnel)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
@@ -115,8 +118,9 @@ voice-transcriber/
 │   ├── static_ratchet_gate.py     # the gate's wrapper around it: exit 3 (a detector could not run) fails
 │   ├── docs_ratchet.py            # vendored docs ratchet (README size, history markers in README/docs)
 │   ├── docs_ratchet_gate.py       # the gate's wrapper around it: exit 3 (the docs could not be read) fails
+│   ├── structure_ratchet.py       # vendored structure ratchet (file size, function length, flat dirs, src→app imports, root layout)
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static ratchet, docs ratchet, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs and structure ratchets, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
@@ -125,3 +129,11 @@ voice-transcriber/
         └── models/
             └── ggml-large-v3-turbo.bin
 ```
+
+## Exceptions
+
+Each is declared once in `.fleet.toml` and here; none is debt.
+
+- `webapp/` (`extra_roots` in `.fleet.toml`): the committed `cloudflared.sample.yml` template; the tray reads the gitignored `webapp/cloudflared.yml` copied from it (path in `app/gui/tray.py`, steps in `docs/remote-access.md`). The `webapp-tray` preset lists no such root, and moving the path would break existing installs' tunnel setup, so the folder stays.
+- `app/gui/`: a desktop tkinter window and the tray icon live beside the web UI, because the app has two native surfaces (the tray and the window) as well as the PWA. The preset's `app/tray/` holds only the single-instance guard; the tray menu, hotkey state machine and service supervisor are in `app/gui/`.
+- The baseline `.structure-ratchet-baseline.json` holds the existing offenders at today's size: `app/webapp/static/styles.css` (over 1,000 lines), the longest functions in `app/gui/app.py`, `app/webapp/static/app.js` and `app/webapp/static/recorder.js`, and `tests/` (over 40 modules). They may not grow; splitting them is separate work.
