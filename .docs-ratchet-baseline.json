@@ -1,9 +1,4 @@
 {
   "version": 1,
-  "entries": [
-    {"key": "docs/consuming-the-session-api.md", "markers": 5},
-    {"key": "docs/iphone-debugging.md", "markers": 8},
-    {"key": "docs/market-scan/initial-scan.md", "markers": 6},
-    {"key": "docs/webapp-architecture.md", "markers": 2}
-  ]
+  "entries": []
 }
