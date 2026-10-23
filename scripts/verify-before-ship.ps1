@@ -5,9 +5,11 @@
 # import/variable beyond .static-ratchet-baseline.json; exit 3 = a detector could
 # not run = NOT CONFIRMED, which fails), the docs ratchet (README within 40 KiB and no
 # new history marker in README/docs beyond .docs-ratchet-baseline.json; same exit-3
-# rule), the non-e2e pytest suite, then the Playwright e2e
-# suite (Chromium + WebKit/iPhone projections) against a disposable webapp
-# the script boots itself on a free port. The e2e stage is routed by the diff
+# rule), the structure ratchet (no file, function or directory past its limit, no
+# src/ -> app/ import and no root folder outside the declared shape, beyond
+# .structure-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
+# disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
 # docs/backend-only diff, a smoke target or one surface's slice for a narrow one,
 # and the whole suite for anything the router cannot read.
@@ -54,6 +56,17 @@ try {
     Write-Host "==> docs ratchet (README size, history markers in docs)..." -ForegroundColor Cyan
     & $python -m scripts.docs_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "docs ratchet failed (README grew, a doc gained a history marker, or the docs could not be read)." }
+
+    # Structure ratchet: fails on a file, function or directory over its limit, a
+    # src/ module importing app/, or a root folder outside the declared shape, beyond
+    # .structure-ratchet-baseline.json. Exit 3 (a file could not be measured, or an
+    # unknown shape) is its own failure, never a pass or a skip. It reads the whole
+    # tree, so it is not path-routed.
+    Write-Host "==> structure ratchet (file size, function length, flat dirs, layers, root layout)..." -ForegroundColor Cyan
+    & $python "scripts/structure_ratchet.py"
+    $structureExit = $LASTEXITCODE
+    if ($structureExit -eq 3) { Fail "structure ratchet NOT CONFIRMED (a file could not be measured, or the shape is unknown)." }
+    if ($structureExit -ne 0) { Fail "structure ratchet failed (a new or grown offender, a root folder outside the shape, or a bad table or baseline)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e
