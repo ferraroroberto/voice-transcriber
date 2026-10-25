@@ -49,7 +49,7 @@ router = APIRouter()
 _MAX_SOURCE_LEN = 40
 
 # How many idle partial-interval periods a rolling-transcription worker
-# tolerates before it reaps itself as abandoned (voice-transcriber#178) —
+# tolerates before it reaps itself as abandoned:
 # a take with no chunk for this long (phone screen locks, tab closed,
 # tunnel drops) is never coming back for a /finish or delete to clean it up.
 _PARTIAL_WORKER_STALE_MULTIPLIER = 15
@@ -488,7 +488,7 @@ async def list_sessions(
     # Fetch one extra row so we know whether a further page exists without
     # an O(N) count — this probe is incognito-aware, so it's the
     # authoritative "Load more" signal (``total`` below is a cheap
-    # folder count that may include incognito takes). See #139.
+    # folder count that may include incognito takes).
     page_plus_one = archive.list_sessions(
         limit=limit + 1, offset=offset, since=window
     )

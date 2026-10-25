@@ -1,4 +1,4 @@
-# Pre-ship verification gate (issue #17).
+# Pre-ship verification gate.
 #
 # Runs the full validation pipeline locally before a change is declared
 # "done": byte-compile, the static ratchet (no new duplicate block, unused
@@ -92,7 +92,7 @@ try {
     & $python -m pytest -q --ignore=tests/e2e
     if ($LASTEXITCODE -ne 0) { Fail "non-e2e pytest suite failed." }
 
-    # Diff-proportionate e2e (#302): scripts/e2e_route.py wraps classify_e2e.py and
+    # Diff-proportionate e2e: scripts/e2e_route.py wraps classify_e2e.py and
     # owns the fail-safe -- a router error, no verdict or an unknown tier is `full`,
     # never less. The only doubt left here is the wrapper dying before it prints a
     # tier, which also runs the whole suite. CI always runs the whole suite.
@@ -131,7 +131,7 @@ try {
         $env:VT_E2E_AUTOBOOT = "1"
         try {
             # Per-test timing for /e2e-audit: the path is gitignored (.pytest_cache/)
-            # and mirrors `[e2e] junit_xml` in .fleet.toml (#216).
+            # and mirrors `[e2e] junit_xml` in .fleet.toml.
             & $python -m pytest @e2eArgs -q --junitxml=.pytest_cache/e2e-junit.xml
             $e2eExit = $LASTEXITCODE
         }

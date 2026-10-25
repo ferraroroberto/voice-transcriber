@@ -33,7 +33,7 @@ if (els.loginOverlay) {
 // call — e.g. a `visibilitychange` re-check on iOS PWA app-switch) would
 // open a fresh dialog listener on top of the one still attached from the
 // last unresolved prompt, so a single Unlock tap fired one `/api/login`
-// POST per stacked listener (voice-transcriber#178).
+// POST per stacked listener.
 let _pendingPrompt = null;
 
 export function promptForPassword() {

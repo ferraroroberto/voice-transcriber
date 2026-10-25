@@ -55,7 +55,7 @@ class PartialWorker:
     # Reap this worker (self-stop the run loop) after this many seconds with
     # no `mark_dirty()` call — a take abandoned mid-recording (phone screen
     # locks, tab closed, tunnel drops) otherwise leaves the task parked on
-    # `_dirty.wait()` forever (voice-transcriber#178). ``0`` disables reaping.
+    # `_dirty.wait()` forever. ``0`` disables reaping.
     stale_after_seconds: float = 0.0
     # Called once, from inside `_run`, when this worker reaps itself for
     # staleness — the owner uses it to drop the dict entry it can no longer

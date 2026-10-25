@@ -82,12 +82,12 @@ _TITLED_LABEL = re.compile(
     r")\s*:\s+",
 )
 
-# Built-in committed heuristic for the recurring assistant-name family
-# (issue #79). The root is the misheard "Claude" — ``Cloud``, ``Claude``,
+# Built-in committed heuristic for the recurring assistant-name family.
+# The root is the misheard "Claude" — ``Cloud``, ``Claude``,
 # ``Claudio``, ``Claudius`` (bare "Claud" too, e.g. mid-``Cloud Code``) —
 # Title-Cased by whisper because it emits the phantom as a proper-name label.
 # The root is bound to that exact suffix set + a trailing word boundary
-# (issue #178) rather than an unbounded ``\w*`` — the old unbounded root let
+# rather than an unbounded ``\w*`` — the old unbounded root let
 # ordinary words sharing the prefix (``Cloudflare``, ``Cloudy``, …) match as
 # the phantom and eat the real words that followed. It may carry up to two
 # more Title-Case name words (a surname, ``Code``, or an initial like ``C``);

@@ -49,7 +49,7 @@ export function applyConfigDefaults() {
     // src/webapp_config.py DEFAULT_*). Omitting rolling_transcription_enabled
     // here used to make openPartialStream() gate itself off whenever the
     // first /api/config failed — live partials gone for the session while
-    // the final transcript still worked (issue #87).
+    // the final transcript still worked.
     partial_interval_seconds: 2.0,
     rolling_transcription_enabled: true,
     vad_auto_stop_enabled: false,
@@ -111,7 +111,7 @@ export function populateConfigUI() {
   renderHistoryHeadLine();
 }
 
-// The persisted settings (#265). Each control saves only its own field
+// The persisted settings. Each control saves only its own field
 // through POST /api/config the moment it changes (numbers on change, i.e.
 // commit or blur); a failed save shows an error toast and puts the control
 // back to the stored value. Language and Translate are per-session choices
@@ -193,7 +193,7 @@ export function refreshPromptPreview() {
     `Sent with your text when you tap Polish. Style: ${opt ? opt.textContent : 'none'}.`;
 }
 
-// Settings › Polish › Instructions: the prompt in a sheet (#265).
+// Settings › Polish › Instructions: the prompt in a sheet.
 export function initPromptSheet() {
   const dlg = els.promptSheet;
   els.openPromptSheet.addEventListener('click', () => {
@@ -211,7 +211,7 @@ function transcriptionOffline(s) {
   return (!s.whisper.running && !s.llm_hub.reachable) || !s.ffmpeg_present;
 }
 
-// Record's header line (#261): the dictation language as one plain fact,
+// Record's header line: the dictation language as one plain fact,
 // replaced by the single exception that matters most. Precedence, first
 // wins: transcription offline (danger), Incognito (neutral), the Translate
 // route (attention), Polish unavailable (attention).
@@ -232,9 +232,9 @@ export function renderRecordHeadLine() {
   }
 }
 
-// Settings' header line (#261): "All services up", or the first failing
+// Settings' header line: "All services up", or the first failing
 // service by name. A status poll that fails is said as such, never as "up".
-// A stale loaded shell (#265) is said after any outage.
+// A stale loaded shell is said after any outage.
 export function renderSettingsHeadLine() {
   const s = state.services;
   const line = els.settingsHeadLine;
@@ -248,7 +248,7 @@ export function renderSettingsHeadLine() {
   else setHeadLine(line, 'All services up');
 }
 
-// Settings › Services (#265): one avatar row per probe, its corner badge
+// Settings › Services: one avatar row per probe, its corner badge
 // alive (success) or down (danger), the value in plain words. Unknown
 // (the poll failed) shows no badge and says so.
 function renderServices(s) {

@@ -66,7 +66,7 @@ HEADER_SERVED_HOST = "X-Hub-Served-Host"
 # through the hub's observability proxy — a fallback to the local
 # whisper-server, or the translate proxy (which never sets the headers, see
 # whisper_translate_proxy.py in local-llm-hub). Distinguishes "we genuinely
-# don't know" from "the hub told us" for UI consumers (issue #156).
+# don't know" from "the hub told us" for UI consumers.
 _LOCAL_FALLBACK_MODEL = "whisper (local fallback)"
 
 
@@ -93,8 +93,8 @@ class TranscriptionClient:
         self.timeout = timeout
         self._session = requests.Session()
         # Which backend/host actually served the most recent transcription
-        # (issue #156) — read from the hub's X-Hub-Served-* response headers
-        # (local-llm-hub#412). Best-effort, display-only: this app is a
+        # (read from the hub's X-Hub-Served-* response headers).
+        # Best-effort, display-only: this app is a
         # single-desktop-user process, so no locking against a concurrent
         # request — a rare race just shows a stale label for one tick.
         self.last_served_model: str = ""

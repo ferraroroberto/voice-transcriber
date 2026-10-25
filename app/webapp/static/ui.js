@@ -107,7 +107,7 @@ export function renderTranscript(text, take = null) {
   renderTextCard();
 }
 
-// Show the polished result (#263): switch to the Polished view so the
+// Show the polished result: switch to the Polished view so the
 // result is what the user sees and what Copy takes.
 export function renderPolished(text, styleLabel) {
   state.polished = text || '';
@@ -189,7 +189,7 @@ export function renderTextCard() {
   els.saveTranscript.hidden = !state.transcript || !!state.sessionId;
 }
 
-// The page header's one live context line (design.md page-header, #261): a
+// The page header's one live context line (design.md page-header): a
 // plain fact in fg-muted, or a single exception in its tone from the
 // styles.css tone map. The vendored renderHeadStatus draws the line; an
 // attention/danger exception then leads with the warning glyph (the

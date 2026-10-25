@@ -23,7 +23,7 @@ import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
 
 function setMode(m) { state.mode = m; }
 
-// Record-button label states, sentence case (#262): the mic glyph over
+// Record-button label states, sentence case: the mic glyph over
 // "Record" at rest (matches the idle markup in index.html), a stop square
 // over "Stop" while the mic is live, a spinner while the take finishes.
 const LABEL_RECORD = icon('mic') + 'Record';
@@ -141,7 +141,7 @@ async function startRecording() {
     session = await sessionRes.json();
   } catch (err) {
     // A rejected fetch (tunnel blip) must not leave the mode on
-    // 'starting' — onRecordToggle only acts on idle/recording (#283).
+    // 'starting' — onRecordToggle only acts on idle/recording.
     console.warn('creating the session failed:', err);
     stream.getTracks().forEach(t => t.stop());
     setMode('idle');
@@ -172,7 +172,7 @@ async function startRecording() {
 
   state.startedAt = Date.now();
   setMode('recording');
-  // Live partials land in the transcript, so show it (#263).
+  // Live partials land in the transcript, so show it.
   state.textView = 'transcript';
   renderTextCard();
 
@@ -233,7 +233,7 @@ export function finalizeForBackground() {
 }
 
 // "Continue this text" — shown only after a take was finalised by
-// backgrounding (issue #14), beside a smaller Record (#262). It starts a fresh take that
+// backgrounding, beside a smaller Record. It starts a fresh take that
 // force-appends onto the existing transcript regardless of the
 // Append toggle, so the seam across the app-switch is invisible.
 export function resumeRecording() {
@@ -253,7 +253,7 @@ export function hideResumeButton() {
 // Delays (ms) between retry attempts on a failed /chunk POST. A dropped
 // chunk isn't just missing audio — if it's the *first* chunk, the WebM
 // container loses its EBML/Segment/Tracks header and the whole take
-// becomes unrecoverable by ffmpeg (voice-transcriber#192). Retrying
+// becomes unrecoverable by ffmpeg. Retrying
 // in-place preserves upload order since chunks are chained.
 const CHUNK_RETRY_DELAYS_MS = [300, 800, 1500];
 

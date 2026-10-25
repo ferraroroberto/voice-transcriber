@@ -15,7 +15,7 @@ export function openPartialStream(sessionId) {
   // disabled. A missing flag — e.g. a transient /api/config failure that
   // fell back to client defaults, common on a cold-waking Tailscale link —
   // must NOT silently kill live partials: chunk upload + /finish still
-  // deliver the final transcript, which masks the loss. See issue #87.
+  // deliver the final transcript, which masks the loss.
   if (state.config && state.config.rolling_transcription_enabled === false) return;
   if (!('EventSource' in window)) return;
   const tok = getStoredToken();

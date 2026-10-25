@@ -41,7 +41,7 @@ logger = logging.getLogger("activity_log")
 
 # Default DB location: the fleet runtime-data root (``C:\sqlite\voice-transcriber\``
 # on Windows), not this repo's ``webapp/`` — the checkout drive here is a spinning
-# HDD, and this store is written by an always-on service (project-scaffolding#243).
+# HDD, and this store is written by an always-on service.
 # ``VT_ACTIVITY_DB_PATH`` (env) still overrides it, and still outranks everything —
 # the tests set it to keep a temp DB off the real one.
 DEFAULT_DB_PATH = runtime_db_path(

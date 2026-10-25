@@ -46,7 +46,7 @@ import { onPolish, onReset, onSaveTranscript } from './polish.js';
 
 captureTokenFromURL();
 
-// Local-only view/tap log (#277): records which views and controls get used
+// Local-only view/tap log: records which views and controls get used
 // (never text, names or audio details) into this app's own SQLite file. The
 // bearer token rides in a header because a phone on the tunnel is not
 // loopback; data-track ids on the controls feed it.
@@ -104,7 +104,7 @@ async function init() {
 }
 
 // Surface the loaded build in Settings › About so "is the phone running the
-// current code?" is answerable — see issue #13. Format + stale-shell reload
+// current code?" is answerable. Format + stale-shell reload
 // guard mirror home-automation's main.js.
 function fmtBuildTime(iso) {
   if (!iso) return '';
@@ -143,7 +143,7 @@ async function loadVersion() {
     if (assetHash) localStorage.setItem(ASSET_HASH_KEY, assetHash);
     // This module was loaded as app.js?v=<its asset hash>; a different hash
     // from the server means the shell is stale even after the one automatic
-    // reload, so Settings' header line asks for a reload (#265).
+    // reload, so Settings' header line asks for a reload.
     const loaded = new URL(import.meta.url).searchParams.get('v');
     state.staleShell = !!(assetHash && loaded && loaded !== assetHash);
     renderSettingsHeadLine();
@@ -190,7 +190,7 @@ function bindEvents() {
     onChange: (tab) => {
       usage.trackView(tab);
       document.getElementById('paneSettings').hidden = true;
-      // History refreshes itself on open — no Refresh button (#264).
+      // History refreshes itself on open — no Refresh button.
       if (tab === 'history') refreshHistory();
     },
   });
@@ -217,7 +217,7 @@ function bindEvents() {
   flipOnTap(els.gainBoostToggle);
   flipOnTap(els.vadAutoStopToggle);
   flipOnTap(els.forceBuiltinMic, releaseCachedStream);
-  // Persisted settings save as they change (#265); registered after the
+  // Persisted settings save as they change; registered after the
   // flips above so a switch saves its new state.
   bindSettings();
 
@@ -232,7 +232,7 @@ function bindEvents() {
     });
   }
 
-  // Theme toggle (app-launcher #355 pattern), one per pane header: the
+  // Theme toggle (the fleet pattern), one per pane header: the
   // pre-paint snippet in index.html already stamped html[data-theme]; a button
   // just flips it. The sun/moon glyph swap is pure CSS keyed on the attribute.
   for (const toggle of document.querySelectorAll('.theme-toggle')) {
@@ -277,7 +277,7 @@ function bindEvents() {
       // Re-fetch config when it never loaded, or when we're running on the
       // offline fallback (a cold-Tailscale first load) — so the real server
       // flags, including rolling transcription, replace the guesses once the
-      // link is warm. See issue #87.
+      // link is warm.
       if (!state.config || state.configIsFallback) loadConfig().catch(() => {});
     }
   });

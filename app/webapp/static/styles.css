@@ -3,7 +3,7 @@
 
 /* ============================================================ design tokens
    Fleet design system (~/.claude/design.md + design.dark.md, canonical spec
-   ferraroroberto/fleet-config#178; this app migrated in issue #107). Token
+   in fleet-config; this app follows it). Token
    *names* are this app's; their *values* are the spec's. Light = :root,
    dark = [data-theme="dark"]. P3 wide-gamut (oklch) twins override the
    saturated tokens behind @media (color-gamut: p3) below. */
@@ -43,7 +43,7 @@
   --input-bg: var(--card-off);
   --control-border: #818b98; /* input/select boundary + switch off-track (3:1 vs card) */
   --toggle-knob: #ffffff;
-  --close-bg: transparent; /* glyph-only controls draw nothing at rest (fleet-config#1259) */
+  --close-bg: transparent; /* glyph-only controls draw nothing at rest */
   /* the modal/login scrim is theme-invariant by design — it dims content */
   --scrim: rgba(0, 0, 0, 0.5);
   --accent-soft: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -70,8 +70,8 @@
   /* hit-target.min (design.md) — the 44px effective pointer-target floor. A
      native input/select is a replaced element that can't carry a ::before
      expansion, so it gets the real 44px box and paints its 36px control
-     inside a transparent --control-inset band (the home-automation #779
-     recipe). */
+     inside a transparent --control-inset band (the fleet recipe for
+     replaced controls). */
   --hit-min: 44px;
   --control-inset: calc((var(--hit-min) - var(--control-h)) / 2);
   /* typography roles — system stack, weight (not case) for hierarchy */
@@ -93,7 +93,7 @@
      toasts are the only elements with a real shadow. */
   --shadow: 0 8px 24px rgba(31, 35, 40, 0.12);
   /* Mobile floating bottom tab bar — phone-validated geometry
-     (home-automation#118, promoted to the vendored nav component). */
+     (promoted to the vendored nav component). */
   --bottom-tabs-height: 61px;
   --bottom-tabs-margin: 21px;
   --bottom-tabs-pill-height: 53px;
@@ -163,7 +163,7 @@
    elements stay laid out — intercepting clicks. */
 [hidden] { display: none !important; }
 
-/* ============================================================ tone map (#261)
+/* ============================================================ tone map
    Each colour means one thing everywhere (design.md status chip tone map).
    An element opts in with data-tone; a consumer reads --tone (text) or
    --tone-base (a fill, dot or border) rather than naming a status token.
@@ -241,7 +241,7 @@ html, body {
 /* Disjoint from the vendored nav's phone rule ((pointer: coarse) and
    (max-width: 520px)), which owns .app's padding there: the safe-area top
    and a bottom reserve for the floating bar. This shorthand used to load
-   after it and win, so the last card sat under the nav (#265). */
+   after it and win, so the last card sat under the nav. */
 @media (pointer: fine), (pointer: none), (min-width: 521px) {
   .app {
     padding: calc(env(safe-area-inset-top, 0px) + var(--gap)) var(--gap)
@@ -255,7 +255,7 @@ html, body {
 :root[data-theme="dark"] .theme-icon-moon { display: none; }
 :root:not([data-theme="dark"]) .theme-icon-sun { display: none; }
 
-/* ---------- the recorder (#262) ---------- */
+/* ---------- the recorder ---------- */
 /* One circle, its status, the level meter and the labelled mode toggles,
    centred in one card under the page header (which names the tab, so the
    card has no title of its own). */
@@ -334,7 +334,7 @@ html, body {
 }
 @keyframes rec-spin { to { transform: rotate(360deg); } }
 
-/* Back from another app (#14): a smaller Record beside "Continue this text",
+/* Back from another app: a smaller Record beside "Continue this text",
    the tint verb that starts a take appending onto the same text. */
 .record-buttons:has(.resume-btn:not([hidden])) .record-btn { width: 88px; height: 88px; }
 .resume-btn {
@@ -461,7 +461,7 @@ textarea.text-out.editable::placeholder {
   color: var(--muted);
 }
 
-/* ---------- the Text card (#263) ---------- */
+/* ---------- the Text card ---------- */
 .text-head { min-height: var(--row-sm); }
 /* The take's facts under the text: body-sm in fg-muted. */
 .text-meta {
@@ -552,7 +552,7 @@ textarea.text-out.editable::placeholder {
 }
 .row > span:first-child { flex: 1; }
 
-/* The polish prompt, read in its sheet (#265): prose, so body-sm in the
+/* The polish prompt, read in its sheet: prose, so body-sm in the
    body face, on the text-area surface. */
 .prompt-preview {
   width: 100%;
@@ -645,7 +645,7 @@ textarea.text-out.editable::placeholder {
   min-height: 18px;
 }
 
-/* ---------- History (#264) ---------- */
+/* ---------- History ---------- */
 /* The Latest take card: the newest take, one-tap Copy, today's numbers. */
 .latest-card .card-head { min-height: var(--row-sm); }
 .latest-text {
@@ -851,7 +851,7 @@ textarea.text-out.editable::placeholder {
 }
 .select-bar b { flex: 1; font-size: var(--font-label); }
 
-/* The take sheet (#261) on the vendored modal shell: the full text (scrolls
+/* The take sheet on the vendored modal shell: the full text (scrolls
    inside its own box), one full-width Copy, Redo as a plain row, the facts
    as the modal's label/value rows, and Delete last as danger text with no
    fill. Nothing is pinned, so no footer can overlap the rows on a phone. */
@@ -896,7 +896,7 @@ textarea.text-out.editable::placeholder {
   overflow-wrap: anywhere;
 }
 
-/* ---------- Settings (#265) ---------- */
+/* ---------- Settings ---------- */
 /* Inset groups under overline headers (design.md settings group): each
    row a lead glyph, a plain label, and its value or inline control. */
 .settings-group-title { margin: var(--space-md) var(--space-xs) calc(-1 * var(--space-xs)); }
@@ -935,7 +935,7 @@ textarea.text-out.editable::placeholder {
 /* Every control is right-anchored in its row, so its value reads from that
    edge. The select's chevron clearance (.select-native padding-right)
    reserves 32px for a chevron this app never draws, so drop it back to the
-   inputs' 10px inset (issue #190). */
+   inputs' 10px inset. */
 .settings-group .input-native,
 .settings-group .select-native { text-align: right; }
 .settings-group .select-native { padding-right: 10px; max-width: 55%; }
@@ -979,7 +979,7 @@ textarea.text-out.editable::placeholder {
 /* The toast is the vendored component (_vendored/toast/toast.css): the nav's
    glass, neutral for every message, tinted only for a real error. */
 
-/* ---------- wide layout (#266) ---------- */
+/* ---------- wide layout ---------- */
 /* design.md layout.wide — the same condition as the vendored nav's left
    rail, which owns the rail and the content's left offset. Placement only:
    below it, or on a touch screen, the phone layout above applies unchanged.

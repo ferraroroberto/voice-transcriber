@@ -110,19 +110,19 @@ class TrayApp:
         self.append_mode: bool = False
         self._append_listeners: list = []
         # Translate-to-English toggle — mirrored from the tk window's
-        # translate_var (voice-transcriber#178) so a mic take routed through
+        # translate_var so a mic take routed through
         # the tray (the default whenever the window was opened from it)
         # honours the checkbox instead of silently ignoring it. Ephemeral,
         # off on every launch, same as append_mode.
         self.translate: bool = False
 
-        # PTT hotkey state machine (voice-transcriber#177).
+        # PTT hotkey state machine.
         self._hotkeys = HotkeyController(
             config,
             has_active_recorder=lambda: self._current_recorder is not None,
             enqueue_toggle=lambda: self._enqueue(EVT_TOGGLE_RECORD),
         )
-        # Whisper-server / webapp / cloudflared-tunnel lifecycles (voice-transcriber#177).
+        # Whisper-server / webapp / cloudflared-tunnel lifecycles.
         self.services = ServiceSupervisor(
             config,
             tunnel_config_path=TUNNEL_CONFIG_PATH,
@@ -528,7 +528,7 @@ def _make_icon_image(color=(70, 180, 120)) -> Image.Image:
     return draw_mic(64, pad_ratio=0.15, fg=(*color, 255))
 
 
-# In-process single-instance guard (project-scaffolding#39): a named mutex held
+# In-process single-instance guard: a named mutex held
 # by the tray process, NOT a PID file. The former PID-file lock was racy — two
 # near-simultaneous starts could both read no-valid-lock and both proceed; the
 # named mutex closes that TOCTOU and is freed by the OS on exit (so a crashed

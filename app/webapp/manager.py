@@ -125,7 +125,7 @@ def build_uvicorn_command(
         # uvicorn over loopback (webapp/cloudflared.yml points at
         # https://localhost:8443) -- trust only that immediate peer to
         # set X-Forwarded-For so request.client.host reflects the real
-        # tunnel caller, not 127.0.0.1 (issue #117). uvicorn already
+        # tunnel caller, not 127.0.0.1. uvicorn already
         # defaults to this; pinned explicitly so it can't silently
         # regress on an upstream default change.
         "--proxy-headers",
@@ -221,7 +221,7 @@ class WebappManager:
             logger.info("ℹ️  Webapp is disabled in config (webapp.enabled=false)")
             return self.status()
 
-        # Race-safe adopt-or-spawn (project-scaffolding#39): serialize the
+        # Race-safe adopt-or-spawn: serialize the
         # status()-then-Popen critical section across processes so two trays
         # starting at once cannot both spawn uvicorn. The loser blocks, then
         # re-checks below and adopts the now-listening webapp. The lock is held

@@ -128,7 +128,7 @@ class TranscriberApp:
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
         self.language_var.trace_add("write", self._on_language_change)
-        # Mirror the translate toggle onto the tray (voice-transcriber#178) —
+        # Mirror the translate toggle onto the tray:
         # when the tray owns the session, `_toggle_record` delegates straight
         # to `tray.request_toggle_record()` and never reads this window's
         # vars, so the tray needs its own copy to honour the checkbox.
