@@ -1,11 +1,4 @@
 {
   "version": 1,
-  "entries": [
-    {"key": "scripts/gen_app_icons.py", "counts": {"no-drive-path": 1}},
-    {"key": "scripts/run_webapp.py", "counts": {"no-window": 1}},
-    {"key": "tests/test_process_supervisor.py", "counts": {"no-window": 2}},
-    {"key": "tests/test_static_app_js.py", "counts": {"no-window": 2}},
-    {"key": "tests/test_webapp_smoke.py", "counts": {"no-window": 1}},
-    {"key": "tests/test_whisper_server_manager.py", "counts": {"no-window": 1}}
-  ]
+  "entries": []
 }

@@ -25,6 +25,8 @@ from pathlib import Path
 # Third-party imports
 import pytest
 
+from src.no_window import NO_WINDOW
+
 
 STATIC_DIR = Path(__file__).resolve().parent.parent / "app" / "webapp" / "static"
 
@@ -356,6 +358,7 @@ class TestAutoStopSilenceLength:
             cwd=str(STATIC_DIR),
             capture_output=True,
             text=True,
+            creationflags=NO_WINDOW,
         )
         assert result.returncode == 0, result.stderr
         assert json.loads(result.stdout) == [3000, 700, 1500, 1500, 1500]
@@ -384,6 +387,7 @@ class TestVitestSuite:
             capture_output=True,
             text=True,
             shell=True,  # npx on Windows needs cmd resolution
+            creationflags=NO_WINDOW,
         )
         if result.returncode != 0:
             pytest.fail(
