@@ -127,8 +127,10 @@ voice-transcriber/
 │   ├── instruction_ratchet_gate.py # the gate's wrapper around it: exit 3 (an instruction file could not be read) fails
 │   ├── doc_refs_ratchet.py        # vendored doc references ratchet (paths, modules and ports named in README / CLAUDE.md / docs)
 │   ├── doc_refs_ratchet_gate.py   # the gate's wrapper around it: exit 3 (a doc could not be read) fails
+│   ├── dead_code_ratchet.py       # vendored dead code ratchet (functions, classes and methods nothing references)
+│   ├── dead_code_ratchet_gate.py  # the gate's wrapper around it: exit 3 (a Python file could not be parsed) fails
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction and doc references ratchets, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references and dead code ratchets, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
