@@ -9,8 +9,8 @@ answered by feel:
     A ``.js`` stamp hashes the module plus everything it imports, so an
     edit to a nested module also moves the URL of every importer above it,
     up to ``app.js`` (issue #220),
-    ``index.html`` carries a ``?v=__NAME__`` placeholder for the two
-    assets it references directly (``app.js`` + ``styles.css``); every
+    ``index.html`` carries a ``?v=__NAME__`` placeholder for the
+    assets it references directly (``app.js`` + the stylesheets); every
     other module is a transitive ``import`` from ``app.js`` and gets its
     ``?v=`` stamped by :meth:`BuildInfo.rewrite_js_imports` at serve time,
   * a build identity (git SHA + build time) surfaced via ``/api/version``
@@ -50,6 +50,7 @@ STAMPED_SUFFIXES = (".js", ".css")
 HTML_STAMPED_ASSETS = (
     "app.js",
     "styles.css",
+    "styles-views.css",
     "_vendored/base/base.css",
     "_vendored/nav/nav-tabs.css",
     "_vendored/card/card.css",

@@ -25,7 +25,7 @@ import requests
 from src.no_window import NO_WINDOW
 
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
 if not PYTHON.exists():
     PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python"

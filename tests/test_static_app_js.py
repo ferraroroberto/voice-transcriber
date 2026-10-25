@@ -245,7 +245,10 @@ class TestPolishModelLabelParity:
 
 @pytest.fixture
 def styles_css() -> str:
-    return (STATIC_DIR / "styles.css").read_text(encoding="utf-8")
+    return "\n".join(
+        (STATIC_DIR / name).read_text(encoding="utf-8")
+        for name in ("styles.css", "styles-views.css")
+    )
 
 
 @pytest.fixture

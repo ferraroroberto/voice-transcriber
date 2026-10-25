@@ -1,11 +1,4 @@
 {
   "version": 1,
-  "entries": [
-    {"key": "dir:tests", "modules": 41},
-    {"key": "fn:app/gui/app.py:TranscriberApp.__init__", "lines": 109},
-    {"key": "fn:app/gui/app.py:TranscriberApp._build_widgets", "lines": 104},
-    {"key": "fn:app/webapp/static/app.js:bindEvents", "lines": 135},
-    {"key": "fn:app/webapp/static/recorder.js:startRecording", "lines": 108},
-    {"key": "size:app/webapp/static/styles.css", "lines": 1030}
-  ]
+  "entries": []
 }

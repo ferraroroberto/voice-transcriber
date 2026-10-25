@@ -69,7 +69,7 @@ class TestNoModelLiteralsInPython:
         should appear. This guards against regressions where someone
         re-adds a `DEFAULT_POLISH_MODEL = "gemini_flash"` constant."""
         module_src = (
-            Path(__file__).resolve().parent.parent
+            Path(__file__).resolve().parents[2]
             / "src" / "webapp_config.py"
         ).read_text(encoding="utf-8")
         forbidden = [
