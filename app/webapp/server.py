@@ -240,7 +240,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(activity.router)
     app.include_router(analytics.router)
-    # Local-only view/tap log (#277): the vendored usage_router stores
+    # Local-only view/tap log: the vendored usage_router stores
     # events in this app's runtime-data SQLite file and sits behind the
     # same bearer-token middleware as every other /api route. The env var
     # is the highest-precedence override, as for the activity log.

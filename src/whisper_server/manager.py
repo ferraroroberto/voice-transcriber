@@ -40,8 +40,8 @@ except ImportError:  # pragma: no cover - psutil is listed in the root requireme
 
 logger = logging.getLogger(__name__)
 
-# Valid values for `mode` in whisper_server.yaml. Default is MODE_EXTERNAL
-# (issue #131) — MODE_LOCAL hard-fails at the next (re)start if a sibling
+# Valid values for `mode` in whisper_server.yaml. Default is MODE_EXTERNAL:
+# MODE_LOCAL hard-fails at the next (re)start if a sibling
 # project happens to be holding the mutex-shared port, which is a silent
 # regression waiting to happen; only the committed whisper_server.yaml is
 # authoritative, this default is just the safe fallback for a config that

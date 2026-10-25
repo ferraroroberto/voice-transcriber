@@ -1,4 +1,4 @@
-# Pre-ship verification gate (issue #17).
+# Pre-ship verification gate.
 #
 # Runs the full validation pipeline locally before a change is declared
 # "done": byte-compile, the static ratchet (no new duplicate block, unused
@@ -9,7 +9,9 @@
 # src/ -> app/ import and no root folder outside the declared shape, beyond
 # .structure-ratchet-baseline.json; exit 3 fails too), the conventions ratchet (no
 # rule's hit count -- no-window, logging-not-print, no-drive-path -- above
-# .conventions-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .conventions-ratchet-baseline.json; exit 3 fails too), the comment ratchet (no file's
+# count of issue references in comments above .comment-ratchet-baseline.json; exit 3
+# fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -78,11 +80,19 @@ try {
     & $python -m scripts.conventions_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "conventions ratchet failed (a rule's hits rose, or a file could not be parsed)." }
 
+    # Comment ratchet: issue references in product-code comments. Call the wrapper,
+    # never scripts/comment_ratchet.py: the wrapper maps exit 3 (a file could not be
+    # scanned) to a failure (tests/ratchets/test_ratchet_stages.py pins it). Whole
+    # tree, never routed.
+    Write-Host "==> comment ratchet (issue references in comments)..." -ForegroundColor Cyan
+    & $python -m scripts.comment_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "comment ratchet failed (a file gained an issue reference in a comment, or a file could not be scanned)." }
+
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e
     if ($LASTEXITCODE -ne 0) { Fail "non-e2e pytest suite failed." }
 
-    # Diff-proportionate e2e (#302): scripts/e2e_route.py wraps classify_e2e.py and
+    # Diff-proportionate e2e: scripts/e2e_route.py wraps classify_e2e.py and
     # owns the fail-safe -- a router error, no verdict or an unknown tier is `full`,
     # never less. The only doubt left here is the wrapper dying before it prints a
     # tier, which also runs the whole suite. CI always runs the whole suite.
@@ -121,7 +131,7 @@ try {
         $env:VT_E2E_AUTOBOOT = "1"
         try {
             # Per-test timing for /e2e-audit: the path is gitignored (.pytest_cache/)
-            # and mirrors `[e2e] junit_xml` in .fleet.toml (#216).
+            # and mirrors `[e2e] junit_xml` in .fleet.toml.
             & $python -m pytest @e2eArgs -q --junitxml=.pytest_cache/e2e-junit.xml
             $e2eExit = $LASTEXITCODE
         }

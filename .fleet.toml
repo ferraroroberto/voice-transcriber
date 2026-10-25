@@ -42,6 +42,7 @@ classify_e2e = { src = "scripts/classify_e2e.py", sha = "4c699636afecd5cae5e966b
 static_ratchet = { src = "scripts/static_ratchet.py", sha = "0eb0da42298e391fc614b3fe550bd6cf2d07c693", dest = "scripts/static_ratchet.py" }
 docs_ratchet = { src = "scripts/docs_ratchet.py", sha = "0d41425ff2797c98d1d3eb7ecb7de0cdb7133456", dest = "scripts/docs_ratchet.py" }
 conventions_ratchet = { src = "scripts/conventions_ratchet.py", sha = "0eb0da42298e391fc614b3fe550bd6cf2d07c693", dest = "scripts/conventions_ratchet.py" }
+comment_ratchet = { src = "scripts/comment_ratchet.py", sha = "e56308e1c099712cf5a006557c94e3f9ae4fe8aa", dest = "scripts/comment_ratchet.py" }
 structure_ratchet = { src = "scripts/structure_ratchet.py", sha = "84d2b12ab416551762e4a615e4a706df91cea69f", dest = "scripts/structure_ratchet.py" }
 base = { src = "app/webapp/static/_vendored/base", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/base" }
 home-head = { src = "app/webapp/static/_vendored/home-head", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "app/webapp/static/_vendored/home-head" }
@@ -108,6 +109,20 @@ baseline = ".structure-ratchet-baseline.json"
 enabled  = true
 baseline = ".conventions-ratchet-baseline.json"
 rules    = ["no-window", "logging-not-print", "no-drive-path"]
+
+# [comment_ratchet] -- the scaffold's baseline-and-ratchet for issue references in
+# product-code comments. The gate (scripts/verify-before-ship.ps1) runs
+# scripts/comment_ratchet.py through scripts/comment_ratchet_gate.py: a file's count of
+# `#NNN` references in .py/.js/.css/.ps1 comments may not rise above
+# .comment-ratchet-baseline.json. A comment states the present-tense why; how the code got
+# there lives in the issue, the PR and git log. Tests and every [vendored] dest are out of
+# scope automatically; _vendored/ holds scaffold copies the repo does not edit. Exit 3 (a file could not be scanned) fails the gate as NOT
+# CONFIRMED. Whole tree, never path-routed. Procedure + limits: project-scaffolding
+# docs/comment-ratchet.md.
+[comment_ratchet]
+enabled  = true
+baseline = ".comment-ratchet-baseline.json"
+exclude  = ["**/_vendored/**"]
 
 # Diff-proportionate e2e routing (project-scaffolding docs/e2e-routing.md).
 # Rules are evaluated top-to-bottom; first match wins. Unmatched paths fall
@@ -201,6 +216,10 @@ path = ".structure-ratchet-baseline.json"
 [[e2e.rule]]             # conventions-ratchet baseline: read by the gate only, never the browser -> none
 tier = "none"
 path = ".conventions-ratchet-baseline.json"
+
+[[e2e.rule]]             # comment-ratchet baseline: read by the gate only, never the browser -> none
+tier = "none"
+path = ".comment-ratchet-baseline.json"
 
 [[e2e.rule]]             # sample config the e2e run never reads -> none
 tier = "none"

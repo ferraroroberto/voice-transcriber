@@ -86,7 +86,7 @@ def _spawn_uvicorn(port: int) -> subprocess.Popen:
     # 127.0.0.1, never the tray's config-driven bind host. Command
     # construction beyond host/port/certs is shared with
     # `WebappManager._build_command` via `build_uvicorn_command` so a flag
-    # can never be added to one spawn path only (voice-transcriber#160).
+    # can never be added to one spawn path only.
     cmd = [str(_find_python())] + build_uvicorn_command(
         "127.0.0.1", port, cert_paths(PROJECT_ROOT)
     )

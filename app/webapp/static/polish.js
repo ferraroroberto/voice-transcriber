@@ -75,7 +75,7 @@ export function onReset() {
   // A tap mid-recording/upload/transcribe would null state.sessionId (and,
   // in incognito, DELETE the in-flight session) out from under the still-
   // running MediaRecorder — every subsequent chunk then 404s against
-  // "null" and the eventual Stop loses the take (voice-transcriber#178).
+  // "null" and the eventual Stop loses the take.
   // Reset is only meaningful once a take has settled back to idle.
   if (state.mode !== 'idle') return;
   cleanupIncognitoSession();

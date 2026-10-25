@@ -5,7 +5,7 @@
  * One in-memory list (state.historyTakes, newest first) is the source of
  * truth: every page load, select toggle or refresh re-renders the card and
  * the groups from it, so grouping across pages and Select mode never drift
- * from what was fetched (#264).
+ * from what was fetched.
  */
 
 'use strict';
@@ -21,7 +21,7 @@ import { mergeForAppend } from './recorder.js';
 
 const HISTORY_PAGE_SIZE = 10;
 
-// The wide layout (#266, design.md layout.wide): the same condition as the
+// The wide layout (design.md layout.wide): the same condition as the
 // vendored nav's left rail. There the take sheet's card is shown in place,
 // beside the list, instead of in a modal.
 const wideLayout = window.matchMedia('(min-width: 1100px) and (pointer: fine)');
@@ -36,7 +36,7 @@ export async function refreshHistory() {
 
 // Today's take count / words-per-minute / estimated time saved, the foot of
 // the Latest take card. Refreshed alongside History itself since both
-// change together (a new take affects both). See issue #95.
+// change together (a new take affects both).
 async function refreshAnalytics() {
   if (!els.analyticsSummary) return;
   try {
@@ -78,7 +78,7 @@ async function fetchHistoryPage(offset, replace) {
     // `has_more` is the authoritative, incognito-aware pagination signal
     // (the server derives it from a one-row-over probe); `total` is a
     // cheap folder count that may run slightly high, so don't gate the
-    // button on a shown/total comparison. See #139.
+    // button on a shown/total comparison.
     els.loadMoreHistory.hidden = !data.has_more;
     renderHistory();
   } catch (err) {
@@ -90,7 +90,7 @@ async function fetchHistoryPage(offset, replace) {
   }
 }
 
-// History's header line (#261): "N takes · kept D days", counted from the
+// History's header line: "N takes · kept D days", counted from the
 // same list `total` the pages draw from, with D the retention setting; "N
 // selected" in Select mode. Also re-run when the config (and so the
 // retention) reloads.
@@ -138,7 +138,7 @@ function renderEmptyState(count) {
   }
 }
 
-// The Latest take card (#264): the newest take, whatever its source, with
+// The Latest take card: the newest take, whatever its source, with
 // one-tap Copy — the owner's most common History action.
 function renderLatestCard(s) {
   els.latestCard.hidden = !s;
@@ -399,7 +399,7 @@ let sheetTake = null;
 let sheetText = '';
 let deleteArmTimer = null;
 
-// The sheet shows the stored source verbatim, "api" included (#264); only
+// The sheet shows the stored source verbatim, "api" included; only
 // this app's own "webapp" reads as a name.
 function sourceLabel(src) {
   if (!src) return NOT_RECORDED;
@@ -452,7 +452,7 @@ function markOpenRow() {
 
 // Put the take card where the layout wants it: in the detail pane beside the
 // list on a wide window, in the modal sheet otherwise. Moving the one card
-// keeps one renderer and one set of handlers for both (#266).
+// keeps one renderer and one set of handlers for both.
 function placeTakeCard() {
   if (wideLayout.matches) {
     if (els.takeSheet.open) els.takeSheet.close();
@@ -564,7 +564,7 @@ async function retranscribe(id) {
   }
 }
 
-// Settings › History › Delete all takes (#265): confirmed in a sheet, never
+// Settings › History › Delete all takes: confirmed in a sheet, never
 // the browser's confirm().
 async function deleteAllTakes() {
   try {

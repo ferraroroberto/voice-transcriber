@@ -99,7 +99,7 @@ export const state = {
   uploadChain: Promise.resolve(),  // serializes uploads so server appends in order
   pendingUploads: 0,
   bytesSent:   0,           // running total of chunk bytes uploaded
-  hadDroppedChunk: false,   // a /chunk POST exhausted its retries this take (#192)
+  hadDroppedChunk: false,   // a /chunk POST exhausted its retries this take
   startedAt:   0,
   timer:       null,
   levelTimer:  null,
@@ -110,15 +110,15 @@ export const state = {
   config:      null,
   services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
   servicesFailed: false,      // the last /api/status poll failed (said as such, never as "up")
-  staleShell:  false,         // the loaded shell is older than the server's, after the one auto-reload (#265)
+  staleShell:  false,         // the loaded shell is older than the server's, after the one auto-reload
   historyTotal: null,         // the History list's `total`, which its header line counts
-  historyTakes: [],           // every loaded History row, newest first (#264)
+  historyTakes: [],           // every loaded History row, newest first
   historySelecting: false,    // History is in Select mode
   historySelected: new Set(), // session ids picked in Select mode
-  historyOpenId: null,        // the take shown in the wide layout's detail pane (#266)
+  historyOpenId: null,        // the take shown in the wide layout's detail pane
   configIsFallback: false,  // true while running on applyConfigDefaults()'s
                             // offline defaults — a later visit re-fetches
-                            // the real server config (issue #87)
+                            // the real server config
   transcript:  '',
   polished:    '',
   textView:    'transcript',  // which version the Text card shows: 'transcript' | 'polished'
@@ -126,7 +126,7 @@ export const state = {
   polishStyle: '',            // label of the style the shown polish used
   polishing:   false,         // a polish request is in flight
   mimeType:    null,
-  // Latency-collapse plumbing (issue #5).
+  // Latency-collapse plumbing.
   eventSource: null,         // open SSE stream against /api/sessions/{id}/events
   partialVersion: 0,         // last partial version we accepted
   partialBaseTranscript: '', // transcript prefix when Append mode is on

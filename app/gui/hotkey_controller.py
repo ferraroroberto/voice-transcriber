@@ -59,7 +59,7 @@ class HotkeyController:
         # ``time.monotonic()`` of the moment the recorder was actually
         # created, as reported by ``notify_recording_started``. Used as a
         # second gate on PTT release so a press that races the 80 ms event
-        # pump can't stop a take that's barely begun (issue #28).
+        # pump can't stop a take that's barely begun.
         self._recorder_active_at: Optional[float] = None
 
     # ------------------------------------------------------------ lifecycle
