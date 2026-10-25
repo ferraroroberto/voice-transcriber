@@ -12,7 +12,7 @@ import pytest
 # Local imports
 from src.static_versioning import BuildInfo, asset_hash
 
-_STATIC_DIR = Path(__file__).resolve().parents[1] / "app" / "webapp" / "static"
+_STATIC_DIR = Path(__file__).resolve().parents[2] / "app" / "webapp" / "static"
 
 # Every asset index.html references directly with a ?v=__NAME__ placeholder —
 # root assets plus the vendored component CSS (issue #107). Deliberately a
@@ -21,6 +21,7 @@ _STATIC_DIR = Path(__file__).resolve().parents[1] / "app" / "webapp" / "static"
 _STAMPED_ASSETS = (
     "app.js",
     "styles.css",
+    "styles-views.css",
     "_vendored/base/base.css",
     "_vendored/nav/nav-tabs.css",
     "_vendored/card/card.css",

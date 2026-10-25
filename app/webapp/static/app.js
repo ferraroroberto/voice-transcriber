@@ -181,6 +181,22 @@ function bindEvents() {
   els.saveTranscript.addEventListener('click', onSaveTranscript);
   els.polishStyle.addEventListener('change', refreshPromptPreview);
 
+  bindNav();
+  els.loadMoreHistory.addEventListener('click', loadMoreHistory);
+  initSelectMode();
+  initTakeSheet();
+  initDeleteAll();
+  initPromptSheet();
+
+  bindSwitches();
+  bindAppearance();
+  els.micSelect.addEventListener('change', releaseCachedStream);
+  els.languageSelect.addEventListener('change', renderRecordHeadLine);
+
+  bindPageLifecycle();
+}
+
+function bindNav() {
   // Fleet bottom-tab nav (vendored component — _vendored/nav/). Settings is
   // no tab (fleet NAV-03): every pane's header gear opens it (openSettings),
   // and choosing any tab leaves it, so onChange hides the pane.
@@ -197,13 +213,9 @@ function bindEvents() {
   for (const gear of document.querySelectorAll('.home-settings')) {
     gear.addEventListener('click', openSettings);
   }
+}
 
-  els.loadMoreHistory.addEventListener('click', loadMoreHistory);
-  initSelectMode();
-  initTakeSheet();
-  initDeleteAll();
-  initPromptSheet();
-
+function bindSwitches() {
   // Fleet switches (vendored component): a tap flips the state through the
   // one setSwitch() write path; reads everywhere go through isOn(). Forcing
   // built-in also invalidates the cached stream so the next record() picks
@@ -231,7 +243,9 @@ function bindEvents() {
       renderRecordHeadLine();
     });
   }
+}
 
+function bindAppearance() {
   // Theme toggle (the fleet pattern), one per pane header: the
   // pre-paint snippet in index.html already stamped html[data-theme]; a button
   // just flips it. The sun/moon glyph swap is pure CSS keyed on the attribute.
@@ -247,10 +261,9 @@ function bindEvents() {
   // voice-transcriber.textsize and stamps html[data-textsize] on every tap, so
   // there is nothing for Save to do. The boot script handles first paint.
   bindTextSize(document.getElementById('textSizeControl'), 'voice-transcriber');
+}
 
-  els.micSelect.addEventListener('change', releaseCachedStream);
-  els.languageSelect.addEventListener('change', renderRecordHeadLine);
-
+function bindPageLifecycle() {
   // Release the mic when the page goes away so the iOS recording
   // indicator turns off — iOS keeps the permission grant for the
   // document lifetime, so the next record won't re-prompt within

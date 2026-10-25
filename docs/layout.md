@@ -79,7 +79,8 @@ voice-transcriber/
 │           ├── config.js          # client-side config constants
 │           ├── history.js         # session history display
 │           ├── polish.js          # polish-text UI flow
-│           ├── styles.css         # fleet design tokens (light + dark), app-specific rules
+│           ├── styles.css         # fleet design tokens (light + dark), recorder and shared rules
+│           ├── styles-views.css  # History, Settings and the wide layout; loaded after styles.css
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
 │                                  #   (base · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button)
 ├── assets/                        # static files the apps ship: tray icon, Stream Deck icon
@@ -146,4 +147,4 @@ Each is declared once in `.fleet.toml` and here; none is debt.
 
 - `webapp/` (`extra_roots` in `.fleet.toml`): the committed `cloudflared.sample.yml` template; the tray reads the gitignored `webapp/cloudflared.yml` copied from it (path in `app/gui/tray.py`, steps in `docs/remote-access.md`). The `webapp-tray` preset lists no such root, and moving the path would break existing installs' tunnel setup, so the folder stays.
 - `app/gui/`: a desktop tkinter window and the tray icon live beside the web UI, because the app has two native surfaces (the tray and the window) as well as the PWA. The preset's `app/tray/` holds only the single-instance guard; the tray menu, hotkey state machine and service supervisor are in `app/gui/`.
-- The baseline `.structure-ratchet-baseline.json` holds the existing offenders at today's size: `app/webapp/static/styles.css` (over 1,000 lines), the longest functions in `app/gui/app.py`, `app/webapp/static/app.js` and `app/webapp/static/recorder.js`, and `tests/` (over 40 modules). They may not grow; splitting them is separate work.
+- The baseline `.structure-ratchet-baseline.json` is empty: no file, function or directory is over its limit, so any new offender fails the gate. The webapp API tests live in `tests/webapp/` to keep `tests/` under the module limit.

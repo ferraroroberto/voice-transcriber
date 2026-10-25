@@ -76,29 +76,7 @@ class TranscriberApp:
         # PolishPanel; also used directly by the record/file flow below.
         self.webapp_config = load_webapp_config()
 
-        # When launched from the tray, live as a Toplevel of the tray's root so
-        # both share one tk interpreter — and delegate record/quit/toasts back
-        # to the tray so we don't run a parallel recorder/hotkey/notification
-        # path that ignores the tray icon color, global hotkey, and toasts.
-        if tray is not None:
-            self.root = tk.Toplevel(tray.root)
-        else:
-            self.root = tk.Tk()
-        self.root.title("Voice Transcription")
-        self.root.geometry("420x560")
-        self.root.minsize(420, 480)
-        self.root.configure(background="#FFFFFF")
-
-        style = ttk.Style(self.root)
-        try:
-            style.theme_use("clam")
-        except tk.TclError:
-            pass
-        style.configure(".", background="#FFFFFF", foreground="#000000")
-        style.configure("TFrame", background="#FFFFFF")
-        style.configure("TLabel", background="#FFFFFF", foreground="#000000")
-        style.configure("TCheckbutton", background="#FFFFFF", foreground="#000000")
-        style.map("TCheckbutton", background=[("active", "#FFFFFF")])
+        self._init_window(tray)
 
         # Language picker — Title-case label backed by ISO under the hood.
         # Old configs spelled it "english"/"spanish"/"italian"; new configs
@@ -134,6 +112,38 @@ class TranscriberApp:
         # vars, so the tray needs its own copy to honour the checkbox.
         self.translate_var.trace_add("write", self._on_translate_change)
 
+        self._init_mic_vars(config)
+
+        self._build_widgets()
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+        self._poll_status()
+
+    def _init_window(self, tray: Optional["TrayApp"]) -> None:
+        # When launched from the tray, live as a Toplevel of the tray's root so
+        # both share one tk interpreter — and delegate record/quit/toasts back
+        # to the tray so we don't run a parallel recorder/hotkey/notification
+        # path that ignores the tray icon color, global hotkey, and toasts.
+        if tray is not None:
+            self.root = tk.Toplevel(tray.root)
+        else:
+            self.root = tk.Tk()
+        self.root.title("Voice Transcription")
+        self.root.geometry("420x560")
+        self.root.minsize(420, 480)
+        self.root.configure(background="#FFFFFF")
+
+        style = ttk.Style(self.root)
+        try:
+            style.theme_use("clam")
+        except tk.TclError:
+            pass
+        style.configure(".", background="#FFFFFF", foreground="#000000")
+        style.configure("TFrame", background="#FFFFFF")
+        style.configure("TLabel", background="#FFFFFF", foreground="#000000")
+        style.configure("TCheckbutton", background="#FFFFFF", foreground="#000000")
+        style.map("TCheckbutton", background=[("active", "#FFFFFF")])
+
+    def _init_mic_vars(self, config: AppConfig) -> None:
         # Enumerate input devices once; used by the mic combobox.
         try:
             self._mic_devices: List[str] = [
@@ -156,10 +166,6 @@ class TranscriberApp:
         self.force_builtin_var.trace_add("write", self._apply_mic_selection)
         self.gain_boost_var.trace_add("write", self._save_gain_boost_settings)
         self.gain_boost_db_var.trace_add("write", self._save_gain_boost_settings)
-
-        self._build_widgets()
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
-        self._poll_status()
 
     # ------------------------------------------------------------ layout
 
@@ -214,6 +220,26 @@ class TranscriberApp:
         self.server_panel = ServerPanel(self.root, self.server)
         self.server_panel.pack(fill=tk.X)
 
+        self._build_language_row(pad)
+
+        self._build_mic_rows(pad)
+
+        self._build_gain_boost_row()
+
+        # Primary actions
+        record_btn = ttk.Button(self.root, text="🎤 Record / Stop", command=self._toggle_record)
+        record_btn.pack(fill=tk.X, **pad)
+        record_btn.configure(padding=(0, 10))
+
+        file_btn = ttk.Button(self.root, text="📁 Transcribe file…", command=self._transcribe_file_dialog)
+        file_btn.pack(fill=tk.X, **pad)
+
+        self._build_text_panels()
+
+        quit_btn = ttk.Button(self.root, text="Quit", command=self._quit)
+        quit_btn.pack(fill=tk.X, **pad)
+
+    def _build_language_row(self, pad: dict) -> None:
         # Dictation mode — full Whisper language list (alphabetical), with a
         # 🌐 Translate-to-English toggle alongside.
         lang_frame = ttk.Frame(self.root)
@@ -229,6 +255,7 @@ class TranscriberApp:
             variable=self.translate_var,
         ).pack(side=tk.LEFT, padx=(8, 0))
 
+    def _build_mic_rows(self, pad: dict) -> None:
         # Mic selector
         mic_frame = ttk.Frame(self.root)
         mic_frame.pack(fill=tk.X, **pad)
@@ -249,6 +276,7 @@ class TranscriberApp:
             variable=self.force_builtin_var,
         ).pack(side=tk.LEFT)
 
+    def _build_gain_boost_row(self) -> None:
         # Quiet-environment gain boost — amplifies captured audio before
         # whisper, distinct from the silence-skip anti-hallucination gate.
         gain_boost_frame = ttk.Frame(self.root)
@@ -265,14 +293,7 @@ class TranscriberApp:
         ).pack(side=tk.LEFT, padx=(8, 4))
         ttk.Label(gain_boost_frame, text="dB").pack(side=tk.LEFT)
 
-        # Primary actions
-        record_btn = ttk.Button(self.root, text="🎤 Record / Stop", command=self._toggle_record)
-        record_btn.pack(fill=tk.X, **pad)
-        record_btn.configure(padding=(0, 10))
-
-        file_btn = ttk.Button(self.root, text="📁 Transcribe file…", command=self._transcribe_file_dialog)
-        file_btn.pack(fill=tk.X, **pad)
-
+    def _build_text_panels(self) -> None:
         # Last-transcription panel — survives clipboard overwrites so the user
         # can always re-copy whatever they dictated last, until the app exits.
         # Append mode mirrors tray.append_mode when this window was opened
@@ -306,9 +327,6 @@ class TranscriberApp:
             get_transcript_text=self.transcript_panel.get_text,
         )
         self.polish_panel.pack(fill=tk.X, padx=16, pady=(8, 4))
-
-        quit_btn = ttk.Button(self.root, text="Quit", command=self._quit)
-        quit_btn.pack(fill=tk.X, **pad)
 
     # --------------------------------------------------- server status polling
 

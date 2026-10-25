@@ -93,30 +93,8 @@ async function startRecording() {
   setMode('starting');
   hideResumeButton();
 
-  const constraints = buildAudioConstraints();
-  const wantedKey = JSON.stringify(constraints);
-  let stream = state.stream;
-
-  if (stream && state.streamKey === wantedKey && stream.getAudioTracks().every(t => t.readyState === 'live')) {
-    // Reuse the existing grant — no permission prompt.
-    els.recordStatus.textContent = 'Reusing mic…';
-  } else {
-    releaseCachedStream();
-    els.recordStatus.textContent = 'Requesting mic…';
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: constraints,
-        video: false,
-      });
-    } catch (err) {
-      setMode('idle');
-      els.recordStatus.textContent = '';
-      showToast('Mic permission denied', 'error');
-      return;
-    }
-    state.stream = stream;
-    state.streamKey = wantedKey;
-  }
+  const stream = await acquireStream();
+  if (!stream) return;
 
   // Re-enumerate now that labels may be visible (iOS reveals after grant).
   populateMics();
@@ -126,7 +104,67 @@ async function startRecording() {
   await cleanupIncognitoSession();
 
   const incognito = isOn(els.incognitoToggle);
-  let session;
+  const session = await createSession(stream, incognito);
+  if (!session) return;
+  state.sessionId = session.session_id;
+  if (incognito) state.incognitoSessionId = session.session_id;
+
+  armRecorder(stream);
+
+  state.startedAt = Date.now();
+  setMode('recording');
+  // Live partials land in the transcript, so show it.
+  state.textView = 'transcript';
+  renderTextCard();
+
+  resetTakeState();
+
+  setupLevelMeter(stream, stopRecording);
+  acquireWakeLock();
+  startTimer();
+  openPartialStream(state.sessionId);
+
+  els.recordLabel.innerHTML = LABEL_STOP;
+  els.recordTimer.hidden = false;
+  els.recordTimer.textContent = '00:00';
+  els.recordStatus.textContent = 'Recording…';
+  els.recordBtn.setAttribute('aria-pressed', 'true');
+}
+
+// The live mic stream for the current constraints: the cached grant when it
+// still matches, otherwise a fresh getUserMedia. Null (mode reset to idle)
+// when the user denies the permission.
+async function acquireStream() {
+  const constraints = buildAudioConstraints();
+  const wantedKey = JSON.stringify(constraints);
+  let stream = state.stream;
+
+  if (stream && state.streamKey === wantedKey && stream.getAudioTracks().every(t => t.readyState === 'live')) {
+    // Reuse the existing grant — no permission prompt.
+    els.recordStatus.textContent = 'Reusing mic…';
+    return stream;
+  }
+  releaseCachedStream();
+  els.recordStatus.textContent = 'Requesting mic…';
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: constraints,
+      video: false,
+    });
+  } catch (err) {
+    setMode('idle');
+    els.recordStatus.textContent = '';
+    showToast('Mic permission denied', 'error');
+    return null;
+  }
+  state.stream = stream;
+  state.streamKey = wantedKey;
+  return stream;
+}
+
+// POST the server-side session for this take. Null (stream stopped, mode reset
+// to idle) when the request fails.
+async function createSession(stream, incognito) {
   try {
     const sessionRes = await authFetch('/api/sessions', {
       method: 'POST',
@@ -138,7 +176,7 @@ async function startRecording() {
       }),
     });
     if (!sessionRes.ok) throw new Error(`HTTP ${sessionRes.status}`);
-    session = await sessionRes.json();
+    return await sessionRes.json();
   } catch (err) {
     // A rejected fetch (tunnel blip) must not leave the mode on
     // 'starting' — onRecordToggle only acts on idle/recording.
@@ -147,11 +185,11 @@ async function startRecording() {
     setMode('idle');
     els.recordStatus.textContent = '';
     showToast('Could not create session', 'error');
-    return;
+    return null;
   }
-  state.sessionId = session.session_id;
-  if (incognito) state.incognitoSessionId = session.session_id;
+}
 
+function armRecorder(stream) {
   const mimeType = pickMimeType();
   state.mimeType = mimeType;
   state.uploadChain = Promise.resolve();
@@ -169,14 +207,10 @@ async function startRecording() {
   };
   state.recorder.onstop = () => onRecorderStopped(mimeType);
   state.recorder.start(1000); // 1 s chunk cadence — survives connection drops
+}
 
-  state.startedAt = Date.now();
-  setMode('recording');
-  // Live partials land in the transcript, so show it.
-  state.textView = 'transcript';
-  renderTextCard();
-
-  // Reset latency-collapse plumbing per-take.
+// Reset latency-collapse plumbing per-take.
+function resetTakeState() {
   state.partialVersion = 0;
   state.partialBaseTranscript =
     (appendActive() && state.transcript)
@@ -185,17 +219,6 @@ async function startRecording() {
   state.vadSilenceSince = 0;
   state.vadStopFired = false;
   state.backgroundFinalized = false;
-
-  setupLevelMeter(stream, stopRecording);
-  acquireWakeLock();
-  startTimer();
-  openPartialStream(state.sessionId);
-
-  els.recordLabel.innerHTML = LABEL_STOP;
-  els.recordTimer.hidden = false;
-  els.recordTimer.textContent = '00:00';
-  els.recordStatus.textContent = 'Recording…';
-  els.recordBtn.setAttribute('aria-pressed', 'true');
 }
 
 function stopRecording() {
