@@ -22,7 +22,7 @@ from tests.test_static_ratchet_gate import _fake_script
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # name -> the gate wrapper module for each stage this module pins
-STAGES = ["comment"]
+STAGES = ["comment", "instruction"]
 
 
 def _wrapper(name: str):
