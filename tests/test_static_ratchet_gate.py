@@ -5,6 +5,9 @@ ruff, a timeout): nothing was checked. These tests pin that 3 fails as NOT
 CONFIRMED -- never a pass, never a skip -- and that the pre-ship gate calls the
 wrapper that guarantees it rather than the script. They run fake scripts in a
 temp directory: no network, no `npx`, and never the live ledger or config.
+
+The conventions-ratchet stage reuses this runner, so its exit-code mapping and its
+gate wiring are pinned at the end of this module.
 """
 
 from __future__ import annotations
@@ -15,6 +18,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts import conventions_ratchet_gate
 from scripts import static_ratchet_gate as gate
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -111,4 +115,44 @@ def test_the_ratchet_is_declared_and_its_script_is_vendored() -> None:
     assert (REPO_ROOT / fleet["static_ratchet"]["baseline"]).is_file()
     entry = fleet["vendored"]["static_ratchet"]
     assert entry["dest"] == "scripts/static_ratchet.py"
+    assert (REPO_ROOT / entry["dest"]).is_file()
+
+
+def test_conventions_exit_three_is_not_confirmed_and_never_a_skip() -> None:
+    ok, label = conventions_ratchet_gate.classify_exit(3)
+    assert not ok
+    assert "NOT CONFIRMED" in label
+    assert "skip" not in label.lower()
+    assert [conventions_ratchet_gate.classify_exit(c)[0] for c in (0, 1, 2, 4, -1)] == [True] + [False] * 4
+
+
+@pytest.mark.parametrize("code", [0, 1, 2, 3])
+def test_conventions_run_exits_nonzero_for_every_script_failure(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], code: int
+) -> None:
+    got = conventions_ratchet_gate.run(_fake_script(tmp_path, code, "from the script"))
+    out = capsys.readouterr().out
+    assert got == (0 if code == 0 else 1)
+    assert "from the script" in out
+    last = out.rstrip().splitlines()[-1]
+    assert last.startswith("OK: conventions ratchet" if code == 0 else "FAIL: conventions ratchet")
+    assert ("NOT CONFIRMED" in last) == (code == 3)
+
+
+def test_the_pre_ship_gate_calls_the_conventions_wrapper_not_the_script() -> None:
+    gate_ps1 = (REPO_ROOT / "scripts" / "verify-before-ship.ps1").read_text(encoding="utf-8")
+    code_lines = [line for line in gate_ps1.splitlines() if not line.lstrip().startswith("#")]
+    stage = [line for line in code_lines if "conventions_ratchet" in line]
+    assert len(stage) == 1
+    assert "-m scripts.conventions_ratchet_gate" in stage[0]
+    assert "conventions_ratchet.py" not in stage[0]
+
+
+def test_the_conventions_ratchet_is_declared_and_its_script_is_vendored() -> None:
+    fleet = tomllib.loads((REPO_ROOT / ".fleet.toml").read_text(encoding="utf-8"))
+    table = fleet["conventions_ratchet"]
+    assert table["enabled"] is True
+    assert (REPO_ROOT / table["baseline"]).is_file()
+    entry = fleet["vendored"]["conventions_ratchet"]
+    assert entry["dest"] == "scripts/conventions_ratchet.py"
     assert (REPO_ROOT / entry["dest"]).is_file()
