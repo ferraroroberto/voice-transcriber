@@ -15,7 +15,8 @@
 # .instruction-ratchet-baseline.json and no file past its size cap; exit 3 fails too),
 # the doc references ratchet (every repo path, module and port README.md, CLAUDE.md and
 # docs/ name resolves, beyond .doc-refs-ratchet-baseline.json; exit 3 fails too), the
-# non-e2e pytest suite, then
+# dead code ratchet (no function, class or method nothing references, beyond
+# .dead-code-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -107,6 +108,14 @@ try {
     Write-Host "==> doc references ratchet (paths, modules and ports named in the docs)..." -ForegroundColor Cyan
     & $python -m scripts.doc_refs_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "doc references ratchet failed (a doc names something that does not exist, or a doc could not be read)." }
+
+    # Dead code ratchet: a definition no tracked Python file reads. Call the wrapper, never
+    # scripts/dead_code_ratchet.py: the wrapper maps exit 3 (a .py file could not be parsed)
+    # to a failure (tests/ratchets/test_ratchet_stages.py pins it). Whole tree, never
+    # routed: deleting the last caller in one file strands a definition in another.
+    Write-Host "==> dead code ratchet (definitions nothing references)..." -ForegroundColor Cyan
+    & $python -m scripts.dead_code_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "dead code ratchet failed (an unreferenced definition, or a Python file could not be parsed)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e
