@@ -22,6 +22,8 @@ from typing import Iterator
 import pytest
 import requests
 
+from src.no_window import NO_WINDOW
+
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PYTHON = PROJECT_ROOT / ".venv" / "Scripts" / "python.exe"
@@ -67,6 +69,7 @@ def uvicorn_proc(tmp_path: Path) -> Iterator[tuple[subprocess.Popen, int]]:
         env=env,
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
+        creationflags=NO_WINDOW,
     )
     # Poll the health endpoint until the server is ready or we give up.
     deadline = time.time() + 20.0

@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from src.no_window import NO_WINDOW
 from src.process_supervisor import is_port_in_use, stop_popen, wait_until_ready
 
 PYTHON = Path(sys.executable)
@@ -55,6 +56,7 @@ class TestStopPopen:
     def test_stops_a_running_process(self):
         proc = subprocess.Popen(
             [str(PYTHON), "-c", "import time; time.sleep(60)"],
+            creationflags=NO_WINDOW,
         )
         try:
             assert proc.poll() is None  # still running
@@ -68,7 +70,7 @@ class TestStopPopen:
         """`wait()` on an already-exited process returns immediately with
         its exit code rather than raising — the ladder should complete
         without hanging."""
-        proc = subprocess.Popen([str(PYTHON), "-c", "pass"])
+        proc = subprocess.Popen([str(PYTHON), "-c", "pass"], creationflags=NO_WINDOW)
         proc.wait(timeout=5)
         assert proc.poll() is not None
         stop_popen(proc, name="test-proc", terminate_timeout=5, kill_timeout=3)

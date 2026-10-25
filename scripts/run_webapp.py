@@ -45,6 +45,7 @@ def main() -> int:
     # Foreground, console-visible spawn -- webapp.bat is a deliberately
     # interactive terminal session, so this inherits stdio rather than
     # suppressing the console window.
+    # no-window-exempt: webapp.bat is an interactive terminal session; the console is the UI
     return subprocess.run(cmd, cwd=str(PROJECT_ROOT)).returncode
 
 

@@ -17,8 +17,9 @@ import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Fleet repos are siblings, so the scaffold checkout defaults to the neighbouring folder.
 SCAFFOLDING_ROOT = Path(
-    os.environ.get("PROJECT_SCAFFOLDING_ROOT", r"E:\automation\project-scaffolding")
+    os.environ.get("PROJECT_SCAFFOLDING_ROOT", PROJECT_ROOT.parent / "project-scaffolding")
 )
 sys.path.insert(0, str(SCAFFOLDING_ROOT / "scripts"))
 

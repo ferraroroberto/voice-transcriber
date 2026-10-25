@@ -17,6 +17,7 @@ from pathlib import Path
 
 import pytest
 
+from src.no_window import NO_WINDOW
 from src.process_supervisor import OWNERSHIP_EXTERNAL, OWNERSHIP_NONE
 from src.whisper_server.manager import ServerConfig, WhisperServerManager
 
@@ -69,6 +70,7 @@ def earlier_server(tmp_path):
     log = cfg.log_file.open("wb")
     proc = subprocess.Popen(
         [str(binary), "-c", _LISTENER, str(port)], stdout=log, stderr=subprocess.STDOUT,
+        creationflags=NO_WINDOW,
     )
     log.close()
     cfg.pid_file.write_text(str(proc.pid), encoding="utf-8")
