@@ -13,7 +13,9 @@
 # count of issue references in comments above .comment-ratchet-baseline.json; exit 3
 # fails too), the instruction ratchet (no instruction-file rule above
 # .instruction-ratchet-baseline.json and no file past its size cap; exit 3 fails too),
-# the non-e2e pytest suite, then
+# the doc references ratchet (every repo path, module and port README.md, CLAUDE.md and
+# docs/ name resolves, beyond .doc-refs-ratchet-baseline.json; exit 3 fails too), the
+# non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -97,6 +99,14 @@ try {
     Write-Host "==> instruction ratchet (rules and size caps over CLAUDE.md / AGENTS.md)..." -ForegroundColor Cyan
     & $python -m scripts.instruction_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "instruction ratchet failed (a rule's count rose, a file passed its size cap, or a file could not be read)." }
+
+    # Doc references ratchet: a path, module or port the docs name that no longer exists.
+    # Call the wrapper, never scripts/doc_refs_ratchet.py: the wrapper maps exit 3 (a doc
+    # could not be read) to a failure (tests/ratchets/test_ratchet_stages.py pins it).
+    # Whole tree, never routed: a code change can strand a reference without touching the doc.
+    Write-Host "==> doc references ratchet (paths, modules and ports named in the docs)..." -ForegroundColor Cyan
+    & $python -m scripts.doc_refs_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "doc references ratchet failed (a doc names something that does not exist, or a doc could not be read)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e

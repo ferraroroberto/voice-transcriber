@@ -73,3 +73,4 @@ def test_ratchet_baseline_routes_to_skip() -> None:
     assert classify([".conventions-ratchet-baseline.json"], cfg).tier == "skip"
     assert classify([".comment-ratchet-baseline.json"], cfg).tier == "skip"
     assert classify([".instruction-ratchet-baseline.json"], cfg).tier == "skip"
+    assert classify([".doc-refs-ratchet-baseline.json"], cfg).tier == "skip"
