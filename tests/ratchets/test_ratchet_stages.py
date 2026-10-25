@@ -22,7 +22,7 @@ from tests.test_static_ratchet_gate import _fake_script
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # name -> the gate wrapper module for each stage this module pins
-STAGES = ["comment", "instruction"]
+STAGES = ["comment", "instruction", "doc_refs"]
 
 
 def _wrapper(name: str):
@@ -49,7 +49,8 @@ def test_run_exits_nonzero_for_every_script_failure(
     assert got == (0 if code == 0 else 1)
     assert "from the script" in out  # the script's own finding is echoed
     last = out.rstrip().splitlines()[-1]
-    assert last.startswith(f"OK: {name} ratchet" if code == 0 else f"FAIL: {name} ratchet")
+    label = name.replace("_", " ")
+    assert last.startswith(f"OK: {label} ratchet" if code == 0 else f"FAIL: {label} ratchet")
     assert ("NOT CONFIRMED" in last) == (code == 3)
 
 
