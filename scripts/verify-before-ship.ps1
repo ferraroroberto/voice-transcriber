@@ -1,13 +1,15 @@
 # Pre-ship verification gate (issue #17).
 #
 # Runs the full validation pipeline locally before a change is declared
-# "done": byte-compile, the static ratchet (no new duplicate block or unused
-# import/variable beyond .static-ratchet-baseline.json; exit 3 = a detector could
+# "done": byte-compile, the static ratchet (no new duplicate block, unused
+# import/variable, ruff B or S finding beyond .static-ratchet-baseline.json; exit 3 = a detector could
 # not run = NOT CONFIRMED, which fails), the docs ratchet (README within 40 KiB and no
 # new history marker in README/docs beyond .docs-ratchet-baseline.json; same exit-3
 # rule), the structure ratchet (no file, function or directory past its limit, no
 # src/ -> app/ import and no root folder outside the declared shape, beyond
-# .structure-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .structure-ratchet-baseline.json; exit 3 fails too), the conventions ratchet (no
+# rule's hit count -- no-window, logging-not-print, no-drive-path -- above
+# .conventions-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -47,7 +49,7 @@ try {
 
     # Call the wrapper, never scripts/static_ratchet.py: the wrapper maps exit 3 to a
     # failure (tests/test_static_ratchet_gate.py pins it). Whole tree, never routed.
-    Write-Host "==> static ratchet (duplicates, unused imports/variables)..." -ForegroundColor Cyan
+    Write-Host "==> static ratchet (duplicates, unused imports/variables, ruff B/S findings)..." -ForegroundColor Cyan
     & $python -m scripts.static_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "static ratchet failed (new finding, or a detector could not run)." }
 
@@ -67,6 +69,14 @@ try {
     $structureExit = $LASTEXITCODE
     if ($structureExit -eq 3) { Fail "structure ratchet NOT CONFIRMED (a file could not be measured, or the shape is unknown)." }
     if ($structureExit -ne 0) { Fail "structure ratchet failed (a new or grown offender, a root folder outside the shape, or a bad table or baseline)." }
+
+    # Conventions ratchet: fleet conventions held as baselined `ast` rules. Call the
+    # wrapper, never scripts/conventions_ratchet.py: the wrapper maps exit 3 (a file
+    # could not be parsed) to a failure (tests/test_static_ratchet_gate.py pins
+    # it). Whole tree, never routed.
+    Write-Host "==> conventions ratchet (no-window, logging-not-print, no-drive-path)..." -ForegroundColor Cyan
+    & $python -m scripts.conventions_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "conventions ratchet failed (a rule's hits rose, or a file could not be parsed)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e
