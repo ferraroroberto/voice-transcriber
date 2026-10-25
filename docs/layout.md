@@ -121,8 +121,10 @@ voice-transcriber/
 │   ├── structure_ratchet.py       # vendored structure ratchet (file size, function length, flat dirs, src→app imports, root layout)
 │   ├── conventions_ratchet.py     # vendored conventions ratchet (no-window, logging-not-print, no-drive-path)
 │   ├── conventions_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be parsed) fails
+│   ├── comment_ratchet.py         # vendored comment ratchet (issue references in product-code comments)
+│   ├── comment_ratchet_gate.py    # the gate's wrapper around it: exit 3 (a file could not be scanned) fails
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure and conventions ratchets, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions and comment ratchets, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/

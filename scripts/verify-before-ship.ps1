@@ -9,7 +9,9 @@
 # src/ -> app/ import and no root folder outside the declared shape, beyond
 # .structure-ratchet-baseline.json; exit 3 fails too), the conventions ratchet (no
 # rule's hit count -- no-window, logging-not-print, no-drive-path -- above
-# .conventions-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .conventions-ratchet-baseline.json; exit 3 fails too), the comment ratchet (no file's
+# count of issue references in comments above .comment-ratchet-baseline.json; exit 3
+# fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -77,6 +79,14 @@ try {
     Write-Host "==> conventions ratchet (no-window, logging-not-print, no-drive-path)..." -ForegroundColor Cyan
     & $python -m scripts.conventions_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "conventions ratchet failed (a rule's hits rose, or a file could not be parsed)." }
+
+    # Comment ratchet: issue references in product-code comments. Call the wrapper,
+    # never scripts/comment_ratchet.py: the wrapper maps exit 3 (a file could not be
+    # scanned) to a failure (tests/ratchets/test_ratchet_stages.py pins it). Whole
+    # tree, never routed.
+    Write-Host "==> comment ratchet (issue references in comments)..." -ForegroundColor Cyan
+    & $python -m scripts.comment_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "comment ratchet failed (a file gained an issue reference in a comment, or a file could not be scanned)." }
 
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e

@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "entries": [
+    {"key": "app/gui/app.py", "count": 1},
+    {"key": "app/gui/hotkey_controller.py", "count": 1},
+    {"key": "app/gui/tray.py", "count": 4},
+    {"key": "app/webapp/manager.py", "count": 2},
+    {"key": "app/webapp/partial_worker.py", "count": 1},
+    {"key": "app/webapp/routers/sessions.py", "count": 2},
+    {"key": "app/webapp/server.py", "count": 1},
+    {"key": "app/webapp/static/api.js", "count": 1},
+    {"key": "app/webapp/static/app.js", "count": 7},
+    {"key": "app/webapp/static/config.js", "count": 7},
+    {"key": "app/webapp/static/history.js", "count": 9},
+    {"key": "app/webapp/static/partials.js", "count": 1},
+    {"key": "app/webapp/static/polish.js", "count": 1},
+    {"key": "app/webapp/static/recorder.js", "count": 6},
+    {"key": "app/webapp/static/state.js", "count": 6},
+    {"key": "app/webapp/static/styles.css", "count": 16},
+    {"key": "app/webapp/static/ui.js", "count": 2},
+    {"key": "scripts/run-e2e.ps1", "count": 1},
+    {"key": "scripts/run_named_tunnel.py", "count": 1},
+    {"key": "scripts/verify-before-ship.ps1", "count": 3},
+    {"key": "src/activity_log.py", "count": 1},
+    {"key": "src/archive.py", "count": 2},
+    {"key": "src/speaker_label.py", "count": 2},
+    {"key": "src/transcription_client.py", "count": 3},
+    {"key": "src/whisper_server/manager.py", "count": 1}
+  ]
+}
