@@ -41,13 +41,13 @@ from typing import Dict
 
 # Third-party imports
 from fastapi import FastAPI
-from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from src import build_transcription_client, load_app_config
 from src import activity_log
 from src.archive import SessionArchive
+from src.compression import StreamSafeGZipMiddleware
 from src.polish import PolishClient
 from src.runtime_data import runtime_db_path
 from src.static_versioning import BuildInfo
@@ -79,10 +79,6 @@ _DAILY_ASSETS = frozenset({
 })
 
 _IMMUTABLE_CACHE = "public, max-age=31536000, immutable"
-
-# Responses smaller than this go out uncompressed — gzip framing would
-# cost more than it saves on the small status/version JSON.
-_GZIP_MIN_BYTES = 1000
 
 
 class CachingStaticFiles(StaticFiles):
@@ -192,21 +188,17 @@ def create_app() -> FastAPI:
         lifespan=_lifespan,
     )
 
-    # Gzip entry document, JS/CSS and JSON. Registered *before* the auth
-    # gate so it sits inside it: ``BaseHTTPMiddleware`` re-streams every
-    # body, which would make an outer gzip ignore ``minimum_size`` and
-    # compress even empty bodies. Starlette's middleware skips
-    # ``text/event-stream``, so the session SSE stream stays unbuffered.
-    app.add_middleware(
-        GZipMiddleware, minimum_size=_GZIP_MIN_BYTES, compresslevel=6
-    )
-
     # Read the token from app.state on every request so a /api/config
     # patch that rotates it takes effect without a restart.
     app.add_middleware(
         BearerTokenMiddleware,
         get_token=lambda: getattr(app.state.webapp_config, "auth_token", ""),
     )
+
+    # Registered last so it is the outermost layer: an auth 401 or a
+    # bodyless 304 passes through it unchanged. The one stream route
+    # (session SSE) is ``text/event-stream``, which it never compresses.
+    app.add_middleware(StreamSafeGZipMiddleware, bypass_paths=())
 
     # Stash dependencies on app.state so handlers can reach them without
     # a global. This also keeps the module import-side-effect-free, which
