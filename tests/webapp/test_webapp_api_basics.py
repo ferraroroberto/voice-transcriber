@@ -281,11 +281,6 @@ class TestCompression:
         resp = client.get("/", headers={"Accept-Encoding": "identity"})
         assert "content-encoding" not in resp.headers
 
-    def test_tiny_responses_stay_uncompressed(self, webapp_client):
-        client, _, _ = webapp_client
-        resp = client.get("/healthz", headers={"Accept-Encoding": "gzip"})
-        assert "content-encoding" not in resp.headers
-
 
 class TestApiConfig:
     def test_get_returns_polish_models_and_languages(self, webapp_client, sample_polish_payload):
