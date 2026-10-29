@@ -38,8 +38,8 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
     Behaviour:
 
     - If the configured token is empty, the middleware short-circuits
-      and the webapp behaves exactly as it did before this feature
-      landed. This is the default.
+      and every request passes through unauthenticated. This is the
+      default.
     - Loopback callers (127.0.0.1, ::1) always bypass — the tk window
       and any local scripts keep working without the token.
     - The page itself (`/`, `/static/*`) and probes (`/healthz`,

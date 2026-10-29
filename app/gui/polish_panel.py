@@ -1,10 +1,11 @@
 """Polish panel — style/model pickers, the polished-text box, and the
 polish / save-defaults / show-prompt / copy-polished actions.
 
-Extracted from ``TranscriberApp`` (voice-transcriber#177). Needs
-read-only access to the current transcript (``get_transcript_text``,
-normally ``TranscriptPanel.get_text``) but never mutates it — the
-polish flow is one-way, transcript → polished text.
+Kept apart from ``TranscriberApp`` so the polish flow owns only its own
+widgets. Needs read-only access to the current transcript
+(``get_transcript_text``, normally ``TranscriptPanel.get_text``) but
+never mutates it — the polish flow is one-way, transcript → polished
+text.
 """
 
 from __future__ import annotations

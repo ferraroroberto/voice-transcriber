@@ -6,9 +6,10 @@ close can optionally hide to tray (caller-controlled flag).
 
 The server status/model line, the last-transcription box, and the polish
 flow each live in their own widget class (``ServerPanel``,
-``TranscriptPanel``, ``PolishPanel`` — voice-transcriber#177); this class
-composes them plus owns window lifecycle, language/mic/gain-boost
-settings, and the record/file transcription flow.
+``TranscriptPanel``, ``PolishPanel``), keeping each concern
+independently testable; this class composes them plus owns window
+lifecycle, language/mic/gain-boost settings, and the record/file
+transcription flow.
 """
 
 from __future__ import annotations
@@ -337,8 +338,8 @@ class TranscriberApp:
 
     def show_model_details(self) -> None:
         """Public passthrough for the tray's "Model info" menu item, which
-        prefers this window's dialog when one is open (voice-transcriber#177
-        — was a private ``_show_model_details()`` reach-through)."""
+        prefers this window's dialog when one is open rather than reaching
+        into a private method."""
         self.server_panel.show_model_details()
 
     def _current_last_transcription(self) -> Optional[str]:
@@ -506,8 +507,8 @@ class TranscriberApp:
         then hand off to ``_show_finalized``.
 
         The mic flow doesn't call this — ``handle_take`` already ran
-        ``finalize_transcript`` (voice-transcriber#174), so it goes straight
-        to ``_show_finalized`` with the already-finalized text instead.
+        ``finalize_transcript``, so it goes straight to
+        ``_show_finalized`` with the already-finalized text instead.
         """
         finalized = finalize_transcript(
             text,

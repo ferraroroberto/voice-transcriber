@@ -27,8 +27,7 @@ def language_type(value: str) -> str:
     Shared by the ``record``/``transcribe`` subcommands in place of a
     ``choices=LANGUAGE_MODES`` allowlist, which rejected every language
     but the legacy three — ``resolve_iso`` (used downstream via
-    ``AppConfig.whisper_language``) already accepts the full set
-    (voice-transcriber#164).
+    ``AppConfig.whisper_language``) already accepts the full set.
     """
     if resolve_iso(value) is None:
         raise argparse.ArgumentTypeError(

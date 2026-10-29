@@ -1,14 +1,15 @@
 """Push-to-talk / tap-toggle global hotkey state machine.
 
-Extracted from ``TrayApp`` (voice-transcriber#177): owns the pynput
-listener registration plus the mutable fields and millisecond-race guards
-needed to tell a tap (press + release, toggle semantics) from a
-push-to-talk hold (press, wait >= ``ptt_threshold_ms``, release = stop) on
-the same key. ``TrayApp`` supplies two narrow callbacks at construction —
-whether a recorder is currently active, and how to enqueue a
-toggle-record event — and calls ``notify_recording_started`` /
-``notify_recording_stopped`` around the actual recorder lifecycle so the
-release-side race guard (issue #28) has an accurate recorder age.
+Owns the pynput listener registration plus the mutable fields and
+millisecond-race guards needed to tell a tap (press + release, toggle
+semantics) from a push-to-talk hold (press, wait >= ``ptt_threshold_ms``,
+release = stop) on the same key — kept apart from ``TrayApp`` so the
+hotkey state machine is testable on its own. ``TrayApp`` supplies two
+narrow callbacks at construction — whether a recorder is currently
+active, and how to enqueue a toggle-record event — and calls
+``notify_recording_started`` / ``notify_recording_stopped`` around the
+actual recorder lifecycle so the release-side race guard has an accurate
+recorder age.
 """
 
 from __future__ import annotations

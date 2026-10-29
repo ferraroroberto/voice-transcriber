@@ -7,11 +7,10 @@ hotkey take: a near-silent recording never reaches whisper (it would
 otherwise hallucinate text on empty audio), a configured gain boost is
 applied for quiet environments, then the samples go to
 ``TranscriptionClient``, then the result is finalized (strip / append-mode
-merge / clipboard copy). ``handle_take`` is the single owner of that whole
-sequence (voice-transcriber#174) — each surface gets back one
-``TakeResult`` and renders it (toast vs messagebox) plus writes its own
-last-transcription slot; the workflow itself can't drift between the two
-surfaces again.
+merge / clipboard copy). ``handle_take`` is the single owner of that
+whole sequence — each surface gets back one ``TakeResult`` and renders
+it (toast vs messagebox) plus writes its own last-transcription slot;
+the workflow itself can't drift between the two surfaces.
 """
 
 from __future__ import annotations
@@ -93,7 +92,7 @@ def finalize_transcript(
     ``last_transcription`` with a blank-line separator when ``append_mode``
     is on, then copy to the clipboard when ``auto_copy`` is on. One
     implementation here means the ordering can't drift between the two
-    surfaces again (voice-transcriber#160).
+    surfaces.
 
     Returns ``None`` for an empty (whitespace-only) transcription — callers
     treat that as "nothing to show" and skip writing back their own
@@ -141,10 +140,10 @@ def handle_take(
     """Run the full take-processing workflow: ``process_recording`` ->
     TranscriptionError arm -> SilentTake arm -> ``finalize_transcript``.
 
-    Both the tray and the tk main window ran hand-written copies of this
-    sequence that had already drifted (voice-transcriber#174); this is the
-    single implementation. Callers only render the result and write their
-    own last-transcription slot.
+    Both the tray and the tk main window call this single implementation
+    instead of keeping their own hand-written copy of the sequence, so
+    the two surfaces can't drift apart. Callers only render the result
+    and write their own last-transcription slot.
     """
     try:
         result = process_recording(

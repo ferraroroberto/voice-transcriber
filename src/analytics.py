@@ -2,8 +2,7 @@
 
 Derived entirely from the persistent activity log (:mod:`src.activity_log`),
 not the archive — so the numbers stay correct even after a session's
-``archive/`` folder has been pruned by the 30-day retention sweep. See
-issue #95.
+``archive/`` folder has been pruned by the 30-day retention sweep.
 
 ``words_per_minute`` and ``time_saved_minutes`` are estimates, not precise
 measurements: word count is a whitespace split of the transcript, and

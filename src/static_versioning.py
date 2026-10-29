@@ -8,7 +8,7 @@ answered by feel:
     edit changes the URL — no manual ``?v=N`` bumps, no stale iOS cache.
     A ``.js`` stamp hashes the module plus everything it imports, so an
     edit to a nested module also moves the URL of every importer above it,
-    up to ``app.js`` (issue #220),
+    up to ``app.js``,
     ``index.html`` carries a ``?v=__NAME__`` placeholder for the
     assets it references directly (``app.js`` + the stylesheets); every
     other module is a transitive ``import`` from ``app.js`` and gets its

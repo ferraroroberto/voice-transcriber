@@ -82,13 +82,13 @@ async def healthz() -> Dict[str, Any]:
 @router.get("/api/version")
 async def version(request: Request) -> Dict[str, str]:
     """Build identity so the phone (and tests) can confirm which build
-    is loaded — see issue #13."""
+    is loaded."""
     return request.app.state.build_info.as_dict()
 
 
 @router.get("/install-ca")
 async def install_ca() -> FileResponse:
-    """Serve the iOS .mobileconfig for one-tap CA install (Phase 3)."""
+    """Serve the iOS .mobileconfig for one-tap CA install."""
     profile = STATIC_DIR / "voice-transcriber-ca.mobileconfig"
     if not profile.exists():
         raise HTTPException(

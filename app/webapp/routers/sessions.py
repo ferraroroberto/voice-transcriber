@@ -110,7 +110,8 @@ async def upload_and_transcribe(
 ) -> Dict[str, Any]:
     """Single-shot upload — receive whole audio blob, transcribe, return.
 
-    Phase 4 adds chunked uploads via /chunk + /finish.
+    A separate path from the chunked ``/chunk`` + ``/finish`` flow below,
+    for callers that already have the whole recording in hand.
     """
     session = request.app.state.archive.get(session_id)
     if session is None:
@@ -515,9 +516,8 @@ async def list_session_transcripts(
 
     Returns the full ``transcript`` text for every non-incognito session
     in the window in one call, avoiding the N+1 ``/text`` fetches a
-    consumer would otherwise make. Backs the hub dictionary miner
-    (voice-transcriber#60 / local-llm-hub#94). Empty transcripts are
-    omitted. Newest-first.
+    consumer would otherwise make. Backs the hub dictionary miner.
+    Empty transcripts are omitted. Newest-first.
     """
     archive: SessionArchive = request.app.state.archive
     window = _resolve_since(days, since)
@@ -683,8 +683,8 @@ def _record_served(session, client: TranscriptionClient) -> Dict[str, str]:
     (the caller writes it) and return the display pair for the response.
 
     Persisted so History's take sheet can say which service served a take
-    long after the ``/finish`` response is gone (#261). An empty pair (no
-    call recorded yet) leaves the meta at None, which the sheet shows as
+    long after the ``/finish`` response is gone. An empty pair (no call
+    recorded yet) leaves the meta at None, which the sheet shows as
     "Not recorded".
     """
     model = humanize_backend_id(client.last_served_model)
@@ -696,8 +696,8 @@ def _record_served(session, client: TranscriptionClient) -> Dict[str, str]:
 
 def humanize_backend_id(raw: str) -> str:
     """Turn a hub registry id (``parakeet``, ``mac-mini-m4``) into a display
-    label (``Parakeet``, ``Mac Mini M4``) for the served-model indicator
-    (#156). Hyphens/underscores become spaces, each word is title-cased —
+    label (``Parakeet``, ``Mac Mini M4``) for the served-model indicator.
+    Hyphens/underscores become spaces, each word is title-cased —
     a heuristic, not a lookup against the hub's own ``display_name`` fields
     (avoiding a second hub call just to prettify a label users only glance
     at)."""
@@ -708,7 +708,7 @@ def humanize_backend_id(raw: str) -> str:
 
 def _list_row(s) -> Dict[str, Any]:
     """One History row. ``word_count`` counts the text Copy takes (the
-    polished version when there is one), read once with the previews (#264)."""
+    polished version when there is one), read once with the previews."""
     transcript = s.read_transcript()
     polished = s.read_polished()
     return {

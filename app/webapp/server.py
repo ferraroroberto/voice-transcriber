@@ -28,7 +28,7 @@ the static mount, and the module-level ``app`` for
 The lifespan hook prunes sessions older than the configured retention
 window on every boot, matching the user's expectation that startup is
 when "the app cleans the history". It also initializes and prunes the
-separate, much-longer-retention persistent activity log (issue #95).
+separate, much-longer-retention persistent activity log.
 """
 
 from __future__ import annotations

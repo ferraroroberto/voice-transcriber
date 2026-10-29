@@ -259,14 +259,14 @@ class SessionArchive:
     def get(self, session_id: str) -> Optional[Session]:
         """Look up one session by id.
 
-        Sorted newest-first (#139's walker) rather than an unordered
-        walk: this sits on the hottest path in the app — once a second
-        for the whole duration of every recording via
+        Sorted newest-first rather than an unordered walk: this sits on
+        the hottest path in the app — once a second for the whole
+        duration of every recording via
         ``POST /api/sessions/{id}/chunk``, plus once each for
         ``/events``/``/finish``/``/polish``/``/text``/``/retranscribe``
         — and a live session is always one of the newest folders, so the
         match lands in the first few entries instead of scanning the
-        whole retention window (voice-transcriber#163).
+        whole retention window.
         """
         for folder in self._iter_session_folders(sorted_=True):
             if folder.name == session_id:
@@ -286,17 +286,17 @@ class SessionArchive:
 
         ``since`` (naive local datetime) keeps only sessions created at or
         after that instant — the date-window retrieval the hub dictionary
-        miner uses (voice-transcriber#60). A session whose ``created_at``
-        can't be parsed is dropped from a windowed query rather than
-        leaking ancient data; with no ``since`` it is kept as before. The
-        window is applied before ``offset``/``limit``.
+        miner uses. A session whose ``created_at`` can't be parsed is
+        dropped from a windowed query rather than leaking ancient data;
+        with no ``since`` it is kept unconditionally. The window is
+        applied before ``offset``/``limit``.
 
-        Cost scales with ``offset + limit``, not with the whole archive
-        (#139): folder names sort chronologically, so we walk newest-first
-        and hydrate lazily, stopping as soon as the requested page is
-        filled — a page of 10 reads ~10 ``meta.json`` files, not N. A
-        windowed query additionally prunes whole day-folders that fall
-        before the window instead of hydrating them.
+        Cost scales with ``offset + limit``, not with the whole archive:
+        folder names sort chronologically, so we walk newest-first and
+        hydrate lazily, stopping as soon as the requested page is filled
+        — a page of 10 reads ~10 ``meta.json`` files, not N. A windowed
+        query additionally prunes whole day-folders that fall before the
+        window instead of hydrating them.
         """
         # How many matches we must gather before slicing off ``offset``.
         needed = offset + limit if limit is not None else None
@@ -324,7 +324,7 @@ class SessionArchive:
         """Session-folder count for the History 'X of Y' hint.
 
         A cheap name-only directory walk — no ``meta.json`` reads — so it
-        stays fast as the archive grows (#139). This counts *all* session
+        stays fast as the archive grows. This counts *all* session
         folders, including the rare incognito ones that never surface in
         History; reading every meta just to subtract a handful would
         reintroduce the O(N) cost this avoids. The authoritative
@@ -394,9 +394,9 @@ class SessionArchive:
         """Walk YYYY/MM/DD/<session> and yield each session folder.
 
         ``sorted_=True`` yields newest-first (see :meth:`_iter_dirs`) — the
-        foundation of the #139 fix that lets ``list_sessions``/
-        ``count_sessions`` page and window without reading any
-        ``meta.json`` up front. Sub-second ties (same ``HH-MM-SS``,
+        foundation that lets ``list_sessions``/``count_sessions`` page
+        and window without reading any ``meta.json`` up front. Sub-second
+        ties (same ``HH-MM-SS``,
         different id suffix) order arbitrarily, exactly as the previous
         ``created_at`` sort did (``created_at`` is second-resolution).
         """
@@ -434,14 +434,13 @@ class SessionArchive:
         """Rebuild a ``Session`` from a folder's ``meta.json``.
 
         Driven off ``dataclasses.fields(SessionMeta)`` instead of a
-        hand-listed rebuild: the write side (``write_meta``) already
-        derives from the dataclass via ``asdict``, so a field added
-        there previously required a matching manual line here too, and
-        forgetting it silently dropped the field on every reload
-        (voice-transcriber#163). ``session_id``/``created_at`` fall back
-        to values derived from the folder itself rather than the
-        dataclass's own defaults; the rest fall back to whatever
-        ``SessionMeta`` already declares.
+        hand-listed rebuild, mirroring how the write side
+        (``write_meta``) already derives from the dataclass via
+        ``asdict`` — so a field added to ``SessionMeta`` stays in sync on
+        both sides instead of silently dropping on reload.
+        ``session_id``/``created_at`` fall back to values derived from
+        the folder itself rather than the dataclass's own defaults; the
+        rest fall back to whatever ``SessionMeta`` already declares.
         """
         fallback_created_at = datetime.fromtimestamp(
             folder.stat().st_mtime

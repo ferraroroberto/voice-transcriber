@@ -1,6 +1,6 @@
 """Last-transcription panel — text box plus Copy / Reset / Append.
 
-Extracted from ``TranscriberApp`` (voice-transcriber#177). Owns its own
+Kept apart from ``TranscriberApp`` so this panel owns its own
 widgets and the view-logic that follows directly from them (buttons
 track "is there text", the append checkbox tracks its own var). Anything
 that crosses into tray/session ownership or the Polish panel — where the

@@ -13,10 +13,10 @@
 
 The PTT hotkey state machine and the three background service lifecycles
 (whisper-server, uvicorn webapp, cloudflared tunnel) each live in their
-own class (``HotkeyController``, ``ServiceSupervisor`` —
-voice-transcriber#177); ``TrayApp`` composes them plus owns the pystray
-icon/menu, the tkinter event pump, and the record → transcribe → notify
-pipeline. ``TranscriberApp`` (the optional main window) only reaches
+own class (``HotkeyController``, ``ServiceSupervisor``), keeping each
+concern independently testable; ``TrayApp`` composes them plus owns the
+pystray icon/menu, the tkinter event pump, and the record → transcribe →
+notify pipeline. ``TranscriberApp`` (the optional main window) only reaches
 ``TrayApp`` through its narrow public surface — ``get_last_transcription``/
 ``set_last_transcription``, ``append_mode``/``set_append_mode``/
 ``add_append_listener``/``remove_append_listener``,
