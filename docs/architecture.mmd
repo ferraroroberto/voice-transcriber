@@ -12,7 +12,7 @@ flowchart TB
   subgraph entry["Entry points"]
     LAUNCHER["launcher.py\nputs repo root on sys.path, dispatches to app.cli.main"]
     TRAYBAT["tray.bat"]
-    WEBAPPBAT["webapp.bat -> scripts/run_webapp.py\n/ webapp_tunnel_named.bat -> scripts/run_named_tunnel.py\nboth source uvicorn argv from WEBAPPMGR's\nbuild_uvicorn_command (issue #160, #174)"]
+    WEBAPPBAT["webapp.bat -> scripts/run_webapp.py\n/ webapp_tunnel_named.bat -> scripts/run_named_tunnel.py\nboth source uvicorn argv from WEBAPPMGR's\nbuild_uvicorn_command"]
     SERVERBAT["server.bat"]
   end
   TRAYBAT --> LAUNCHER
@@ -51,7 +51,7 @@ flowchart TB
   SVCSUP -->|boots + owns lifecycle of| WEBAPPMGR
   SVCSUP --> TUNNEL
   TUNNEL -->|spawns if cloudflared.yml present| CLOUDFLARED["cloudflared tunnel"]
-  LIFECYCLE["tray_lifecycle.ps1\nsubtree kill + port reclaim — %USERPROFILE%/.claude/tray/,\nowned by fleet-config (project-scaffolding#153), not this repo"]
+  LIFECYCLE["tray_lifecycle.ps1\nsubtree kill + port reclaim — %USERPROFILE%/.claude/tray/,\nowned by fleet-config, not this repo"]
   TRAYBAT -->|--restart| LIFECYCLE
 
   subgraph webapp["app/webapp/ — FastAPI mobile PWA"]
@@ -61,7 +61,7 @@ flowchart TB
     MIDDLEWARE["middleware.py\nbearer-token auth, loopback bypass"]
     AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
-    EVENTLOOP["event_loop.py\nselector event-loop shim — every uvicorn spawn of\napp.webapp.server:app picks it (fixes the :8443 wedge, issue #113)"]
+    EVENTLOOP["event_loop.py\nselector event-loop shim — every uvicorn spawn of\napp.webapp.server:app picks it (fixes the :8443 wedge)"]
     STATIC["static/\nindex.html (Record · History tabs, Settings via the header gear) · app.js ·\nrecorder.js (record/upload/finish) · level.js (VU+VAD) · vad.js ·\npartials.js (rolling SSE) · wakelock.js · api.js · state.js ·\nui.js · history.js · polish.js · styles.css + styles-views.css (fleet tokens, light+dark)"]
     VENDORED["static/_vendored/\nfleet components, byte-verbatim from project-scaffolding\nbase · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button"]
   end
@@ -83,7 +83,7 @@ flowchart TB
     ARCHIVE["archive.py\ndated session folders + 30-day cleanup"]
     ACTIVITYLOG["activity_log.py\nSQLite events log, 365-day retention —\nsurvives the archive's 30-day prune"]
     ANALYTICS["analytics.py\ntoday's take count / wpm / time-saved,\nread from activity_log"]
-    RUNTIMEDATA["runtime_data.py\nresolves the activity DB path: VT_ACTIVITY_DB_PATH ->\nVOICE_TRANSCRIBER_DATA_DIR -> FLEET_DATA_ROOT ->\nC:/sqlite default (project-scaffolding#243)"]
+    RUNTIMEDATA["runtime_data.py\nresolves the activity DB path: VT_ACTIVITY_DB_PATH ->\nVOICE_TRANSCRIBER_DATA_DIR -> FLEET_DATA_ROOT ->\nC:/sqlite default"]
     USAGELOG["usage_log.py (vendored)\nlocal view/tap usage log: POST /api/usage/events,\nGET /api/usage/summary"]
     WEBAPPCFG["webapp_config.py\ntyped loader, config/webapp_config.json"]
     VOCAB["vocabulary.py"]
@@ -95,8 +95,8 @@ flowchart TB
     INJECT["inject.py\nclipboard + caret paste"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
     MICGLYPH["mic_glyph.py\nruntime state-tinted tray renderer —\nsame mic.svg silhouette as brand_gen"]
-    RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py (issue #174)"]
-    TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by service_supervisor.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen (issue #174)"]
+    RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py"]
+    TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by service_supervisor.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen"]
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py, disfluency.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
     WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
@@ -175,10 +175,10 @@ flowchart TB
   subgraph tests["tests/ — pytest + Playwright e2e"]
     UNITTESTS["test_*.py — src/ + webapp routes + auth"]
     E2E["e2e/ — pytest-playwright SPA smoke\n(Chromium + WebKit/iPhone)"]
-    VERIFYSHIP["scripts/verify-before-ship.ps1\npy_compile -> pytest (no smoke) -> e2e on a disposable port"]
+    VERIFYSHIP["scripts/verify-before-ship.ps1\npy_compile -> static/docs/structure/conventions/comment/\ninstruction/doc-refs/dead-code ratchets -> pytest (no smoke)\n-> diff-routed e2e on a disposable instance"]
   end
   VERIFYSHIP --> UNITTESTS
   VERIFYSHIP --> E2E
   UNITTESTS -.->|exercise| logic
   UNITTESTS -.->|exercise| webapp
-  E2E -.->|drives live tray on :8443| WEBAPPMGR
+  E2E -.->|boots + drives a disposable instance, never the live tray| WEBAPPMGR

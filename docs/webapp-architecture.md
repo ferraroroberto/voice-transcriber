@@ -48,15 +48,13 @@ One context per launcher, both live from the same `tray.bat`:
 | Sitting at the PC | Loopback (`https://127.0.0.1:8443`) | No tunnel needed; a local self-signed cert gives Safari/Chrome the secure context `getUserMedia` requires. |
 | Anywhere else (phone, work PC, hotel Wi-Fi) | Cloudflare named tunnel | Public HTTPS URL, no firewall changes, real edge TLS. Same pattern as `facilitation-shuffle/launch_server.bat`. |
 
-Tailscale support (a third, direct-to-`:8443` tunnel context) was
-dropped in favor of Cloudflare-only remote access (`2611178`,
-2026-05-09) — the tray no longer offers a "Copy Tailscale URL" entry,
-and the [launch table](webapp-usage.md#where-to-launch-from-where-to-reach-it) only documents the loopback and
+Remote access is Cloudflare-only: the tray has no "Copy Tailscale URL"
+entry, and the [launch table](webapp-usage.md#where-to-launch-from-where-to-reach-it) documents only the loopback and
 Cloudflare rows above. The PC may still run Tailscale for unrelated
 reasons, and a tailnet peer that knows the machine's Tailscale IP can
 still technically reach `:8443` directly — the bearer-token middleware
-(below) accounts for that as a defense-in-depth case — but it is not a
-documented or promoted way to reach this app.
+(below) requires the same token from that peer as from the tunnel — but
+it is not a documented or promoted way to reach this app.
 
 **HTTPS is mandatory** for the loopback context because iOS/desktop
 Safari refuses `getUserMedia` over plain HTTP. `scripts/gen_ssl_cert.py`
@@ -77,8 +75,8 @@ URL is publicly reachable until the tunnel closes.
 
 The tray is the umbrella process. Starting `tray.bat` brings up the
 whisper-server **and** the web app under the same adopt-or-spawn pattern.
-The hotkey workflow is unchanged. Tray menu gains "Web app: <url>",
-"Copy local URL", "Copy Cloudflare URL", "Restart web app".
+The tray menu offers "Web app: <url>", "Copy local URL", "Copy Cloudflare
+URL", and "Restart web app".
 
 Three launch surfaces, **identical feature surface**:
 
@@ -96,10 +94,9 @@ The other repos in `automation/` (`local-llm-hub`,
 - `src/` for non-UI logic (no UI imports)
 - `app/` for UI surfaces (Streamlit, tk, FastAPI)
 
-voice-transcriber was the odd one out with `core/`, `gui/`, `cli/`,
-`whisper_server/` flat at root; it now follows the same `src/` + `app/`
-split. The canonical, up-to-date directory tree lives in [layout.md](layout.md) —
-this section records *why* the split exists, not the current file list.
+voice-transcriber follows the same `src/` + `app/` split. The canonical,
+up-to-date directory tree lives in [layout.md](layout.md) — this section
+records *why* the split exists, not the current file list.
 
 ## Decisions and tradeoffs
 
@@ -124,15 +121,16 @@ documented in [webapp-usage.md](webapp-usage.md).
 
 ### History
 30-day auto-cleanup on app start (cron-on-boot pattern), plus a
-"Clean all" button in the History view. Sessions live in
+"Delete all takes…" action under Settings › History, confirmed in a
+sheet before it runs. Sessions live in
 `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with raw.webm, audio.wav,
 transcript.txt, polished.txt, meta.json, polish_request.json,
 polish_response.json. Whole `archive/` is gitignored.
 
 ### Crash recovery
 Every chunk lands on disk during recording. If the iPhone dies mid-take,
-the partial `raw.webm` is still on the PC. A History row exposes a
-"Re-transcribe" button so a saved take can always be redriven.
+the partial `raw.webm` is still on the PC. A take's detail sheet exposes
+a "Redo transcription" action so a saved take can always be redriven.
 
 ### Tray = umbrella
 `config/config.json` gains a `webapp.enabled` flag (default `true`).
@@ -154,22 +152,23 @@ console.
 `https://<your-domain>` URL. Anyone who guesses or intercepts that
 URL while the tunnel is up can record / transcribe / polish on the home
 PC, burning local hardware and (for the `claude-*` models) Claude
-subscription quota. Tailscale-only / loopback paths are already gated by
-Tailscale's ACL, so this only matters when the tunnel is the exposure
-path — but a built-in, dormant-by-default token gate covers it.
+subscription quota. Loopback traffic is inherently local, so this only
+matters once the Cloudflare tunnel (or a Tailscale peer reaching
+`:8443` directly) exposes the app beyond the PC — a built-in,
+dormant-by-default token gate covers both.
 
-- **Default off, loopback/Tailscale only.** `auth_token` defaults to
-  `""`. With an empty token the middleware short-circuits for the tk
-  window and Tailscale callers — those flows keep working unchanged,
-  zero config required. The Cloudflare tunnel is the exception:
-  `src/tunnel.py`'s `publish_refusal_reason` refuses to spawn
+- **Default off, loopback only.** `auth_token` defaults to `""`. With an
+  empty token the middleware short-circuits only for loopback callers
+  (the tk window, local probes/scripts) — that flow keeps working
+  unchanged, zero config required. The Cloudflare tunnel is the
+  exception: `src/tunnel.py`'s `publish_refusal_reason` refuses to spawn
   cloudflared at all while `auth_token` is empty, so the tunnel will
   not publish without a token configured first (`scripts/gen_token.py`).
 - **Loopback always bypasses.** `client.host in {"127.0.0.1", "::1"}`
   goes straight through, so the tk main window's reuse of the API and any
-  local probe / script keeps working without the token. No Tailnet
-  IP-range bypass — Tailscale callers must carry the token too, which is
-  the simpler mental model.
+  local probe / script keeps working without the token. There is no
+  Tailnet IP-range bypass — a Tailscale peer reaching `:8443` directly
+  must carry the token too, the same as the tunnel.
 - **Page boot is exempt.** `/`, `/static/*`, `/healthz`, `/install-ca`
   remain reachable so the JS can load and pick up the token from
   `?token=…` before any API call fires. `/api/login` is also exempt — a
