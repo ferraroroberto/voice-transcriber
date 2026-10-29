@@ -106,8 +106,7 @@ def build_uvicorn_command(
     Shared by :class:`WebappManager` (the tray-managed webapp) and
     ``scripts/run_named_tunnel.py`` (the headless named-tunnel launcher)
     so a flag added on one spawn path is never missing from the other
-    (voice-transcriber#160) — each caller prepends its own resolved
-    python executable.
+    — each caller prepends its own resolved python executable.
     """
     cmd: List[str] = [
         "-m",

@@ -1,4 +1,4 @@
-"""Windows event-loop shim for uvicorn (issue #113).
+"""Windows event-loop shim for uvicorn.
 
 On Windows, asyncio's default proactor event loop closes its listening
 socket the moment ``accept()`` raises any ``OSError`` (see CPython's

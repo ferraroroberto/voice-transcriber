@@ -22,7 +22,7 @@
 #              works offline. An externally-owned server is never stopped
 #              by this app.
 #
-# `external` is the default (issue #131) — port 8090 is intentionally
+# `external` is the default — port 8090 is intentionally
 # mutex-shared with `local-llm-hub`, and `local` hard-fails with a
 # RuntimeError at the next (re)start if that sibling happens to be holding
 # the port, which is a silent, hours-later regression waiting to happen.

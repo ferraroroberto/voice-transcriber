@@ -1,4 +1,4 @@
-"""Usage analytics API — ``GET /api/analytics/summary`` (issue #95).
+"""Usage analytics API — ``GET /api/analytics/summary``.
 
 A single aggregate endpoint backing the compact analytics line in the
 webapp's History card: today's take count, words/min, and estimated time

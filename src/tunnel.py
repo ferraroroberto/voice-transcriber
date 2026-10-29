@@ -9,7 +9,7 @@ run`` process and the same ``webapp/last_tunnel_url.txt`` persistence
 module is the one place that lives so a fix lands once instead of twice.
 Teardown of the spawned process goes through
 ``src.process_supervisor.stop_popen``, the single owner of the
-CTRL_BREAK/terminate/kill ladder (voice-transcriber#160).
+CTRL_BREAK/terminate/kill ladder.
 """
 
 from __future__ import annotations

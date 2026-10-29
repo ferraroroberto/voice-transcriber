@@ -1,8 +1,8 @@
 """Owns the tray's three background service lifecycles.
 
-Extracted from ``TrayApp`` (voice-transcriber#177): the whisper-server
+Kept apart from ``TrayApp`` so the three lifecycles — the whisper-server
 subprocess, the uvicorn webapp, and the optional named cloudflared tunnel
-in front of it are started together on launch and torn down together
+in front of it — are started together on launch and torn down together
 (tunnel first, so the public URL goes 5xx immediately) on quit.
 ``TrayApp`` supplies a ``notify`` callback for the toasts each lifecycle
 transition surfaces, and reads status/labels back through this object

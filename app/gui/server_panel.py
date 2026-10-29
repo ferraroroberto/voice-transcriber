@@ -1,10 +1,10 @@
 """Server status panel — traffic light, model identity, start/stop
 buttons, and the diagnostics / model-details dialogs.
 
-Extracted from ``TranscriberApp`` (voice-transcriber#177) so the god
-class no longer owns whisper-server lifecycle display alongside
-everything else. Self-contained: only needs the ``WhisperServerManager``
-it displays, no back-reference to the owning window.
+Kept apart from ``TranscriberApp`` so whisper-server lifecycle display
+is its own self-contained unit rather than one more concern on the main
+window. Only needs the ``WhisperServerManager`` it displays, no
+back-reference to the owning window.
 """
 
 from __future__ import annotations

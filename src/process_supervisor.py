@@ -6,8 +6,8 @@ the uvicorn subprocess) run the same adopt-or-spawn lifecycle: three-state
 ownership (none / ours / external), a low-level TCP probe before HTTP is
 listening, a CTRL_BREAK_EVENT -> terminate() -> kill() stop ladder, and a
 "poll until reachable or dead or timed out" readiness wait. This module is
-the single owner of those primitives (voice-transcriber#160) so a fix to
-one lands in both managers instead of needing to be re-applied by hand.
+the single owner of those primitives, so a fix to one lands in both
+managers instead of needing to be re-applied by hand.
 
 Domain-specific bits stay in each manager: PID files and startup-log
 draining are whisper-only; the cross-process start lock and SSL cert

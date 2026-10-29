@@ -191,10 +191,10 @@ class TranscriptionClient:
         )
 
     def _record_served_from(self, response: requests.Response) -> None:
-        """Stash who actually served this transcription (issue #156).
+        """Stash who actually served this transcription.
 
         The hub stamps ``X-Hub-Served-Model``/``X-Hub-Served-Host`` on every
-        ``/v1/audio/*`` response (local-llm-hub#412). A bare whisper-server —
+        ``/v1/audio/*`` response. A bare whisper-server —
         the local fallback path, or the translate proxy, neither of which
         goes through the hub's observability proxy — never sets them, so
         that case falls back to a local sentinel rather than showing a
