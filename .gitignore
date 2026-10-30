@@ -49,3 +49,4 @@ webapp/activity.sqlite3-wal
 webapp/activity.sqlite3-shm
 app/webapp/static/voice-transcriber-ca.mobileconfig
 app/webapp/static/ca.crt
+.proof/
