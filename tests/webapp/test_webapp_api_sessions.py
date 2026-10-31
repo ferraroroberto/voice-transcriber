@@ -178,6 +178,26 @@ class TestListSessions:
         body = client.get("/api/sessions").json()
         assert body["sessions"][0]["source"] == "app-launcher"
 
+    def test_has_audio_false_once_audio_is_pruned(self, webapp_client):
+        client, app, _ = webapp_client
+        s = app.state.archive.new_session()
+        s.write_transcript("kept words")
+        s.write_meta()
+        s.raw_path().write_bytes(b"webm")
+        assert client.get("/api/sessions").json()["sessions"][0]["has_audio"] is True
+        s.raw_path().unlink()
+        row = client.get("/api/sessions").json()["sessions"][0]
+        assert row["has_audio"] is False
+        assert row["transcript_preview"] == "kept words"
+
+    def test_retranscribe_404_for_text_only_session(self, webapp_client):
+        client, app, _ = webapp_client
+        s = app.state.archive.new_session()
+        s.write_transcript("kept words")
+        s.write_meta()
+        resp = client.post(f"/api/sessions/{s.session_id}/retranscribe")
+        assert resp.status_code == 404
+
 
 class TestListSessionsWindow:
     def test_days_window_filters_old(self, webapp_client):

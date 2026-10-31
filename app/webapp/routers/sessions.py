@@ -738,6 +738,7 @@ def _list_row(s) -> Dict[str, Any]:
         "polish_prompt_id": s.meta.polish_prompt_id,
         "polish_succeeded": s.meta.polish_succeeded,
         "raw_bytes": s.meta.raw_bytes,
+        "has_audio": s.has_audio(),
         "duration_seconds": s.meta.duration_seconds,
         "served_model": s.meta.served_model,
         "served_host": s.meta.served_host,

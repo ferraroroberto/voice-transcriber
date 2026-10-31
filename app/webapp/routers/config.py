@@ -71,6 +71,7 @@ async def patch_config(request: Request) -> Dict[str, Any]:
         "force_builtin_mic_default",
         "preferred_mic_id",
         "history_retention_days",
+        "transcript_retention_days",
         "vad_auto_stop_enabled",
         "auto_stop_silence_ms",
         "gain_boost_enabled",

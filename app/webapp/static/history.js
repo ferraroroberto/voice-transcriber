@@ -104,7 +104,7 @@ export function renderHistoryHeadLine() {
   if (typeof n !== 'number') return;
   const days = state.config && state.config.history_retention_days;
   const takes = `${n} take${n === 1 ? '' : 's'}`;
-  setHeadLine(els.historyHeadLine, days ? `${takes} · kept ${days} days` : takes);
+  setHeadLine(els.historyHeadLine, days ? `${takes} · audio kept ${days} days` : takes);
 }
 
 // ------------------------------------------------------------ rendering
@@ -503,6 +503,8 @@ async function openTakeSheet(s) {
   els.takeLanguage.textContent = languageLabel(s.language);
   els.takeSource.textContent = sourceLabel(s.source);
   els.takeServedBy.textContent = servedByLabel(s);
+  // Past the audio window only the text is left, so there is nothing to redo.
+  els.takeRedo.hidden = s.has_audio === false;
   if (wideLayout.matches) {
     state.historyOpenId = s.session_id;
     els.takeDetail.hidden = false;

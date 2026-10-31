@@ -31,6 +31,8 @@ def _take(i: int) -> dict:
         "word_count": 10 + i,
         "source": "webapp" if i % 2 else "api",
         "language": "es" if i == 2 else "en",
+        # Past the audio window only the text is left.
+        **({"has_audio": False} if i == 1 else {}),
         # The newest take carries the served-by stamp (#261); older ones
         # predate it.
         **({"served_model": "Speech Model A", "served_host": "Box One",
@@ -106,7 +108,7 @@ def test_latest_card_day_groups_and_paging(
     expect(load_more).to_be_visible()  # has_more=true → button shown
     # The header line counts the list's own `total` (#261), not the pages shown.
     expect(authed_page.locator("#historyHeadLine")).to_have_text(
-        re.compile(rf"^{_TOTAL} takes · kept \d+ days$")
+        re.compile(rf"^{_TOTAL} takes · audio kept \d+ days$")
     )
     heads = authed_page.locator("#historyGroups .day-head")
     expect(heads).to_have_count(3)  # days of takes 1-3, 4-7, 8-9
@@ -209,6 +211,7 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     # An older take predates the stamp; closing disarms the delete row.
     rows.first.locator(".history-more").click()
     expect(sheet.locator("#takeServedBy")).to_have_text("Not recorded")
+    expect(sheet.locator("#takeRedo")).to_be_hidden()  # no audio left to redo
     expect(delete).to_have_text("Delete take")
     sheet.locator(".detail-close").click()
     expect(sheet).to_be_hidden()

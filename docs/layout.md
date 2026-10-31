@@ -19,7 +19,7 @@ voice-transcriber/
 │   ├── diagnostics.py             # log ring + port-owner introspection
 │   ├── polish.py                  # local-llm-hub client (system-prompt-driven polish)
 │   ├── polish_prompts.py          # loader for the polish-style library
-│   ├── archive.py                 # dated session folders + 30-day cleanup
+│   ├── archive.py                 # dated session folders + audio/text retention cleanup
 │   ├── activity_log.py            # SQLite events log, 365-day retention
 │   ├── analytics.py               # today's take count / wpm / time-saved
 │   ├── usage_log.py               # vendored: local view/tap usage log (router + SQLite)

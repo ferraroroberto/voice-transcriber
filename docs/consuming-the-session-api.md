@@ -257,7 +257,8 @@ Re-run whisper on the raw audio already on disk — the crash-recovery
 path. Use it when a streamed session's caller died before `/finish`
 landed: the chunks are still on disk, so this recovers the transcript
 after the fact. Same query params and response shape as `/finish`.
-`404` if the raw audio is missing.
+`404` if the raw audio is missing, which includes a take past the
+audio retention window (only its text is left).
 
 ---
 
@@ -410,13 +411,13 @@ entirely since it names the transport rather than the caller; a take's
 own sheet still shows it verbatim.
 
 The guarantee is **attribution, not retention exemption**: an
-attributed take still obeys the 30-day retention window and the
+attributed take still obeys the retention windows (audio 30 days, text 365 by default) and the
 [Incognito](#incognito) opt-out below.
 
 ## Incognito
 
 A consumer that doesn't want its takes sitting in History for the
-30-day retention window:
+audio retention window:
 
 1. `POST /api/sessions` with `{ "incognito": true }` — the session is
    flagged server-side and excluded from `GET /api/sessions`.

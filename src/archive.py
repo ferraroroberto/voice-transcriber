@@ -15,9 +15,11 @@ Layout:
               polish_response.json    raw hub response (only if polished)
               meta.json               recorder/server params, durations, errors
 
-The whole `archive/` folder is gitignored. Sessions older than the
-retention window (default 30 days) are deleted on app start, and on
-demand from the UI's Clean button.
+The whole `archive/` folder is gitignored. Retention has two windows:
+audio (`raw.webm`, `audio.wav`) is deleted once a session is older than
+the audio window (default 30 days), while the text files and `meta.json`
+stay until the longer transcript window (default 365 days) passes and the
+whole folder goes. The sweep runs on app start.
 """
 
 from __future__ import annotations
@@ -25,6 +27,7 @@ from __future__ import annotations
 # Standard library imports
 import json
 import logging
+import os
 import shutil
 import time
 import uuid
@@ -76,6 +79,7 @@ def _folder_date(folder: Path) -> Optional[date]:
 
 RAW_AUDIO_FILENAME = "raw.webm"
 WAV_AUDIO_FILENAME = "audio.wav"
+AUDIO_FILENAMES = (RAW_AUDIO_FILENAME, WAV_AUDIO_FILENAME)
 TRANSCRIPT_FILENAME = "transcript.txt"
 POLISHED_FILENAME = "polished.txt"
 POLISH_REQUEST_FILENAME = "polish_request.json"
@@ -214,6 +218,10 @@ class Session:
     def wav_path(self) -> Path:
         return self.folder / WAV_AUDIO_FILENAME
 
+    def has_audio(self) -> bool:
+        """False once the audio window has pruned the recording (text-only)."""
+        return self.raw_path().exists()
+
 
 class SessionArchive:
     """Top-level archive — creates sessions, lists them, prunes old ones."""
@@ -345,20 +353,37 @@ class SessionArchive:
 
     # ------------------------------------------------------ housekeeping
 
-    def cleanup_older_than(self, days: int) -> int:
-        """Delete sessions older than `days`. Returns the count removed."""
-        cutoff = time.time() - days * 86400
+    def cleanup_older_than(self, days: int, text_days: Optional[int] = None) -> int:
+        """Prune sessions past their retention window; return folders removed.
+
+        Without ``text_days`` a session older than ``days`` is deleted whole.
+        With a ``text_days`` longer than ``days``, a session between the two
+        windows keeps its text and ``meta.json`` but loses its audio, and
+        only one older than ``text_days`` is deleted whole. An incognito
+        session never gets the longer text window: the owner asked for it
+        not to sit on disk.
+        """
+        now = time.time()
+        cutoff = now - days * 86400
+        text_cutoff = now - max(text_days or days, days) * 86400
         removed = 0
+        stripped = 0
         for folder in list(self._iter_session_folders()):
             try:
                 mtime = folder.stat().st_mtime
             except OSError:
                 continue
-            if mtime < cutoff:
+            if mtime < text_cutoff or (
+                mtime < cutoff and self._hydrate(folder).meta.incognito
+            ):
                 shutil.rmtree(folder, ignore_errors=True)
                 removed += 1
+            elif mtime < cutoff and self._strip_audio(folder):
+                stripped += 1
         if removed:
-            logger.info(f"🧹 Pruned {removed} sessions older than {days} days")
+            logger.info(f"🧹 Pruned {removed} sessions past their retention window")
+        if stripped:
+            logger.info(f"🧹 Dropped the audio of {stripped} sessions older than {days} days")
         self._prune_empty_date_folders()
         return removed
 
@@ -406,6 +431,30 @@ class SessionArchive:
             for month in self._iter_dirs(year, sorted_=sorted_):
                 for day in self._iter_dirs(month, sorted_=sorted_):
                     yield from self._iter_dirs(day, sorted_=sorted_)
+
+    def _strip_audio(self, folder: Path) -> bool:
+        """Delete a session's audio files; True iff any was removed.
+
+        Removing a file bumps the folder's mtime, which is the clock both
+        retention windows read, so the original stamp is put back — else the
+        text window would restart the moment the audio goes.
+        """
+        try:
+            before = folder.stat()
+        except OSError:
+            return False
+        dropped = False
+        for name in AUDIO_FILENAMES:
+            try:
+                (folder / name).unlink()
+                dropped = True
+            except FileNotFoundError:
+                continue
+            except OSError as exc:
+                logger.warning(f"⚠️  Could not drop {name} in {folder.name}: {exc}")
+        if dropped:
+            os.utime(folder, ns=(before.st_atime_ns, before.st_mtime_ns))
+        return dropped
 
     def _prune_empty_date_folders(self) -> None:
         """Tidy up YYYY/MM/DD folders that no longer contain sessions."""

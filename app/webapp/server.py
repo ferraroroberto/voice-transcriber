@@ -52,7 +52,7 @@ from src.polish import PolishClient
 from src.runtime_data import runtime_db_path
 from src.static_versioning import BuildInfo
 from src.usage_log import usage_router
-from src.webapp_config import WebappConfig, load_webapp_config
+from src.webapp_config import WebappConfig, load_webapp_config, text_retention_days
 from src.whisper_server import WhisperServerManager
 
 from app.webapp.audio import find_ffmpeg
@@ -140,7 +140,9 @@ async def _lifespan(app: FastAPI):
     cfg: WebappConfig = app.state.webapp_config
     archive: SessionArchive = app.state.archive
     try:
-        removed = archive.cleanup_older_than(cfg.history_retention_days)
+        removed = archive.cleanup_older_than(
+            cfg.history_retention_days, text_retention_days(cfg)
+        )
         if removed:
             logger.info(f"🧹 Pruned {removed} old sessions on boot")
     except Exception as exc:  # noqa: BLE001 — never block startup

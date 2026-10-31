@@ -42,6 +42,9 @@ SAMPLE_CONFIG_PATH = (
 # re-declared here, so each literal has exactly one source.
 DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
 DEFAULT_RETENTION_DAYS = 30
+# Transcript text and meta.json outlive the audio: a few KB per take, kept
+# long enough for look-back reports and glossary mining.
+DEFAULT_TRANSCRIPT_RETENTION_DAYS = 365
 # Quiet-environment gain boost — amplifies captured audio before whisper,
 # orthogonal to the silence gate above (see src/gain.py). Off by default;
 # mirrors the vad_auto_stop_enabled + auto_stop_silence_ms enable/value pair.
@@ -89,7 +92,10 @@ class WebappConfig:
     )
     polish_prompt_default: str = DEFAULT_POLISH_PROMPT_ID
     llm_hub_url: str = DEFAULT_LLM_HUB_URL
+    # Audio window; text lives for ``transcript_retention_days`` (never
+    # shorter than this one, see ``text_retention_days``).
     history_retention_days: int = DEFAULT_RETENTION_DAYS
+    transcript_retention_days: int = DEFAULT_TRANSCRIPT_RETENTION_DAYS
     force_builtin_mic_default: bool = False
     preferred_mic_id: Optional[str] = None
     # Bearer token enforced when the request did NOT come from a
@@ -270,6 +276,11 @@ def config_to_client_dict(cfg: WebappConfig) -> Dict[str, Any]:
     }
 
 
+def text_retention_days(cfg: WebappConfig) -> int:
+    """Days a session's text is kept: at least as long as its audio."""
+    return max(cfg.transcript_retention_days, cfg.history_retention_days)
+
+
 def _validate(cfg: WebappConfig) -> None:
     if cfg.polish_model_default not in cfg.polish_models_available:
         raise ValueError(
@@ -278,6 +289,8 @@ def _validate(cfg: WebappConfig) -> None:
         )
     if cfg.history_retention_days < 1:
         raise ValueError("history_retention_days must be >= 1")
+    if cfg.transcript_retention_days < 1:
+        raise ValueError("transcript_retention_days must be >= 1")
     if cfg.partial_interval_seconds < 0:
         raise ValueError("partial_interval_seconds must be >= 0 (0 disables)")
     if cfg.auto_stop_silence_ms < 200:

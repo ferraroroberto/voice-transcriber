@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # Standard library imports
 import json
+import os
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -264,6 +265,72 @@ class TestCleanup:
         assert removed == 1
         assert recent.folder.exists()
         assert not old.folder.exists()
+
+    def _aged_take(self, archive, age_days: int):
+        """A complete take whose folder is ``age_days`` old (date + mtime)."""
+        s = archive.new_session(now=datetime.now() - timedelta(days=age_days))
+        (s.folder / RAW_AUDIO_FILENAME).write_bytes(b"webm")
+        (s.folder / "audio.wav").write_bytes(b"wav")
+        s.write_transcript("hello there")
+        s.write_meta()
+        stamp = time.time() - age_days * 86400
+        os.utime(s.folder, (stamp, stamp))
+        return s
+
+    def test_text_outlives_audio(self, archive):
+        old = self._aged_take(archive, 100)
+        removed = archive.cleanup_older_than(days=30, text_days=365)
+        assert removed == 0
+        assert (old.folder / TRANSCRIPT_FILENAME).read_text(encoding="utf-8") == "hello there"
+        assert (old.folder / META_FILENAME).exists()
+        assert not (old.folder / RAW_AUDIO_FILENAME).exists()
+        assert not (old.folder / "audio.wav").exists()
+        assert archive.get(old.session_id).has_audio() is False
+
+    def test_session_past_text_window_is_deleted(self, archive):
+        ancient = self._aged_take(archive, 400)
+        assert archive.cleanup_older_than(days=30, text_days=365) == 1
+        assert not ancient.folder.exists()
+
+    def test_recent_session_keeps_its_audio(self, archive):
+        fresh = self._aged_take(archive, 5)
+        archive.cleanup_older_than(days=30, text_days=365)
+        assert (fresh.folder / RAW_AUDIO_FILENAME).exists()
+        assert archive.get(fresh.session_id).has_audio() is True
+
+    def test_text_never_deleted_before_its_window(self, archive):
+        """Dropping the audio must not restart or shorten the text clock."""
+        s = self._aged_take(archive, 364)
+        archive.cleanup_older_than(days=30, text_days=365)
+        assert (s.folder / TRANSCRIPT_FILENAME).exists()
+        # Sweeping twice (as every boot does) keeps the same stamp.
+        archive.cleanup_older_than(days=30, text_days=365)
+        assert (s.folder / TRANSCRIPT_FILENAME).exists()
+        age_days = (time.time() - s.folder.stat().st_mtime) / 86400
+        assert 363.9 < age_days < 364.1
+
+    def test_incognito_session_does_not_get_the_text_window(self, archive):
+        s = archive.new_session(
+            now=datetime.now() - timedelta(days=100), incognito=True
+        )
+        s.write_transcript("private")
+        s.write_meta()
+        stamp = time.time() - 100 * 86400
+        os.utime(s.folder, (stamp, stamp))
+        assert archive.cleanup_older_than(days=30, text_days=365) == 1
+        assert not s.folder.exists()
+
+    def test_text_window_shorter_than_audio_window_is_ignored(self, archive):
+        old = self._aged_take(archive, 40)
+        assert archive.cleanup_older_than(days=30, text_days=10) == 1
+        assert not old.folder.exists()
+
+    def test_listing_includes_text_only_sessions(self, archive):
+        old = self._aged_take(archive, 100)
+        archive.cleanup_older_than(days=30, text_days=365)
+        listed = archive.list_sessions()
+        assert [s.session_id for s in listed] == [old.session_id]
+        assert listed[0].read_transcript() == "hello there"
 
     def test_cleanup_all_wipes_everything(self, archive):
         archive.new_session()
