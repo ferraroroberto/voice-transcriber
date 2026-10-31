@@ -15,7 +15,6 @@ attempt from the same client has to wait out a doubling delay.
 from __future__ import annotations
 
 # Standard library imports
-import hmac
 import logging
 import math
 import time
@@ -25,9 +24,10 @@ from typing import Any, Dict, Optional, Tuple
 # Third-party imports
 from fastapi import APIRouter, HTTPException, Request
 
+from src.secret_compare import secrets_equal
 from src.webapp_config import WebappConfig
 
-from app.webapp.routers._helpers import PROJECT_ROOT, maybe_json
+from app.webapp.routers._helpers import PROJECT_ROOT, current_webapp_config, maybe_json
 
 logger = logging.getLogger(__name__)
 
@@ -126,7 +126,7 @@ async def login(request: Request) -> Dict[str, Any]:
     Safari's. Failed attempts are logged with the client IP to
     webapp/auth.log so suspicious access is visible.
     """
-    cfg: WebappConfig = request.app.state.webapp_config
+    cfg: WebappConfig = current_webapp_config(request.app)
     client_host = request.client.host if request.client else "?"
     limiter: AttemptLimiter = request.app.state.login_limiter
     wait = limiter.retry_after(client_host)
@@ -160,7 +160,7 @@ async def login(request: Request) -> Dict[str, Any]:
         )
     body = await maybe_json(request)
     presented = str(body.get("password") or "")
-    if not presented or not hmac.compare_digest(presented, cfg.auth_password):
+    if not presented or not secrets_equal(presented, cfg.auth_password):
         limiter.record_failure(client_host)
         auth_logger.warning(
             f"🚨 Failed password attempt from {client_host} "

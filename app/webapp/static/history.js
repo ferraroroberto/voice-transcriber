@@ -15,7 +15,8 @@ import { icon } from './_vendored/icons/icons.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
 import {
-  capitalize, copyText, formatWhen, renderTranscript, setHeadLine, showToast,
+  capitalize, copyText, formatWhen, renderTextCard, renderTranscript, setHeadLine,
+  showToast,
 } from './ui.js';
 import { mergeForAppend } from './recorder.js';
 
@@ -376,10 +377,22 @@ async function copyTake(id, flag) {
   }
 }
 
+// The Text card keeps showing a deleted take's text. Dropping its session id
+// makes that text an unsaved paste again (Polish stops posting to a removed
+// session, Save reappears). Only while idle: mid-take the id is still the
+// live /chunk and /finish target. `id` null means every take was removed.
+function releaseDeletedSession(id) {
+  if (state.mode !== 'idle' || !state.sessionId) return;
+  if (id && state.sessionId !== id) return;
+  state.sessionId = null;
+  renderTextCard();
+}
+
 async function deleteTake(id) {
   try {
     const r = await authFetch(`/api/sessions/${id}`, { method: 'DELETE' });
     if (!r.ok) throw new Error(await r.text());
+    releaseDeletedSession(id);
     // Refresh the whole list so counts and pagination stay correct.
     refreshHistory();
   } catch (err) {
@@ -550,6 +563,12 @@ export function initTakeSheet() {
 }
 
 async function retranscribe(id) {
+  // Redo repoints state.sessionId at the old take; mid-recording that would
+  // redirect the live take's remaining /chunk and /finish calls to it.
+  if (state.mode !== 'idle') {
+    showToast('Finish the current take first', 'error');
+    return;
+  }
   showToast('Re-transcribing…');
   try {
     const r = await authFetch(`/api/sessions/${id}/retranscribe`, { method: 'POST' });
@@ -572,6 +591,7 @@ async function deleteAllTakes() {
     if (!r.ok) throw new Error(await r.text());
     const data = await r.json();
     showToast(`Removed ${data.removed} take${data.removed === 1 ? '' : 's'}`);
+    releaseDeletedSession(null);
     refreshHistory();
   } catch (err) {
     showToast("Couldn't delete the takes", 'error');

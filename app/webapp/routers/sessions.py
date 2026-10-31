@@ -35,7 +35,7 @@ from app.webapp.audio import (
     transcode_to_wav,
 )
 from app.webapp.partial_worker import PartialWorker, encode_sse
-from app.webapp.routers._helpers import maybe_json
+from app.webapp.routers._helpers import current_webapp_config, maybe_json
 
 logger = logging.getLogger(__name__)
 
@@ -346,7 +346,7 @@ async def _polish_and_persist(
 @router.post("/api/sessions/{session_id}/polish")
 async def polish_session(session_id: str, request: Request) -> Dict[str, Any]:
     body = await maybe_json(request)
-    cfg: WebappConfig = request.app.state.webapp_config
+    cfg: WebappConfig = current_webapp_config(request.app)
     model = _resolve_model(body.get("model"), cfg)
     prompt = _resolve_prompt(body.get("prompt_id"), cfg)
 
@@ -381,7 +381,7 @@ async def polish_text(request: Request) -> Dict[str, Any]:
     History alongside dictated takes.
     """
     body = await maybe_json(request)
-    cfg: WebappConfig = request.app.state.webapp_config
+    cfg: WebappConfig = current_webapp_config(request.app)
     text = body.get("text")
     if not isinstance(text, str) or not text.strip():
         raise HTTPException(status_code=400, detail="text is required")
@@ -614,7 +614,7 @@ async def _transcribe_session_payload(
 
     # Silence gate — skip whisper entirely on near-silent audio so it
     # can't hallucinate "Thanks for watching" on an empty take.
-    cfg: WebappConfig = request.app.state.webapp_config
+    cfg: WebappConfig = current_webapp_config(request.app)
     silent, dbfs = await asyncio.to_thread(
         is_silent_wav, wav_path, cfg.silence_dbfs_threshold,
     )
@@ -780,7 +780,7 @@ def _ensure_partial_worker(app: FastAPI, session) -> PartialWorker:
     if existing is not None:
         return existing
 
-    cfg: WebappConfig = app.state.webapp_config
+    cfg: WebappConfig = current_webapp_config(app)
     app_cfg = app.state.app_config
     interval = float(cfg.partial_interval_seconds or 0.0)
 

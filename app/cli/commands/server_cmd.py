@@ -38,7 +38,10 @@ class ServerCommand(BaseCommand):
             return _print_status(manager)
         if action == "stop":
             manager.stop()
-            return _print_status(manager)
+            # A completed stop leaves the server not running, which is the
+            # success state here; only `status` reports that as exit 1.
+            _print_status(manager)
+            return 0
         if action == "logs":
             lines = manager.log_lines()
             if not lines:

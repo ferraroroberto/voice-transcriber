@@ -6,13 +6,12 @@ Split out of ``server.py`` so the auth gate is a self-contained unit —
 
 from __future__ import annotations
 
-# Standard library imports
-import hmac
-
 # Third-party imports
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
+
+from src.secret_compare import secrets_equal
 
 # Loopback addresses bypass the bearer-token gate so the tk window and
 # local probes keep working without carrying the token. Tailscale and
@@ -77,7 +76,7 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
         if not presented:
             presented = request.query_params.get("token", "").strip()
 
-        if presented and hmac.compare_digest(presented, token):
+        if presented and secrets_equal(presented, token):
             return await call_next(request)
 
         return JSONResponse(

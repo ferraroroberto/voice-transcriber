@@ -171,6 +171,37 @@ def load_webapp_config(path: Optional[Path] = None) -> WebappConfig:
     return cfg
 
 
+def config_mtime(path: Optional[Path] = None) -> float:
+    """The config file's mtime, or 0.0 when it does not exist."""
+    target = Path(path) if path is not None else DEFAULT_CONFIG_PATH
+    try:
+        return target.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def reload_if_changed(
+    current: WebappConfig, seen_mtime: float, path: Optional[Path] = None
+) -> tuple[WebappConfig, float]:
+    """Re-read the config when another process rewrote the file.
+
+    The tk window and the webapp are separate processes sharing one file, so
+    a long-lived webapp must pick up the other surface's saves. A file that
+    no longer parses keeps ``current`` serving; the mtime is still recorded
+    so the same bad write is warned about once, not on every request.
+    """
+    mtime = config_mtime(path)
+    if mtime == seen_mtime:
+        return current, seen_mtime
+    try:
+        return load_webapp_config(path), mtime
+    except (TypeError, ValueError) as exc:
+        logger.warning(
+            f"⚠️  webapp_config changed but is invalid ({exc}); keeping the loaded copy"
+        )
+        return current, mtime
+
+
 def _field_value(cfg: WebappConfig, name: str) -> Any:
     value = getattr(cfg, name)
     return list(value) if isinstance(value, list) else value

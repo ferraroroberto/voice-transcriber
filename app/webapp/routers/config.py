@@ -19,14 +19,16 @@ from src.webapp_config import WebappConfig, config_to_client_dict, update_webapp
 from src.whisper_server import WhisperServerManager
 
 from app.webapp.audio import find_ffmpeg
-from app.webapp.routers._helpers import PROJECT_ROOT, maybe_json
+from app.webapp.routers._helpers import (
+    PROJECT_ROOT, adopt_webapp_config, current_webapp_config, maybe_json,
+)
 
 router = APIRouter()
 
 
 @router.get("/api/config")
 async def get_config(request: Request) -> Dict[str, Any]:
-    cfg: WebappConfig = request.app.state.webapp_config
+    cfg: WebappConfig = current_webapp_config(request.app)
     app_cfg = request.app.state.app_config
     prompts = load_polish_prompts()
     data = config_to_client_dict(cfg)
@@ -79,7 +81,7 @@ async def patch_config(request: Request) -> Dict[str, Any]:
         new_cfg = update_webapp_config(**patch)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
-    request.app.state.webapp_config = new_cfg
+    adopt_webapp_config(request.app, new_cfg)
     return {"ok": True, "config": config_to_client_dict(new_cfg)}
 
 
