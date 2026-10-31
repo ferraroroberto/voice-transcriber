@@ -33,6 +33,7 @@ from app.webapp.audio import (
     AudioToolMissing,
     AudioTranscodeError,
     transcode_to_wav,
+    wav_duration_seconds,
 )
 from app.webapp.partial_worker import PartialWorker, encode_sse
 from app.webapp.routers._helpers import current_webapp_config, maybe_json
@@ -248,6 +249,7 @@ async def finish_session(
         text = worker.partial_text
         session.write_transcript(text)
         session.meta.language = language or session.meta.language
+        _ensure_duration(session)
         # The partial passes ran on the same shared client, so its last
         # served pair is the best answer available for this take.
         served = _record_served(session, request.app.state.transcription_client)
@@ -661,6 +663,7 @@ async def _transcribe_session_payload(
     text = (text or "").strip()
     session.write_transcript(text)
     session.meta.language = chosen_lang
+    _ensure_duration(session)
     served = _record_served(session, client)
     session.write_meta()
     activity_log.record_event(
@@ -676,6 +679,20 @@ async def _transcribe_session_payload(
         "language": chosen_lang,
         **served,
     }
+
+
+def _ensure_duration(session) -> None:
+    """Fill ``meta.duration_seconds`` from the take's WAV when the client sent none.
+
+    API callers never report a duration, so without this every one of their
+    ``transcribed`` events logs NULL and words-per-minute is computed from the
+    PWA minority. A client-reported value (wall-clock, pauses included) wins.
+    """
+    if session.meta.duration_seconds is not None:
+        return
+    derived = wav_duration_seconds(session.wav_path())
+    if derived is not None:
+        session.meta.duration_seconds = round(derived, 2)
 
 
 def _record_served(session, client: TranscriptionClient) -> Dict[str, str]:

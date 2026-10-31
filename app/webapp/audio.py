@@ -16,6 +16,7 @@ import logging
 import shutil
 import subprocess
 import sys
+import wave
 from pathlib import Path
 from typing import Optional
 
@@ -94,3 +95,21 @@ def transcode_to_wav(
             f"ffmpeg exited {result.returncode}: {result.stderr.strip()[:500]}"
         )
     return dst
+
+
+def wav_duration_seconds(path: Path) -> Optional[float]:
+    """Length of a PCM WAV in seconds (frames / rate), or ``None``.
+
+    ``None`` means "could not tell" (missing or unreadable file), never zero:
+    a caller must not log a fabricated duration for a take it could not measure.
+    """
+    try:
+        with wave.open(str(path), "rb") as wf:
+            rate = wf.getframerate()
+            frames = wf.getnframes()
+    except (OSError, EOFError, wave.Error) as exc:
+        logger.warning(f"⚠️  Could not read duration of {path}: {exc}")
+        return None
+    if rate <= 0:
+        return None
+    return frames / rate
