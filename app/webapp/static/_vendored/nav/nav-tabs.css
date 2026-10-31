@@ -239,19 +239,21 @@
   }
 
   .app {
-    /* Bottom reserve = bar + its margin above and below + the gap, so the
-       last row scrolls clear of the fixed bar. Keep the bar a body-level
-       sibling of .app: iOS captures fixed descendants of scrollers. */
+    /* Bottom reserve = the bottom fade's full height (the bar, its bottom
+       margin, and whichever reaches higher above the bar: the fade's tail or
+       the bar's top margin) + the gap, so scrolled to the end the last row
+       and the build footer sit a gap above the fade, never dimmed, and clear
+       of the bar's taps. Keep the bar a body-level sibling of .app: iOS
+       captures fixed descendants of scrollers. */
+    --nav-bottom-reserve: calc(
+      env(safe-area-inset-bottom, 0px) +
+      max(var(--nav-fade-tail, 24px), var(--bottom-tabs-margin, 21px)) +
+      var(--bottom-tabs-height, 61px) + var(--bottom-tabs-margin, 21px) + var(--gap)
+    );
     /* Top = the safe area only: the top fade is off at scroll-top, so the
        first card sits right under the status bar. */
-    padding: env(safe-area-inset-top, 0px) var(--gap) calc(
-      env(safe-area-inset-bottom, 0px) + var(--bottom-tabs-margin, 21px) +
-      var(--bottom-tabs-height, 61px) + var(--bottom-tabs-margin, 21px) + var(--gap)
-    );
-    scroll-padding-bottom: calc(
-      env(safe-area-inset-bottom, 0px) + var(--bottom-tabs-margin, 21px) +
-      var(--bottom-tabs-height, 61px) + var(--bottom-tabs-margin, 21px) + var(--gap)
-    );
+    padding: env(safe-area-inset-top, 0px) var(--gap) var(--nav-bottom-reserve);
+    scroll-padding-bottom: var(--nav-bottom-reserve);
   }
 
   .tabs {
