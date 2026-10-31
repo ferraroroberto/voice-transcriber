@@ -5,8 +5,8 @@
 # `vendor/whisper.cpp/models/ggml-large-v3-turbo.bin` — both populated by
 # `scripts/install_whisper_cpp.py` and `scripts/download_model.py`.
 #
-# Paths below are relative to the project root (one directory above
-# `whisper_server/`) and resolved at runtime by the manager.
+# Paths below are relative to the repo root and resolved at runtime by the
+# manager.
 
 # `mode` drives startup behaviour. Two values:
 #
@@ -34,8 +34,8 @@ server:
   port: 8090               # fixed — collides on purpose with any other instance
 
 binary:
-  # Built by `python scripts/install_whisper_cpp.py` (CMake + CUDA if
-  # available). On Windows the `.exe` suffix is appended automatically when
+  # Downloaded as a prebuilt release by `python scripts/install_whisper_cpp.py`
+  # (cuBLAS build if an NVIDIA GPU is present, else CPU). On Windows the `.exe` suffix is appended automatically when
   # the bare name is not found.
   path: "vendor/whisper.cpp/whisper-server"
 
@@ -49,7 +49,7 @@ model:
 # Extra CLI flags forwarded after --host/--port/--model. whisper.cpp uses
 # GPU by default when built with CUDA/Metal; pass `-ng` (or `--no-gpu`) here
 # to force CPU. `--inference-path` exposes the OpenAI-shaped transcription
-# route that `core/transcription_client.py` expects.
+# route that `src/transcription_client.py` expects.
 #
 # `--flash-attn` is a universal speed-up on any CUDA GPU (Pascal-era and
 # newer): typically 1.3-2x faster encoder/decoder with no quality loss.

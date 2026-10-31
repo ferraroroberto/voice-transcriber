@@ -1,24 +1,15 @@
-// Vitest tests for the small pure functions in app.js. Run with:
+// Vitest tests for the pure label helpers in labels.js. Run with:
 //
-//   npm install --save-dev vitest jsdom
+//   npm install
 //   npx vitest run app/webapp/static/__tests__/
 //
-// The functions exported here mirror the ones in app.js. We re-define
-// them in a tiny module so vitest can import them without booting the
-// whole IIFE that wraps app.js. When you change either copy, keep them
-// in sync — the Python test `tests/test_static_app_js.py` enforces that
-// the JS source still contains the expected logic.
+// labels.js has no DOM access and no imports, so Vitest loads the shipped
+// function directly. The Python test `tests/test_static_app_js.py` pins the
+// same rule from the Python side.
 
 import { describe, it, expect } from 'vitest';
 
-// Mirror of `polishModelLabel` from app.js.
-function polishModelLabel(id) {
-  return String(id || '')
-    .split('_')
-    .filter(Boolean)
-    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(' ');
-}
+import { polishModelLabel } from '../labels.js';
 
 describe('polishModelLabel', () => {
   it.each([

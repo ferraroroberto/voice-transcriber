@@ -10,6 +10,7 @@ import { els, state } from './state.js';
 import { authFetch, promptForPassword, readErrorMessage } from './api.js';
 import { capitalize, isOn, renderTextCard, setHeadLine, showToast } from './ui.js';
 import { renderHistoryHeadLine } from './history.js';
+import { polishModelLabel } from './labels.js';
 
 export async function loadConfig() {
   // Single attempt first so we can detect 401 and prompt for the
@@ -61,18 +62,6 @@ export function applyConfigDefaults() {
   // so the server's actual flags (and any disabled rolling) take over.
   state.configIsFallback = true;
   populateConfigUI();
-}
-
-export function polishModelLabel(id) {
-  // Derive a friendly label from the hub alias by title-casing the
-  // segments (claude_haiku → "Claude Haiku"). Keeping this rule
-  // synthesis-only means adding a new model is a single edit in
-  // config/webapp_config.sample.json with no code change here.
-  return String(id || '')
-    .split('_')
-    .filter(Boolean)
-    .map(s => s.charAt(0).toUpperCase() + s.slice(1))
-    .join(' ');
 }
 
 export function populateConfigUI() {

@@ -14,7 +14,7 @@
 #      `hostname:` to match.
 #   5. webapp_tunnel_named.bat
 #
-# See README → "Persistent URL via named Cloudflare tunnel" for the
+# See docs/remote-access.md → "Persistent URL via Cloudflare tunnel" for the
 # full walkthrough including the Cloudflare Access policy.
 
 # Tunnel UUID — replace with the one returned by `tunnel create`.
