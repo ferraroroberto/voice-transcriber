@@ -15,6 +15,8 @@ from src import (
     TranscriptionError,
     build_transcription_client,
 )
+from src.recording_pipeline import TakeResult, handle_take
+from src.webapp_config import load_webapp_config
 from .base import BaseCommand, language_type
 
 logger = logging.getLogger(__name__)
@@ -48,7 +50,6 @@ class RecordCommand(BaseCommand):
     def execute(self, args: argparse.Namespace) -> int:
         if args.language:
             self.config.language = args.language
-        iso_lang = self.config.whisper_language
         max_seconds = args.max_seconds or self.config.max_record_seconds
 
         ensured = self._ensure_server(args)
@@ -57,8 +58,8 @@ class RecordCommand(BaseCommand):
         manager, spawned_here, status = ensured
 
         try:
-            text = _record_and_transcribe(
-                self.config, status.base_url, iso_lang, max_seconds,
+            take = _record_and_transcribe(
+                self.config, status.base_url, max_seconds,
             )
         except (RecordingError, TranscriptionError) as e:
             logger.error(f"❌ {e}")
@@ -66,17 +67,23 @@ class RecordCommand(BaseCommand):
         finally:
             self._release_server(manager, spawned_here)
 
-        if not text:
+        if take.error is not None:
+            return 1
+        if take.silent is not None:
+            logger.warning(
+                f"⚠️  Recording was silent ({take.silent.dbfs:.1f} dBFS) — "
+                "nothing transcribed"
+            )
+            return 1
+        if not take.text:
             logger.warning("⚠️  Empty transcription")
             return 1
 
-        self._emit(text, args)
+        self._emit(take.text, args)
         return 0
 
 
-def _record_and_transcribe(
-    config, base_url: str, language: str, max_seconds: int,
-) -> str:
+def _record_and_transcribe(config, base_url: str, max_seconds: int) -> TakeResult:
     recorder = AudioRecorder(
         sample_rate=config.sample_rate,
         preferred_mics=config.resolve_preferred_mics(),
@@ -93,8 +100,10 @@ def _record_and_transcribe(
 
     logger.info(f"🔇 Captured {len(result.samples) / result.sample_rate:.1f}s (peak={result.peak_level:.3f})")
     client = build_transcription_client(config, base_url)
-    return client.transcribe_array(
-        result.samples, result.sample_rate, language=language,
+    # auto_copy=False: `_emit` owns the clipboard copy so `--no-copy` is honoured.
+    return handle_take(
+        result, config, load_webapp_config(), client,
+        last_transcription=None, append_mode=False, auto_copy=False,
     )
 
 
