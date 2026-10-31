@@ -68,6 +68,33 @@ def stop_popen(
         proc.wait(timeout=kill_timeout)
 
 
+def stop_pid(
+    pid: int,
+    *,
+    name: str,
+    terminate_timeout: float = 5.0,
+    kill_timeout: float = 3.0,
+) -> None:
+    """terminate() -> kill() stop ladder for a process this manager did not
+    Popen (adopted from a PID file). Same timeout contract as `stop_popen`;
+    an already-gone pid is a no-op.
+    """
+    import psutil  # local: only adopted-pid stops need it
+
+    logger.info(f"🛑 Stopping {name} (pid={pid}, started earlier)")
+    try:
+        proc = psutil.Process(pid)
+        proc.terminate()
+        try:
+            proc.wait(timeout=terminate_timeout)
+        except psutil.TimeoutExpired:
+            logger.warning(f"⚠️  {name} didn't exit; killing")
+            proc.kill()
+            proc.wait(timeout=kill_timeout)
+    except psutil.NoSuchProcess:
+        pass
+
+
 def wait_until_ready(
     *,
     still_alive: Callable[[], bool],

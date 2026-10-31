@@ -18,7 +18,12 @@ from pathlib import Path
 import pytest
 
 from src.no_window import NO_WINDOW
-from src.process_supervisor import is_port_in_use, stop_popen, wait_until_ready
+from src.process_supervisor import (
+    is_port_in_use,
+    stop_pid,
+    stop_popen,
+    wait_until_ready,
+)
 
 PYTHON = Path(sys.executable)
 
@@ -74,6 +79,25 @@ class TestStopPopen:
         proc.wait(timeout=5)
         assert proc.poll() is not None
         stop_popen(proc, name="test-proc", terminate_timeout=5, kill_timeout=3)
+
+
+class TestStopPid:
+    def test_stops_a_process_we_did_not_popen(self):
+        proc = subprocess.Popen(
+            [str(PYTHON), "-c", "import time; time.sleep(60)"],
+            creationflags=NO_WINDOW,
+        )
+        try:
+            stop_pid(proc.pid, name="test-proc", terminate_timeout=5, kill_timeout=3)
+            assert proc.wait(timeout=5) is not None  # reaped
+        finally:
+            if proc.poll() is None:
+                proc.kill()
+
+    def test_is_a_noop_for_a_pid_that_is_already_gone(self):
+        proc = subprocess.Popen([str(PYTHON), "-c", "pass"], creationflags=NO_WINDOW)
+        proc.wait(timeout=5)
+        stop_pid(proc.pid, name="test-proc", terminate_timeout=5, kill_timeout=3)
 
 
 class TestWaitUntilReady:
