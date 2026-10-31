@@ -44,6 +44,7 @@
   <link rel="stylesheet" href="/static/_vendored/empty-state/empty-state.css?v=__VENDORED_EMPTY_STATE_EMPTY_STATE_CSS__">
   <link rel="stylesheet" href="/static/_vendored/button/button.css?v=__VENDORED_BUTTON_BUTTON_CSS__">
   <link rel="stylesheet" href="/static/_vendored/icon-button/icon-button.css?v=__VENDORED_ICON_BUTTON_ICON_BUTTON_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/page-foot/page-foot.css?v=__VENDORED_PAGE_FOOT_PAGE_FOOT_CSS__">
   <link rel="stylesheet" href="/static/styles.css?v=__STYLES_CSS__">
   <link rel="stylesheet" href="/static/styles-views.css?v=__STYLES_VIEWS_CSS__">
   <title>Whisper</title>
@@ -449,6 +450,13 @@
       </div>
     </section>
     </section>
+
+    <!-- Build identity: outside every pane, last child of <main> so it ends at
+         the end of every tab (vendored page-foot). Text set from
+         GET /api/version by app.js. -->
+    <footer class="page-foot">
+      <p id="buildReadout"></p>
+    </footer>
 
   </main>
 
