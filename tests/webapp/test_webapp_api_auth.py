@@ -98,6 +98,22 @@ class TestNonLoopback:
         resp = non_loopback_client.get("/api/config?token=secret-token")
         assert resp.status_code == 200
 
+    def test_non_ascii_wrong_token_returns_401(self, webapp_client, non_loopback_client):
+        _, app, _ = webapp_client
+        app.state.webapp_config.auth_token = "secret-token"
+        header = non_loopback_client.get(
+            "/api/config", headers={"Authorization": "Bearer café".encode("latin-1")},
+        )
+        query = non_loopback_client.get("/api/config?token=se%C3%B1or")
+        assert header.status_code == 401
+        assert query.status_code == 401
+
+    def test_non_ascii_token_is_accepted(self, webapp_client, non_loopback_client):
+        _, app, _ = webapp_client
+        app.state.webapp_config.auth_token = "señor-token"
+        resp = non_loopback_client.get("/api/config?token=se%C3%B1or-token")
+        assert resp.status_code == 200
+
     def test_healthz_is_exempt(self, webapp_client, non_loopback_client):
         _, app, _ = webapp_client
         app.state.webapp_config.auth_token = "secret-token"
@@ -146,6 +162,21 @@ class TestLoginEndpoint:
         app.state.webapp_config.auth_token = "tok"
         resp = client.post("/api/login", json={"password": "wrong"})
         assert resp.status_code == 401
+
+    def test_401_on_non_ascii_bad_password(self, webapp_client):
+        client, app, _ = webapp_client
+        app.state.webapp_config.auth_password = "letmein"
+        app.state.webapp_config.auth_token = "secret-token"
+        resp = client.post("/api/login", json={"password": "letmèin"})
+        assert resp.status_code == 401
+
+    def test_200_with_non_ascii_owner_password(self, webapp_client):
+        client, app, _ = webapp_client
+        app.state.webapp_config.auth_password = "passñword"
+        app.state.webapp_config.auth_token = "secret-token"
+        resp = client.post("/api/login", json={"password": "passñword"})
+        assert resp.status_code == 200
+        assert resp.json()["token"] == "secret-token"
 
     def test_200_with_token_on_good_password(self, webapp_client):
         client, app, _ = webapp_client

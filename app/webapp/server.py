@@ -59,7 +59,9 @@ from app.webapp.audio import find_ffmpeg
 from app.webapp.middleware import BearerTokenMiddleware
 from app.webapp.partial_worker import PartialWorker
 from app.webapp.routers import activity, analytics, auth, config, misc, sessions
-from app.webapp.routers._helpers import PROJECT_ROOT, STATIC_DIR
+from app.webapp.routers._helpers import (
+    PROJECT_ROOT, STATIC_DIR, adopt_webapp_config, current_webapp_config,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -188,11 +190,11 @@ def create_app() -> FastAPI:
         lifespan=_lifespan,
     )
 
-    # Read the token from app.state on every request so a /api/config
-    # patch that rotates it takes effect without a restart.
+    # Read the token from the live config on every request so a rotation
+    # (/api/config patch or a config-file edit) takes effect without a restart.
     app.add_middleware(
         BearerTokenMiddleware,
-        get_token=lambda: getattr(app.state.webapp_config, "auth_token", ""),
+        get_token=lambda: current_webapp_config(app).auth_token,
     )
 
     # Registered last so it is the outermost layer: an auth 401 or a
@@ -204,7 +206,7 @@ def create_app() -> FastAPI:
     # a global. This also keeps the module import-side-effect-free, which
     # matters because the tray imports it to start uvicorn programmatically.
     app.state.app_config = app_config
-    app.state.webapp_config = webapp_cfg
+    adopt_webapp_config(app, webapp_cfg)
     app.state.server_manager = server_manager
     app.state.archive = archive
     app.state.transcription_client = transcription_client

@@ -77,7 +77,7 @@ still covers the same logic via the parity port in
 
 | File | What it pins |
 |------|--------------|
-| `tests\webapp\test_webapp_config.py` | First-run defaults come from `webapp_config.sample.json` (not Python); regression guard that no model-name literal sneaks back into `src\webapp_config.py` |
+| `tests\webapp\test_webapp_config.py` | First-run defaults come from `webapp_config.sample.json` (not Python); regression guard that no model-name literal sneaks back into `src\webapp_config.py`; `reload_if_changed` serves a file another process rewrote |
 | `tests\test_polish.py` | Hub client request shape, `<think>` stripping, error wrapping |
 | `tests\test_polish_prompts.py` | Library load, dedupe, built-in fallback |
 | `tests\test_app_config.py` | 100-language Whisper map, ISO normalisation, validation |
@@ -109,6 +109,8 @@ still covers the same logic via the parity port in
 | `tests\test_cli_ensure_server.py` | `BaseCommand._ensure_server` honours the hub-first record gate — record/transcribe keep working when the hub is reachable even if the local whisper-server is down |
 | `tests\test_cli_language.py` | `record` / `transcribe --language` accepts the full 100-language Whisper set (ISO code or English name), not just a legacy three-entry tuple |
 | `tests\test_cli_record.py` | The CLI `record` command runs takes through `handle_take` — a silent take never reaches whisper, an audible one is transcribed and emitted |
+| `tests\test_cli_server_cmd.py` | `server stop` exits 0 once the stop has run; `status` keeps mapping not-running to exit 1 |
+| `tests\test_secret_compare.py` | `secrets_equal` accepts non-ASCII text, and no code outside `src\secret_compare.py` calls `compare_digest` |
 | `tests\webapp\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status`, cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp) |
 | `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
 | `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty; `set_password.py`'s password-length floor |

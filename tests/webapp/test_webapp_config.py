@@ -349,3 +349,58 @@ class TestAppendAuthToken:
         # urlencode escapes the space and the plus; the slash escapes
         # to %2F. The exact encoding is what tests pin.
         assert "token=a+b%2Bc%2Fd" in out
+
+
+# ---------------------------------------------------------------------------
+# Hot reload — the webapp is a separate process from the tk window and must
+# pick up that window's saves without a restart.
+# ---------------------------------------------------------------------------
+
+class TestReloadIfChanged:
+    def test_unchanged_file_keeps_the_loaded_object(self, tmp_path):
+        from src.webapp_config import config_mtime, reload_if_changed
+
+        path = tmp_path / "webapp_config.json"
+        save_webapp_config(WebappConfig(), path)
+        loaded = WebappConfig()
+        cfg, mtime = reload_if_changed(loaded, config_mtime(path), path)
+        assert cfg is loaded
+        assert mtime == config_mtime(path)
+
+    def test_rewritten_file_is_reloaded(self, tmp_path):
+        import os
+        from dataclasses import replace
+        from src.webapp_config import config_mtime, reload_if_changed
+
+        path = tmp_path / "webapp_config.json"
+        save_webapp_config(WebappConfig(), path)
+        seen = config_mtime(path)
+        save_webapp_config(replace(WebappConfig(), gain_boost_db=12.0), path)
+        # Coarse filesystem clocks can give back-to-back writes one mtime.
+        os.utime(path, (seen + 5, seen + 5))
+        cfg, mtime = reload_if_changed(WebappConfig(), seen, path)
+        assert cfg.gain_boost_db == 12.0
+        assert mtime == seen + 5
+
+    def test_invalid_rewrite_keeps_the_loaded_copy(self, tmp_path):
+        from src.webapp_config import reload_if_changed
+
+        path = tmp_path / "webapp_config.json"
+        path.write_text(json.dumps({"history_retention_days": 0}), encoding="utf-8")
+        loaded = WebappConfig()
+        cfg, mtime = reload_if_changed(loaded, 0.0, path)
+        assert cfg is loaded
+        assert mtime > 0.0
+        # The same bad write is not re-parsed on every request.
+        again, _ = reload_if_changed(loaded, mtime, path)
+        assert again is loaded
+
+    def test_webapp_serves_a_file_written_by_another_process(self, webapp_client):
+        from src import webapp_config as webapp_config_mod
+
+        client, _, _ = webapp_client
+        assert client.get("/api/config").json()["gain_boost_db"] != 9.0
+        # What the tk window does: write the shared file directly.
+        save_webapp_config(WebappConfig(gain_boost_db=9.0))
+        assert webapp_config_mod.DEFAULT_CONFIG_PATH.exists()
+        assert client.get("/api/config").json()["gain_boost_db"] == 9.0
