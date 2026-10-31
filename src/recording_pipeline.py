@@ -1,16 +1,17 @@
 """Shared mic-recording take-processing pipeline: silence gate -> gain
 boost -> whisper transcription -> finalize.
 
-Both the tk main window (``app/gui/app.py``) and the tray
-(``app/gui/tray.py``) run this exact sequence on every Record-button /
-hotkey take: a near-silent recording never reaches whisper (it would
-otherwise hallucinate text on empty audio), a configured gain boost is
-applied for quiet environments, then the samples go to
-``TranscriptionClient``, then the result is finalized (strip / append-mode
-merge / clipboard copy). ``handle_take`` is the single owner of that
-whole sequence — each surface gets back one ``TakeResult`` and renders
-it (toast vs messagebox) plus writes its own last-transcription slot;
-the workflow itself can't drift between the two surfaces.
+The tk main window (``app/gui/app.py``), the tray
+(``app/gui/tray.py``) and the CLI ``record`` command
+(``app/cli/commands/record.py``) run this exact sequence on every take:
+a near-silent recording never reaches whisper (it would otherwise
+hallucinate text on empty audio), a configured gain boost is applied for
+quiet environments, then the samples go to ``TranscriptionClient``, then
+the result is finalized (strip / append-mode merge / clipboard copy).
+``handle_take`` is the single owner of that whole sequence — each
+surface gets back one ``TakeResult`` and renders it (toast vs messagebox)
+plus writes its own last-transcription slot; the workflow itself can't
+drift between the surfaces.
 """
 
 from __future__ import annotations

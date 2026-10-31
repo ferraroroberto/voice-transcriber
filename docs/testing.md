@@ -108,6 +108,7 @@ still covers the same logic via the parity port in
 | `tests\test_transcription_client.py` | whisper-server multipart shape, translate routing |
 | `tests\test_cli_ensure_server.py` | `BaseCommand._ensure_server` honours the hub-first record gate — record/transcribe keep working when the hub is reachable even if the local whisper-server is down |
 | `tests\test_cli_language.py` | `record` / `transcribe --language` accepts the full 100-language Whisper set (ISO code or English name), not just a legacy three-entry tuple |
+| `tests\test_cli_record.py` | The CLI `record` command runs takes through `handle_take` — a silent take never reaches whisper, an audible one is transcribed and emitted |
 | `tests\webapp\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status`, cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp) |
 | `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
 | `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty; `set_password.py`'s password-length floor |
