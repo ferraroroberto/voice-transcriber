@@ -12,6 +12,7 @@ import { initNavTabs } from './_vendored/nav/nav-tabs.js';
 import { setSwitch } from './_vendored/switch/switch.js';
 import { initUsageLog } from './_vendored/usage-log/usage-log.js';
 import { bindTextSize } from './_vendored/text-size/text-size.js';
+import { buildReadoutText, fmtBuildTime } from './_vendored/page-foot/page-foot.js';
 import { els, state, captureTokenFromURL, getStoredToken } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, isOn, renderTextCard, setTextView, shownText, showToast } from './ui.js';
@@ -103,18 +104,9 @@ async function init() {
   loadVersion();
 }
 
-// Surface the loaded build in Settings › About so "is the phone running the
-// current code?" is answerable. Format + stale-shell reload
-// guard mirror home-automation's main.js.
-function fmtBuildTime(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso).replace('T', ' ').slice(0, 16);
-  const pad = function (n) { return String(n).padStart(2, '0'); };
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
-    ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-}
-
+// Surface the loaded build (Settings › About and the page footer) so "is the
+// phone running the current code?" is answerable. The stale-shell reload
+// guard mirrors home-automation's main.js.
 const ASSET_HASH_KEY = 'voice-transcriber.assetHash';
 const ASSET_RELOAD_KEY = 'voice-transcriber.assetReloadedFor';
 
@@ -149,9 +141,11 @@ async function loadVersion() {
     renderSettingsHeadLine();
     const ts = fmtBuildTime(v.built_at || '');
     els.buildInfo.textContent = ts ? `${sha} · ${ts}` : sha;
+    if (els.buildReadout) els.buildReadout.textContent = buildReadoutText(sha, v.built_at || '');
   } catch (_) {
     // Non-critical — say it plainly rather than alarming the user.
     els.buildInfo.textContent = 'Unavailable';
+    if (els.buildReadout) els.buildReadout.textContent = '';
   }
 }
 

@@ -157,7 +157,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     """Settings (#265): inset groups with no Save button; each control posts
     only its own field the moment it changes, and a refused save puts the
     control back with an error toast. Delete all takes is a sheet, Services
-    shows the probes and About the build (the per-tab footer is gone)."""
+    shows the probes and About the build (also the page footer's readout)."""
     import json
 
     page = authed_page
@@ -200,7 +200,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     expect(page.locator("#svcPolish")).to_have_attribute("data-badge", "alive")
     expect(page.locator("#settingsHeadLine")).to_have_text("Local fallback down")
     expect(page.locator("#buildInfo")).not_to_have_text("…")
-    expect(page.locator(".page-foot")).to_have_count(0)
+    expect(page.locator("#buildReadout")).to_contain_text("Build: ")
 
     deletes: list[str] = []
     page.on("request", lambda r: deletes.append(r.url) if r.method == "DELETE" else None)

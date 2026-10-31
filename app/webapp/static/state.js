@@ -83,6 +83,7 @@ export const els = {
   retentionDays:    document.getElementById('retentionDays'),
   settingsHeadLine: document.getElementById('settingsHeadLine'),
   buildInfo:        document.getElementById('buildInfo'),
+  buildReadout:     document.getElementById('buildReadout'),
 
 };
 

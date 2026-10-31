@@ -133,6 +133,7 @@ still covers the same logic via the parity port in
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load |
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor |
 | `tests\e2e\test_typography.py` | A nav tab, a button, an input and a select compute the same `font-family` as the body, so form controls never fall back to the UA's Arial |
+| `tests\e2e\test_page_foot.py` | The vendored build footer ends every tab (Record, History, Settings) with a `Build: ` readout; on the phone pill, scrolled to the end it sits wholly above the nav's bottom fade |
 | `tests\e2e\test_control_border.py` | The icon-only incognito chip and the three text areas draw their edge in the `control-border` token, not the hairline, in light and dark |
 | `tests\e2e\test_page_header.py` | Settings is never a tab: the nav lists only Record and History, every pane opens with the `home-head` row carrying the theme toggle and the Settings gear, and the gear opens Settings from any tab until a tab is chosen |
 | `tests\e2e\test_toast.py` | The toast is neutral: a success message paints the nav's glass (no hue) and only an error tints danger, announced assertively |

@@ -57,6 +57,7 @@ nav = { src = "app/webapp/static/_vendored/nav", sha = "217ff83f11dc4b8a69766c1f
 select-native = { src = "app/webapp/static/_vendored/select-native", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/select-native" }
 switch = { src = "app/webapp/static/_vendored/switch", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/switch" }
 button = { src = "app/webapp/static/_vendored/button", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/button" }
+page-foot = { src = "app/webapp/static/_vendored/page-foot", sha = "217ff83f11dc4b8a69766c1f65a10a3a339f639e", dest = "app/webapp/static/_vendored/page-foot" }
 modal = { src = "app/webapp/static/_vendored/modal", sha = "713b1d1e36989440679ec4e415ff149b14d96c81", dest = "app/webapp/static/_vendored/modal" }
 icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/icon-button" }
 empty-state = { src = "app/webapp/static/_vendored/empty-state", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/empty-state" }
