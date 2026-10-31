@@ -90,13 +90,13 @@ At `(min-width: 1100px) and (pointer: fine)` (`design.md` `layout.wide`, fleet-c
 
 ## Bottom reserve and hit area (phone)
 
-On the phone pill (`(pointer: coarse) and (max-width: 520px)`), `nav-tabs.css` sets `.app`'s `padding-bottom` and `scroll-padding-bottom` to one reserve:
+On the phone pill (`(pointer: coarse) and (max-width: 520px)`), `nav-tabs.css` sets `.app`'s `padding-bottom` and `scroll-padding-bottom` to one reserve, `--nav-bottom-reserve`, the bottom fade's full height plus a gap:
 
 ```
-env(safe-area-inset-bottom) + --bottom-tabs-margin + --bottom-tabs-height + --bottom-tabs-margin + --gap
+env(safe-area-inset-bottom) + max(--nav-fade-tail, --bottom-tabs-margin) + --bottom-tabs-height + --bottom-tabs-margin + --gap
 ```
 
-That is 21 + 61 + 21 + 12 = 115px with no safe area, plus the home-indicator inset on an iPhone. Scrolled to the end, the last row's bottom edge sits at least `--bottom-tabs-margin + --gap` (33px) above the pill, so no tap rectangle of the last row meets a tab's. Do not add your own bottom padding for the nav on top of it.
+That is 24 + 61 + 21 + 12 = 118px with no safe area, plus the home-indicator inset on an iPhone. Scrolled to the end, the last row, and the build-identity footer (`page-foot`) when it is `.app`'s last child, ends at least `--gap` above the bottom fade's top edge, so it is never dimmed, and at least `--nav-fade-tail + --gap` (36px) above the pill, so no tap rectangle of the last row meets a tab's. The reserve follows an app's own `--nav-fade-tail`. Do not add your own bottom padding for the nav on top of it.
 
 Above the end, rows scroll under the floating pill by design, so the pill must win every tap in each tab's rectangle. Tabs are rectangles, but the bar's corners are rounded (`--radius-nav`), and a rounded corner takes no taps outside its curve. A transparent `.tabs::before` layer fills the bar's square padding box under the tabs, so a tap in an outer tab's corner sliver lands on the nav, not on the row beneath. It is never painted and exists only on the phone pill: the desktop control and the wide rail have no such layer (#348, design rubric TOUCH-02). The layer is the nav's own `::before`, so don't put an app rule on `.tabs::before`.
 
@@ -104,8 +104,8 @@ Above the end, rows scroll under the floating pill by design, so the pill must w
 
 Content fades gently at the top and bottom edges of the phone pill layout, a hint that more lies past the edge, never a wall, and with no solid zone. The fully visible middle stays 100% opaque. Both edges use one eased curve: from the screen edge inward the content's opacity runs 0, 0.25, 0.5, 0.75, 0.92 and 1 at 0, 10, 25, 50, 75 and 100% of the band, so content stays at least half visible over three quarters of each band and only vanishes at the edge. Each band is page colour `--bg` drawn over the content, inert (`z-index: 110`, above `.app` and below the pill, `pointer-events: none`). Two tokens size them: `--nav-fade-band` (12px, the top band) and `--nav-fade-tail` (24px, how far the bottom band reaches above the pill). An app may tune them but never re-draws the bands.
 
-- **Bottom:** a `body::before` band anchored to the screen bottom like the pill, from `--nav-fade-tail` above the pill's top edge down to the screen edge. Rows show through the pill's glass and fade out under it. The bottom reserve still scrolls the last row clear of the pill, and every tap passes through the band.
-- **Top:** a `body::after` band from the top of the viewport, solid only through the safe area, then the curve over `--nav-fade-band`. In an installed iOS app with the `default` status bar the viewport starts below the status bar and no fixed layer paints in that strip, so the band starts at the viewport top and stays thin. Its opacity is `--nav-fade-on`, which `initNavTabs` raises from 0 at scroll-top to 1 over the first `--nav-fade-band` of scroll. At rest the first row sits right under the status bar, undimmed: the phone `.app` top padding is the safe area only.
+- **Bottom:** a `body::before` band anchored to the screen bottom like the pill, from `--nav-fade-tail` above the pill's top edge down to the screen edge. Rows show through the pill's glass and fade out under it. The bottom reserve scrolls the last row a gap clear of the whole band, and every tap passes through the band.
+- **Top:** a `body::after` band from the top of the viewport, solid only through the safe area, then the curve over `--nav-fade-band`. In an installed iOS app with the `default` status bar the viewport starts below the status bar and no fixed layer paints in that strip, so the band starts at the viewport top and stays thin. Its opacity is `--nav-fade-on`, which `initNavTabs` raises from 0 at scroll-top to 1 over the first `--nav-fade-band` of scroll. At rest nothing is dimmed: the first row, including an app's rounded header card, static or sticky, sits right under the status bar at full opacity, and the installed app's 1px startup scroll leaves the band off once it returns to the top. The phone `.app` top padding is the safe area only.
 
 Reduce Transparency (`prefers-reduced-transparency: reduce`) drops both bands. It is CSS only, with no transform on the nav. Desktop and the wide rail carry no such layer. The bands are the nav's own `body::before` and `body::after`, so don't put an app rule on either. `tests/e2e/test_nav_offset.py` checks both bands' geometry and stops in light and dark on a 390x844 phone, that the top band is off at scroll-top and full after one band of scroll, and in WebKit measures the bottom band's coverage row by row with no step. The real look is confirmed on an iPhone.
 
@@ -143,7 +143,7 @@ Reduce Transparency (`prefers-reduced-transparency: reduce`) drops both bands. I
 | `--bottom-tabs-margin` | `21px` | floating bar inset from left/right/physical bottom — optional, falls back to `21px` |
 | `--bottom-tabs-pill-height` | `53px` | per-tab pill height (mobile) — optional, falls back to `53px` |
 | `--nav-fade-band` | `12px` | top scroll-edge fade band height, and the scroll distance over which it switches on — optional, falls back to `12px` |
-| `--nav-fade-tail` | `24px` | how far the bottom fade reaches above the pill's top edge — optional, falls back to `24px` |
+| `--nav-fade-tail` | `24px` | how far the bottom fade reaches above the pill's top edge, and so part of the phone bottom reserve — optional, falls back to `24px` |
 | `--bottom-tabs-padding` | `4px` | mobile bar inner padding — optional, falls back to `4px` |
 | `--bottom-tabs-gap` | `4px` | mobile tab gap — optional, falls back to `4px` |
 | `--bottom-tabs-icon` | `20px` | mobile SVG icon size — optional, falls back to `20px` |
