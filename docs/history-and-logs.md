@@ -4,9 +4,20 @@
 
 Every recording lands in `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with
 `raw.webm`, transcoded `audio.wav`, `transcript.txt`, `polished.txt`,
-and `meta.json`. The directory is gitignored. Sessions older than 30
-days are auto-deleted on app start (configurable in
-`webapp_config.json`).
+and `meta.json`. The directory is gitignored. Retention has two windows,
+both swept on app start and set in `webapp_config.json`:
+
+- **Audio** (`raw.webm`, `audio.wav`) is deleted once a take is older
+  than `history_retention_days` (default 30; Settings › Keep audio for).
+- **Text** (`transcript.txt`, `polished.txt`, `meta.json`) stays until
+  `transcript_retention_days` (default 365), then the whole folder is
+  deleted. The text window is never shorter than the audio window, and an
+  [incognito](webapp-usage.md#incognito-mode) take is deleted at the audio
+  window.
+
+A take past the audio window stays in History as text only: Copy and the
+facts work, *Redo transcription* is hidden, and `POST
+/api/sessions/{id}/retranscribe` answers `404`.
 
 History lives on its **own tab** in the bottom navigation (fleet nav
 contract) and refreshes itself every time you open it. It opens on the
@@ -65,12 +76,12 @@ the take in the middle, one overflow button on the right:
 Every tab's header carries one live line beside its title: Record shows
 the dictation language, or the one exception that applies (in order:
 *Transcription offline*, Incognito, the Translate route, *Polish
-unavailable*); History shows *N takes · kept D days*; Settings shows *All
+unavailable*); History shows *N takes · audio kept D days*; Settings shows *All
 services up* or names the first failing service.
 
 ### Persistent activity log
 
-Unlike `archive/` (pruned after 30 days), every session-lifecycle event
+Unlike `archive/` (audio pruned after 30 days, text after 365), every session-lifecycle event
 — created, transcribed, transcribe/polish failures, polished, deleted —
 is also written to a separate, much longer-lived SQLite log, retained
 for 365 days and pruned on boot. It lives outside the git

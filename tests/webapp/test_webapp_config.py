@@ -23,6 +23,7 @@ from src.webapp_config import (
     DEFAULT_POLISH_PROMPT_ID,
     DEFAULT_RETENTION_DAYS,
     DEFAULT_SILENCE_DBFS_THRESHOLD,
+    DEFAULT_TRANSCRIPT_RETENTION_DAYS,
     SAMPLE_CONFIG_PATH,
     WebappConfig,
     _sample_polish_defaults,
@@ -30,6 +31,7 @@ from src.webapp_config import (
     append_auth_token,
     load_webapp_config,
     save_webapp_config,
+    text_retention_days,
     update_webapp_config,
 )
 
@@ -314,6 +316,20 @@ class TestValidate:
         )
         with pytest.raises(ValueError, match="history_retention_days"):
             _validate(bad)
+
+    def test_transcript_retention_must_be_positive(self, sample_polish_payload):
+        bad = WebappConfig(
+            polish_model_default=sample_polish_payload["polish_model_default"],
+            polish_models_available=list(sample_polish_payload["polish_models_available"]),
+            transcript_retention_days=0,
+        )
+        with pytest.raises(ValueError, match="transcript_retention_days"):
+            _validate(bad)
+
+    def test_text_window_never_shorter_than_audio_window(self):
+        assert text_retention_days(WebappConfig()) == DEFAULT_TRANSCRIPT_RETENTION_DAYS
+        short = WebappConfig(history_retention_days=90, transcript_retention_days=30)
+        assert text_retention_days(short) == 90
 
     def test_gain_boost_db_must_be_in_range(self, sample_polish_payload):
         for bad_db in (-1.0, 25.0):

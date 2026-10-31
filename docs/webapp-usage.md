@@ -106,7 +106,7 @@ either keeps both in sync; the webapp toggle is independent.
 An **Incognito** toggle pill under the record button. While it is on (blue),
 the **next recording** is flagged `incognito=true` server-side and
 never appears in the History list — useful for taking a private
-note that shouldn't sit on disk for the 30-day retention window.
+note that shouldn't sit on disk for the retention window.
 The session still works normally during its lifetime (record,
 transcribe, polish, copy); the moment you hit **Clear** or
 start the next recording, the client sends `DELETE

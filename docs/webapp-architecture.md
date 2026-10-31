@@ -120,7 +120,7 @@ audio through Bluetooth at the system level regardless. Best-effort —
 documented in [webapp-usage.md](webapp-usage.md).
 
 ### History
-30-day auto-cleanup on app start (cron-on-boot pattern), plus a
+Audio auto-cleanup after 30 days and text cleanup after 365 on app start (cron-on-boot pattern), plus a
 "Delete all takes…" action under Settings › History, confirmed in a
 sheet before it runs. Sessions live in
 `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with raw.webm, audio.wav,
