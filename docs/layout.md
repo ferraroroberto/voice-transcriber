@@ -71,6 +71,7 @@ voice-transcriber/
 │           ├── recorder.js        # MediaRecorder record/upload/finish state machine
 │           ├── level.js           # VU meter + VAD auto-stop
 │           ├── vad.js             # pure VAD helpers (Silence length → trigger ms)
+│           ├── labels.js          # pure label helpers (polish-model alias → display label)
 │           ├── partials.js        # rolling-transcription SSE stream
 │           ├── wakelock.js        # screen wake lock during recording
 │           ├── api.js             # fetch wrappers for server endpoints

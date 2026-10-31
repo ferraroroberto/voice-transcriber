@@ -13,8 +13,8 @@ The persistent URL is written to `webapp/last_tunnel_url.txt` (with
 `?token=…` appended when an `auth_token` is configured) so external
 tooling can find it.
 
-One-time setup before this script can run — see README →
-"Persistent URL via Cloudflare tunnel":
+One-time setup before this script can run — see
+docs/remote-access.md → "Persistent URL via Cloudflare tunnel":
 
   cloudflared tunnel login
   cloudflared tunnel create voice
@@ -127,7 +127,7 @@ def main() -> int:
         logger.error(
             f"❌ {config_path} missing. Copy {SAMPLE_CONFIG.name} to "
             f"{config_path.name} and fill in your tunnel UUID + hostname. "
-            "See README → 'Persistent URL via named Cloudflare tunnel'."
+            "See docs/remote-access.md → 'Persistent URL via Cloudflare tunnel'."
         )
         return 1
 
