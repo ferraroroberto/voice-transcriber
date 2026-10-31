@@ -29,6 +29,7 @@ from src.process_supervisor import (
     OWNERSHIP_NONE,
     OWNERSHIP_OURS,
     is_port_in_use,
+    stop_pid,
     stop_popen,
     wait_until_ready,
 )
@@ -49,6 +50,12 @@ logger = logging.getLogger(__name__)
 MODE_LOCAL = "local"        # we own the server — refuse if host:port is externally held
 MODE_EXTERNAL = "external"  # reuse an already-running server if present, else spawn
 _VALID_MODES = (MODE_LOCAL, MODE_EXTERNAL)
+
+# Stop-ladder grace periods. Unmeasured estimates: a CUDA model unload plus
+# buffered-log flush can take several seconds, so terminate gets a generous
+# window before the hard kill; kill only waits for the OS to reap the process.
+STOP_TERMINATE_TIMEOUT_S = 8
+STOP_KILL_TIMEOUT_S = 5
 
 
 @dataclass(frozen=True)
@@ -499,7 +506,12 @@ class WhisperServerManager:
 
         p = self._proc
         try:
-            stop_popen(p, name="whisper-server", terminate_timeout=8, kill_timeout=5)
+            stop_popen(
+                p,
+                name="whisper-server",
+                terminate_timeout=STOP_TERMINATE_TIMEOUT_S,
+                kill_timeout=STOP_KILL_TIMEOUT_S,
+            )
         finally:
             self._proc = None
             self._clear_pid_file()
@@ -631,18 +643,12 @@ class WhisperServerManager:
 
     def _stop_pid(self, pid: int) -> None:
         """terminate() -> kill() ladder for a process we did not Popen here."""
-        logger.info(f"🛑 Stopping whisper-server (pid={pid}, started earlier)")
-        try:
-            proc = psutil.Process(pid)
-            proc.terminate()
-            try:
-                proc.wait(timeout=8)
-            except psutil.TimeoutExpired:
-                logger.warning("⚠️  whisper-server didn't exit; killing")
-                proc.kill()
-                proc.wait(timeout=5)
-        except psutil.NoSuchProcess:
-            pass
+        stop_pid(
+            pid,
+            name="whisper-server",
+            terminate_timeout=STOP_TERMINATE_TIMEOUT_S,
+            kill_timeout=STOP_KILL_TIMEOUT_S,
+        )
 
     def _wait_until_ready(self) -> None:
         def _not_alive_message() -> str:
