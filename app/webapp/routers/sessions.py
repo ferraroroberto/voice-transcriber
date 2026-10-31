@@ -258,7 +258,7 @@ async def finish_session(
             "transcribed", session_id=session.session_id, source=session.meta.source,
             duration_seconds=session.meta.duration_seconds,
             word_count=len(text.split()) if text else 0,
-            payload={"language": session.meta.language, "from_partial": True},
+            payload={"language": partial_iso, "from_partial": True},
         )
         await worker.finalise(text)
         await _shutdown_partial_worker(request.app, session_id)
@@ -670,7 +670,7 @@ async def _transcribe_session_payload(
         "transcribed", session_id=session.session_id, source=session.meta.source,
         duration_seconds=session.meta.duration_seconds,
         word_count=len(text.split()) if text else 0,
-        payload={"language": chosen_lang},
+        payload={"language": iso},
     )
 
     return {
