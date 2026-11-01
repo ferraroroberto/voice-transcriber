@@ -197,9 +197,13 @@ extensions = ["md"]
 tier   = "full"
 prefix = "app/webapp/"
 
+[[e2e.rule]]             # the webapp manager takes its cross-process lock from here -> full
+tier = "full"
+path = "app/tray/single_instance.py"
+
 [[e2e.rule]]             # tray/gui, cli, and shared logic -> no browser impact -> none
 tier       = "none"
-prefix     = "app/gui/"
+prefix     = "app/tray/"
 extensions = ["py"]
 
 [[e2e.rule]]             # cli entry points -> no browser impact -> none

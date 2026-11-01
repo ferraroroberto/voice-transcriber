@@ -1,7 +1,7 @@
 """Shared Cloudflare named-tunnel lifecycle: read the configured hostname,
 spawn ``cloudflared``, and persist the public URL.
 
-Both the tray (``app/gui/tray.py``, auto-spawned as part of normal
+Both the tray (``app/tray/tray.py``, auto-spawned as part of normal
 ``tray.bat`` startup) and the headless ``scripts/run_named_tunnel.py``
 front the same webapp through the same ``cloudflared tunnel --config …
 run`` process and the same ``webapp/last_tunnel_url.txt`` persistence

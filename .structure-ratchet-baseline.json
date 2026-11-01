@@ -2,7 +2,5 @@
   "version": 1,
   "band": {"files": 0, "functions": 2},
   "root_extras": [],
-  "entries": [
-    {"key": "place:app/gui", "files": 10}
-  ]
+  "entries": []
 }

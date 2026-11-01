@@ -20,5 +20,5 @@ class TrayCommand(BaseCommand):
         )
 
     def execute(self, args: argparse.Namespace) -> int:
-        from app.gui.tray import run_tray  # lazy import — optional deps
+        from app.tray.tray import run_tray  # lazy import — optional deps
         return run_tray(self.config)

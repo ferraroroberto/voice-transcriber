@@ -54,7 +54,7 @@ class TestTrayConsultsTheGuard:
     """The predicate is only useful if the spawn path actually calls it."""
 
     def test_tunnel_worker_returns_before_spawning(self, monkeypatch):
-        from app.gui import service_supervisor as svc_mod
+        from app.tray import service_supervisor as svc_mod
 
         spawned = []
         monkeypatch.setattr(
