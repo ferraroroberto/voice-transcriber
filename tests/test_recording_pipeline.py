@@ -1,7 +1,7 @@
 """Unit tests for `src/recording_pipeline.finalize_transcript` and
 `handle_take`.
 
-Extracted from `app/gui/tray.py` and `app/gui/app.py` (voice-transcriber#160,
+Extracted from `app/tray/tray.py` and `app/tray/app.py` (voice-transcriber#160,
 then the full take-processing workflow in #174) so the process-recording ->
 error/silent arms -> strip -> append-merge -> clipboard-copy sequence lives
 in exactly one place. Both GUI surfaces are otherwise untested (tk), so this

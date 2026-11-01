@@ -21,5 +21,5 @@ class GuiCommand(BaseCommand):
         )
 
     def execute(self, args: argparse.Namespace) -> int:
-        from app.gui.app import run_gui  # lazy — tk isn't always present
+        from app.tray.app import run_gui  # lazy — tk isn't always present
         return run_gui(self.config, tray_on_close=args.tray_on_close)

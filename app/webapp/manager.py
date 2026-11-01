@@ -8,7 +8,7 @@ Mirrors `src/whisper_server/manager.py`:
 - `stop()` only terminates a process this manager spawned. An externally
   started uvicorn is left alone.
 
-Used by the tray (`app/gui/tray.py`) so launching `tray.bat` brings up
+Used by the tray (`app/tray/tray.py`) so launching `tray.bat` brings up
 the webapp alongside whisper-server. Standalone `webapp.bat` is the
 "server only, no tray" alternative.
 """

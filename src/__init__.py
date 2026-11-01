@@ -1,6 +1,6 @@
 """Logic layer — audio capture, HTTP client, app config, diagnostics.
 
-UI surfaces (`app/gui/`, `app/cli/`, `app/webapp/`) consume this package;
+UI surfaces (`app/tray/`, `app/cli/`, `app/webapp/`) consume this package;
 nothing in here imports any UI framework. See `CLAUDE.md` for the
 `src/` ↔ `app/` split convention shared across the monorepo.
 """

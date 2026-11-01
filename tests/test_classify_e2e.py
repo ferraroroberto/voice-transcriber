@@ -46,7 +46,9 @@ def test_real_rules_route_representative_paths() -> None:
     assert tier("app/webapp/static/favicon.ico") == "static"
 
     # Tray/GUI, CLI, shared logic, tests, docs, markdown -> skip.
-    assert tier("app/gui/service_supervisor.py") == "skip"
+    assert tier("app/tray/service_supervisor.py") == "skip"
+    # ...except the lock primitive the webapp manager imports -> full.
+    assert tier("app/tray/single_instance.py") == "full"
     assert tier("app/cli/main.py") == "skip"
     assert tier("src/app_config.py") == "skip"
     assert tier("tests/test_app_config.py") == "skip"
@@ -63,7 +65,7 @@ def test_real_rules_route_representative_paths() -> None:
     ) == "full"
 
     # Mixed real diff (gui + webapp) -> full.
-    assert tier("app/gui/service_supervisor.py", "app/webapp/static/app.js") == "full"
+    assert tier("app/tray/service_supervisor.py", "app/webapp/static/app.js") == "full"
 
 
 def test_ratchet_baseline_routes_to_skip() -> None:

@@ -1,8 +1,8 @@
 """Shared mic-recording take-processing pipeline: silence gate -> gain
 boost -> whisper transcription -> finalize.
 
-The tk main window (``app/gui/app.py``), the tray
-(``app/gui/tray.py``) and the CLI ``record`` command
+The tk main window (``app/tray/app.py``), the tray
+(``app/tray/tray.py``) and the CLI ``record`` command
 (``app/cli/commands/record.py``) run this exact sequence on every take:
 a near-silent recording never reaches whisper (it would otherwise
 hallucinate text on empty audio), a configured gain boost is applied for

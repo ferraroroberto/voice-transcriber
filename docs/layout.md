@@ -41,21 +41,20 @@ voice-transcriber/
 │       ├── manager.py             # spawn / kill / health / PID / describe
 │       └── whisper_server.yaml    # mode, paths, port, CLI args
 ├── app/                           # ── UI surfaces ──
-│   ├── gui/
+│   ├── cli/
+│   │   ├── main.py                # argparse dispatcher
+│   │   └── commands/              # record, transcribe, gui, tray, server
+│   ├── tray/                      # desktop surface: tray icon + the tkinter window it hosts
+│   │   ├── tray.py                # pystray icon/menu, event pump, record->transcribe->notify
+│   │   ├── hotkey_controller.py   # PTT tap/hold state machine, pynput listener
+│   │   ├── service_supervisor.py  # whisper-server + webapp + cloudflared lifecycles
+│   │   ├── single_instance.py     # Windows mutex — one tray at a time
 │   │   ├── app.py                 # tkinter main window: composition + window lifecycle
 │   │   ├── server_panel.py        # status traffic light, model line, start/stop
 │   │   ├── transcript_panel.py    # last-transcription box, Copy/Reset/Append
 │   │   ├── polish_panel.py        # polish row: style/model pickers, polished text
-│   │   ├── tray.py                # pystray icon/menu, event pump, record->transcribe->notify
-│   │   ├── hotkey_controller.py   # PTT tap/hold state machine, pynput listener
-│   │   ├── service_supervisor.py  # whisper-server + webapp + cloudflared lifecycles
 │   │   ├── recording_popup.py     # compact VU popup
 │   │   └── diagnostics_window.py
-│   ├── cli/
-│   │   ├── main.py                # argparse dispatcher
-│   │   └── commands/              # record, transcribe, gui, tray, server
-│   ├── tray/
-│   │   └── single_instance.py     # Windows mutex — one tray at a time
 │   └── webapp/                    # FastAPI mobile-first web UI
 │       ├── server.py              # wiring: create_app(), lifespan, static mount
 │       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
@@ -146,6 +145,5 @@ voice-transcriber/
 
 Each is declared once in `.fleet.toml` and here; none is debt.
 
-- `webapp/` (`extra_roots` in `.fleet.toml`): the committed `cloudflared.sample.yml` template; the tray reads the gitignored `webapp/cloudflared.yml` copied from it (path in `app/gui/tray.py`, steps in `docs/remote-access.md`). The `webapp-tray` preset lists no such root, and moving the path would break existing installs' tunnel setup, so the folder stays.
-- `app/gui/`: a desktop tkinter window and the tray icon live beside the web UI, because the app has two native surfaces (the tray and the window) as well as the PWA. The preset's `app/tray/` holds only the single-instance guard; the tray menu, hotkey state machine and service supervisor are in `app/gui/`.
+- `webapp/` (`extra_roots` in `.fleet.toml`): the committed `cloudflared.sample.yml` template; the tray reads the gitignored `webapp/cloudflared.yml` copied from it (path in `app/tray/tray.py`, steps in `docs/remote-access.md`). The `webapp-tray` preset lists no such root, and moving the path would break existing installs' tunnel setup, so the folder stays.
 - The baseline `.structure-ratchet-baseline.json` is empty: no file, function or directory is over its limit, so any new offender fails the gate. The webapp API tests live in `tests/webapp/` to keep `tests/` under the module limit.

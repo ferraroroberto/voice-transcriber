@@ -24,7 +24,7 @@ flowchart TB
   end
   LAUNCHER --> CLIMAIN
 
-  subgraph gui["app/gui/ — desktop UI + tray"]
+  subgraph tray["app/tray/ — desktop UI + tray"]
     TKAPP["app.py\ntkinter main window: composition + window lifecycle,\nlanguage/mic/gain-boost settings, record/file flow"]
     SERVERPANEL["server_panel.py\nstatus traffic light, model line, start/stop"]
     TRANSCRIPTPANEL["transcript_panel.py\nlast-transcription box, Copy/Reset/Append"]
@@ -34,18 +34,15 @@ flowchart TB
     TRAYPY["tray.py\npystray icon + menu, tkinter event pump,\nrecord -> transcribe -> notify pipeline"]
     HOTKEYCTRL["hotkey_controller.py\nPTT tap/hold state machine, pynput listener"]
     SVCSUP["service_supervisor.py\nwhisper-server + webapp + cloudflared\nlifecycles, status/labels"]
+    SINGLEINST["single_instance.py\nWindows mutex — one tray at a time"]
   end
   TKAPP --> SERVERPANEL
   TKAPP --> TRANSCRIPTPANEL
   TKAPP --> POLISHPANEL
   TRAYPY --> HOTKEYCTRL
   TRAYPY --> SVCSUP
-  CLICMDS -->|gui, record| gui
+  CLICMDS -->|gui, record| tray
   CLICMDS -->|tray| TRAYPY
-
-  subgraph tray["app/tray/ — tray plumbing"]
-    SINGLEINST["single_instance.py\nWindows mutex — one tray at a time"]
-  end
   TRAYPY --> SINGLEINST
   SVCSUP -->|boots + owns lifecycle of| WHISPERMGR
   SVCSUP -->|boots + owns lifecycle of| WEBAPPMGR
