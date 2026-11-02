@@ -16,7 +16,9 @@
 # the doc references ratchet (every repo path, module and port README.md, CLAUDE.md and
 # docs/ name resolves, beyond .doc-refs-ratchet-baseline.json; exit 3 fails too), the
 # dead code ratchet (no function, class or method nothing references, beyond
-# .dead-code-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .dead-code-ratchet-baseline.json; exit 3 fails too), the runtime write ratchet (no
+# file's count of write targets resolving under a code folder above
+# .runtime-write-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -119,6 +121,20 @@ try {
     & $python -m scripts.dead_code_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "dead code ratchet failed (an unreferenced definition, or a Python file could not be parsed)." }
 
+    # Runtime write ratchet: a write target resolving under a code folder. Call the wrapper:
+    # it maps exit 3 (a new target it cannot resolve) to a failure
+    # (tests/ratchets/test_ratchet_stages.py pins it). Whole tree, never routed.
+    Write-Host "==> runtime write ratchet (writes resolving under a code folder)..." -ForegroundColor Cyan
+    & $python -m scripts.runtime_write_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "runtime write ratchet failed (a file gained a write under a code folder, or a target could not be resolved)." }
+
+    # Runtime write probe, first half: what already sits untracked or ignored under the
+    # code folders, so the probe after the test runs names only what they wrote.
+    $runtimeSnapshot = Join-Path ([IO.Path]::GetTempPath()) "runtime-write-snapshot-$PID.json"
+    Write-Host "==> runtime write probe (snapshot)..." -ForegroundColor Cyan
+    & $python "scripts/runtime_write_ratchet.py" --snapshot $runtimeSnapshot
+    if ($LASTEXITCODE -ne 0) { Fail "runtime write probe could not take its snapshot (exit $LASTEXITCODE)." }
+
     Write-Host "==> pytest (non-e2e)..." -ForegroundColor Cyan
     & $python -m pytest -q --ignore=tests/e2e
     if ($LASTEXITCODE -ne 0) { Fail "non-e2e pytest suite failed." }
@@ -171,6 +187,13 @@ try {
         }
     }
     if ($e2eExit -ne 0) { Fail "Playwright e2e suite failed." }
+
+    # Runtime write probe, second half: any file the unit and e2e runs left under a code folder.
+    Write-Host "==> runtime write probe..." -ForegroundColor Cyan
+    & $python "scripts/runtime_write_ratchet.py" --probe $runtimeSnapshot
+    $probeExit = $LASTEXITCODE
+    if ($probeExit -eq 3) { Fail "runtime write probe NOT CONFIRMED (the snapshot could not be read)." }
+    if ($probeExit -ne 0) { Fail "runtime write probe failed: the test runs left a file under a code folder." }
 }
 finally {
     Pop-Location
