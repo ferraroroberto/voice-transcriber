@@ -18,6 +18,7 @@ import {
 } from './ui.js';
 import { refreshHistory } from './history.js';
 import { setupLevelMeter, teardownLevelMeter } from './level.js';
+import { clearTakeLevel, primeLevelSource, watchTakeLevel } from './mic-notice.js';
 import { openPartialStream, closePartialStream } from './partials.js';
 import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
 
@@ -92,9 +93,11 @@ export async function onRecordToggle() {
 async function startRecording() {
   setMode('starting');
   hideResumeButton();
+  // Built inside the tap: iOS resumes an AudioContext only within a gesture.
+  primeLevelSource();
 
   const stream = await acquireStream();
-  if (!stream) return;
+  if (!stream) { clearTakeLevel(); return; }
 
   // Re-enumerate now that labels may be visible (iOS reveals after grant).
   populateMics();
@@ -105,7 +108,7 @@ async function startRecording() {
 
   const incognito = isOn(els.incognitoToggle);
   const session = await createSession(stream, incognito);
-  if (!session) return;
+  if (!session) { clearTakeLevel(); return; }
   state.sessionId = session.session_id;
   if (incognito) state.incognitoSessionId = session.session_id;
 
@@ -120,6 +123,7 @@ async function startRecording() {
   resetTakeState();
 
   setupLevelMeter(stream, stopRecording);
+  watchTakeLevel(stream);
   acquireWakeLock();
   startTimer();
   openPartialStream(state.sessionId);
@@ -233,6 +237,7 @@ function stopRecording() {
   // visibilitychange/pagehide or when the mic selection changes.
   stopTimer();
   teardownLevelMeter();
+  clearTakeLevel();
   releaseWakeLock();
   // The /finish call will broadcast a `final` SSE event then close
   // the worker; closing here too is harmless and frees the connection
@@ -409,7 +414,6 @@ async function onRecorderStopped(mimeType) {
     els.recordLabel.innerHTML = LABEL_RECORD;
     els.recordTimer.hidden = true;
     els.recordBtn.setAttribute('aria-pressed', 'false');
-    els.levelFill.style.width = '0%';
     setMode('idle');
     renderTextCard();
     state.backgroundFinalized = false;

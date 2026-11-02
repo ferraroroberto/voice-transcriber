@@ -87,7 +87,6 @@ export function onReset() {
   state.partialVersion = 0;
   state.partialBaseTranscript = '';
   els.recordStatus.textContent = 'Tap to start';
-  els.levelFill.style.width = '0%';
 }
 
 export async function onSaveTranscript() {

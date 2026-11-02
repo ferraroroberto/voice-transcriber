@@ -15,7 +15,10 @@ export const els = {
   recordLabel:      document.getElementById('recordLabel'),
   recordTimer:      document.getElementById('recordTimer'),
   recordStatus:     document.getElementById('recordStatus'),
-  levelFill:        document.getElementById('levelFill'),
+  micNotice:        document.getElementById('micNotice'),
+  micInput:         document.getElementById('micInput'),
+  micWave:          document.getElementById('micWave'),
+  micSilent:        document.getElementById('micSilent'),
 
   transcript:       document.getElementById('transcript'),
   polished:         document.getElementById('polished'),

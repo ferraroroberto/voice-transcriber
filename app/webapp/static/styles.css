@@ -367,22 +367,31 @@ html, body {
   text-align: center;
 }
 
-/* The level meter (design.md meter): a neutral-soft pill track with an
-   accent fill. */
-.level-bar {
+/* The take's input name, live level strip (the vendored rec-wave, which takes
+   this colour) and, when the input carries no sound, the attention banner. */
+.mic-notice {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-xs);
   width: 100%;
   max-width: 280px;
-  height: 6px;
-  background: var(--neutral-soft);
-  border-radius: var(--radius-pill);
-  overflow: hidden;
+  font-size: var(--font-label);
+  color: var(--muted);
+  text-align: center;
 }
-.level-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: var(--radius-pill);
-  width: 0%;
-  transition: width .08s;
+.mic-notice-input {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mic-notice-wave { color: var(--accent); }
+.mic-notice-silent {
+  padding: var(--space-xs) var(--space-sm);
+  border: 1px solid var(--attention);
+  border-radius: var(--radius-sm);
+  color: var(--attention-text);
+  font-weight: 600;
 }
 
 /* Mode toggles (Append, Incognito) and Reset: labelled pills under the

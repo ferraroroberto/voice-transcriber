@@ -68,7 +68,8 @@ voice-transcriber/
 │           ├── index.html         # tabbed SPA (Record · History; Settings opens from the header gear), big-button mobile-first
 │           ├── app.js             # module wiring / boot sequence
 │           ├── recorder.js        # MediaRecorder record/upload/finish state machine
-│           ├── level.js           # VU meter + VAD auto-stop
+│           ├── level.js           # VAD auto-stop
+│           ├── mic-notice.js      # mic name line, rec-wave strip, silent-mic warning
 │           ├── vad.js             # pure VAD helpers (Silence length → trigger ms)
 │           ├── labels.js          # pure label helpers (polish-model alias → display label)
 │           ├── partials.js        # rolling-transcription SSE stream
@@ -82,7 +83,7 @@ voice-transcriber/
 │           ├── styles.css         # fleet design tokens (light + dark), recorder and shared rules
 │           ├── styles-views.css  # History, Settings and the wide layout; loaded after styles.css
 │           └── _vendored/         # fleet components, byte-verbatim from project-scaffolding
-│                                  #   (base · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button)
+│                                  #   (base · nav · home-head · toast · text-size · segmented · usage-log · icons · card · switch · select-native · modal · empty-state · button · rec-wave)
 ├── assets/                        # static files the apps ship: tray icon, Stream Deck icon
 ├── webapp/
 │   └── cloudflared.sample.yml     # committed template for the gitignored webapp/cloudflared.yml (named tunnel)

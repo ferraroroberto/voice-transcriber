@@ -65,6 +65,7 @@ HTML_STAMPED_ASSETS = (
     "_vendored/button/button.css",
     "_vendored/icon-button/icon-button.css",
     "_vendored/page-foot/page-foot.css",
+    "_vendored/rec-wave/rec-wave.css",
 )
 
 # Static ES-module imports inside the JS graph: ``from './x.js'`` and the
