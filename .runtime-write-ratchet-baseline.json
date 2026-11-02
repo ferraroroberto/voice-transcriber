@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "entries": [
+    {"key": "app/webapp/partial_worker.py", "counts": {"unresolved": 2}},
+    {"key": "app/webapp/routers/auth.py", "counts": {"unresolved": 2}},
+    {"key": "app/webapp/routers/sessions.py", "counts": {"unresolved": 1}},
+    {"key": "scripts/download_model.py", "counts": {"unresolved": 1}},
+    {"key": "scripts/gen_ssl_cert.py", "counts": {"code-folder": 3, "unresolved": 3}},
+    {"key": "scripts/install_whisper_cpp.py", "counts": {"unresolved": 3}},
+    {"key": "src/activity_log.py", "counts": {"unresolved": 2}},
+    {"key": "src/archive.py", "counts": {"unresolved": 9}},
+    {"key": "src/tunnel.py", "counts": {"unresolved": 2}},
+    {"key": "src/webapp_config.py", "counts": {"unresolved": 2}},
+    {"key": "src/whisper_server/manager.py", "counts": {"unresolved": 2}}
+  ]
+}

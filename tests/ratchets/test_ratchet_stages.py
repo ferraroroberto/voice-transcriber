@@ -22,7 +22,7 @@ from tests.test_static_ratchet_gate import _fake_script
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # name -> the gate wrapper module for each stage this module pins
-STAGES = ["comment", "instruction", "doc_refs", "dead_code"]
+STAGES = ["comment", "instruction", "doc_refs", "dead_code", "runtime_write"]
 
 
 def _wrapper(name: str):
@@ -58,7 +58,12 @@ def test_run_exits_nonzero_for_every_script_failure(
 def test_the_pre_ship_gate_calls_the_wrapper_not_the_script(name: str) -> None:
     gate_ps1 = (REPO_ROOT / "scripts" / "verify-before-ship.ps1").read_text(encoding="utf-8")
     code_lines = [line for line in gate_ps1.splitlines() if not line.lstrip().startswith("#")]
-    stage = [line for line in code_lines if f"{name}_ratchet" in line]
+    # The runtime write script's own --snapshot/--probe calls bracket the tests; they are
+    # not the ratchet stage, so only the line without them is checked.
+    stage = [
+        line for line in code_lines
+        if f"{name}_ratchet" in line and "--snapshot" not in line and "--probe" not in line
+    ]
     assert len(stage) == 1
     assert f"-m scripts.{name}_ratchet_gate" in stage[0]
     assert f"{name}_ratchet.py" not in stage[0]
