@@ -137,6 +137,10 @@ as the desktop flow allows:
   contains *realtek*, *built-in*, or *internal*. Default seeded
   from `force_builtin_mic_default` in `webapp_config.json`.
 
+### Mic notice
+
+While a take is recording, a line under the Record circle names the live input (`Mic: AirPods`) and a small waveform follows the sound it delivers. If the input carries no sound for about three seconds, a warning appears under the waveform (*No sound from the microphone — check Bluetooth/AirPods*, or *check Remote Desktop* when the input is called *Remote Audio*) and clears the moment sound arrives. The waveform reads the stream the take already holds, so it never asks for the mic again. When the browser withholds the input's name the line is left out and the waveform and warning still run.
+
 ### Silence skip
 
 Whisper hallucinates plausible-sounding text on near-silent input

@@ -130,6 +130,7 @@ still covers the same logic via the parity port in
 | `tests\e2e\test_history_pagination.py` | "Load more" reveals older takes and hides at the end, driven by the server's `has_more` flag; a row tap fetches the take's text and its ⋮ menu opens |
 | `tests\e2e\test_resume_take.py` | `pagehide` backgrounding finalises the take, then ▶ Resume restarts recording with the earlier transcript still in place (`desktop_only`) |
 | `tests\e2e\test_start_failure.py` | A failed session create doesn't strand Record on "starting" — a network failure during `POST /api/sessions` is caught so a second tap still starts a real take (`desktop_only`) |
+| `tests\e2e\test_mic_notice.py` | The recorder names the live input, draws the vendored waveform on the take's one stream (a single `getUserMedia`), warns when a muted input delivers no sound and clears it when sound returns; the warning names Remote Desktop for *Remote Audio* (`desktop_only`) |
 | `tests\e2e\test_rolling_partials.py` | Live partials survive a failed initial `/api/config` load |
 | `tests\e2e\test_viewport.py` | WebKit projection actually applies the `iPhone 15 Pro Max` viewport descriptor |
 | `tests\e2e\test_typography.py` | A nav tab, a button, an input and a select compute the same `font-family` as the body, so form controls never fall back to the UA's Arial |
