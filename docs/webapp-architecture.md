@@ -199,11 +199,22 @@ tokenised URL:
   a device with no token has to be able to reach it — so it is the one
   endpoint a caller can exercise repeatedly without presenting a
   credential.
-- **`AttemptLimiter` bounds that exposure.** A small free allowance
-  (5 attempts) covers a fat-fingered human on a phone keyboard; past
-  that, each further rejected attempt from the same client waits out a
-  doubling delay (2s → 300s ceiling), so an unbounded guess rate never
-  materialises without ever locking the owner out permanently.
+- **The vendored `LoginLockout` (`src/login_lockout.py`) bounds that
+  exposure.** A small free allowance (5 attempts) covers a fat-fingered
+  human on a phone keyboard; past that, each further rejected attempt
+  from the same client waits out a doubling delay (2s → 300s ceiling) and
+  is answered `429` with `Retry-After`, so an unbounded guess rate never
+  materialises without ever locking the owner out permanently. A client
+  quiet for an hour starts over, and the PC itself (the loopback check in
+  `middleware.is_pc_itself`) is never locked out. State is in memory, so
+  a restart clears it.
+- **Guessing alerts the owner.** Three wrong passwords in a row from one
+  client send one message (app name, client address, count; never the
+  password or token) to the coding-alerts Telegram chat through the
+  vendored `src/notify`, from a thread so the login never waits on it. At
+  most one alert goes out per five minutes across all clients. It is off
+  until `notifier` is `telegram` in the ignored `webapp_config.json`, with
+  `telegram_bot_token` and `telegram_alert_chat_id` set there.
 - **Failed and throttled attempts are logged** with the requesting
   client IP to `webapp/auth.log`, in addition to the normal server log,
   so suspicious access is visible without scrolling full server logs.

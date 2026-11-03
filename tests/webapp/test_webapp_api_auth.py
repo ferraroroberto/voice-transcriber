@@ -7,11 +7,15 @@ to exercise the gate we override `request.client.host` via the ASGI
 
 from __future__ import annotations
 
+# Standard library imports
+import threading
+
 # Third-party imports
 import pytest
 from fastapi.testclient import TestClient
 
-from app.webapp.routers.auth import FREE_ATTEMPTS, AttemptLimiter
+from app.webapp.routers.auth import make_login_alert
+from src.login_lockout import FREE_ATTEMPTS, LoginLockout
 
 
 @pytest.fixture
@@ -187,46 +191,104 @@ class TestLoginEndpoint:
         assert resp.json() == {"token": "tok"}
 
 
-class TestLoginAttemptLimiter:
-    """The unit, driven with an injected clock so no test sleeps."""
+class _FakeClock:
+    """A monotonic clock the test advances by hand, so nothing sleeps."""
 
-    def test_free_attempts_are_not_delayed(self):
-        lim = AttemptLimiter(free_attempts=3, base_delay=2.0)
-        for _ in range(3):
-            lim.record_failure("c", now=0.0)
-        assert lim.retry_after("c", now=0.0) == 0.0
+    def __init__(self) -> None:
+        self.now = 1000.0
 
-    def test_delay_starts_after_the_free_allowance(self):
-        lim = AttemptLimiter(free_attempts=3, base_delay=2.0)
-        for _ in range(4):
-            lim.record_failure("c", now=0.0)
-        assert lim.retry_after("c", now=0.0) == pytest.approx(2.0)
+    def __call__(self) -> float:
+        return self.now
 
-    def test_delay_doubles_and_is_capped(self):
-        lim = AttemptLimiter(free_attempts=0, base_delay=1.0, max_delay=4.0)
-        seen = []
-        for _ in range(5):
-            lim.record_failure("c", now=0.0)
-            seen.append(lim.retry_after("c", now=0.0))
-        assert seen == [1.0, 2.0, 4.0, 4.0, 4.0]
 
-    def test_waiting_out_the_delay_clears_it(self):
-        lim = AttemptLimiter(free_attempts=0, base_delay=5.0)
-        lim.record_failure("c", now=0.0)
-        assert lim.retry_after("c", now=4.9) > 0
-        assert lim.retry_after("c", now=5.0) == 0.0
+class _FakeNotifier:
+    def __init__(self) -> None:
+        self.sent: list[str] = []
+        self.delivered = threading.Event()
 
-    def test_clients_are_tracked_independently(self):
-        lim = AttemptLimiter(free_attempts=0, base_delay=5.0)
-        lim.record_failure("a", now=0.0)
-        assert lim.retry_after("a", now=0.0) > 0
-        assert lim.retry_after("b", now=0.0) == 0.0
+    def send_text(self, text: str) -> None:
+        self.sent.append(text)
+        self.delivered.set()
 
-    def test_reset_clears_the_history(self):
-        lim = AttemptLimiter(free_attempts=0, base_delay=5.0)
-        lim.record_failure("c", now=0.0)
-        lim.reset("c")
-        assert lim.retry_after("c", now=0.0) == 0.0
+
+@pytest.fixture
+def lockout_rig(webapp_client):
+    """The app with a lock-out on a fake clock and a fake alert notifier."""
+    client, app, _ = webapp_client
+    cfg = app.state.webapp_config
+    cfg.auth_password = "correct horse battery"
+    cfg.auth_token = "tok"
+    cfg.notifier = "telegram"
+    cfg.telegram_bot_token = "bot-secret"
+    cfg.telegram_alert_chat_id = "chat-secret"
+    clock = _FakeClock()
+    notifier = _FakeNotifier()
+    builds: list[str] = []
+
+    def build(name, telegram):
+        builds.append(name)
+        return notifier
+
+    app.state.login_lockout = LoginLockout(
+        clock=clock, on_alert=make_login_alert(lambda: cfg, build=build)
+    )
+    return client, app, clock, notifier, builds
+
+
+class TestLoginLockoutRoute:
+    def test_wrong_passwords_then_429_then_success_after_the_wait(self, lockout_rig):
+        client, _, clock, _, _ = lockout_rig
+        codes = [
+            client.post("/api/login", json={"password": f"guess-{i}"}).status_code
+            for i in range(FREE_ATTEMPTS + 1)
+        ]
+        assert codes == [401] * (FREE_ATTEMPTS + 1)
+        locked = client.post("/api/login", json={"password": "correct horse battery"})
+        assert locked.status_code == 429
+        assert int(locked.headers["Retry-After"]) >= 1
+        clock.now += float(locked.headers["Retry-After"])
+        ok = client.post("/api/login", json={"password": "correct horse battery"})
+        assert ok.status_code == 200
+        assert ok.json() == {"token": "tok"}
+
+    def test_three_wrong_passwords_alert_the_owner_once(self, lockout_rig):
+        client, _, _, notifier, builds = lockout_rig
+        for i in range(2):
+            client.post("/api/login", json={"password": f"guess-{i}"})
+        assert builds == []
+        client.post("/api/login", json={"password": "guess-2"})
+        assert notifier.delivered.wait(timeout=5)
+        for i in range(3, 6):
+            client.post("/api/login", json={"password": f"guess-{i}"})
+        assert builds == ["telegram"]
+        assert len(notifier.sent) == 1
+        text = notifier.sent[0]
+        assert "voice-transcriber" in text
+        assert "3 wrong passwords" in text
+        assert "testclient" in text
+        for secret in ("guess-", "correct horse", "tok", "bot-secret", "chat-secret"):
+            assert secret not in text
+
+    def test_notifier_none_sends_nothing(self, lockout_rig):
+        client, app, _, notifier, _ = lockout_rig
+        app.state.webapp_config.notifier = "none"
+        app.state.login_lockout = LoginLockout(
+            on_alert=make_login_alert(lambda: app.state.webapp_config)
+        )
+        for i in range(4):
+            assert client.post("/api/login", json={"password": f"g{i}"}).status_code == 401
+        assert notifier.sent == []
+
+    def test_the_pc_itself_is_never_locked_out(self, lockout_rig, loopback_client):
+        _, _, _, notifier, builds = lockout_rig
+        codes = [
+            loopback_client.post("/api/login", json={"password": f"guess-{i}"}).status_code
+            for i in range(FREE_ATTEMPTS + 4)
+        ]
+        assert codes == [401] * (FREE_ATTEMPTS + 4)
+        ok = loopback_client.post("/api/login", json={"password": "correct horse battery"})
+        assert ok.status_code == 200
+        assert builds == [] and notifier.sent == []
 
 
 class TestLoginThrottling:

@@ -118,6 +118,9 @@ flowchart TB
   ROUTERS --> ANALYTICS
   ANALYTICS --> ACTIVITYLOG
   ACTIVITYLOG --> RUNTIMEDATA
+  ROUTERS -->|"/api/login lock-out"| LOGINLOCKOUT["login_lockout.py\nvendored: 429 + guessing alert"]
+  LOGINLOCKOUT -->|alert, from a thread| NOTIFY["notify/\nvendored Telegram notifier"]
+  NOTIFY --> TELEGRAM
   ROUTERS --> USAGELOG
   USAGELOG --> RUNTIMEDATA
   ROUTERS --> WEBAPPCFG
@@ -150,6 +153,7 @@ flowchart TB
   subgraph ext["External dependencies"]
     LLMHUB["local-llm-hub :8000 — polish models,\ntranscribe role (parakeet + whisper failover),\ntranslate whisper :8091"]
     CLOUDFLAREACCESS["Cloudflare Access + named tunnel"]
+    TELEGRAM["Telegram coding-alerts chat (optional)"]
   end
   POLISH -->|POST /v1/messages| LLMHUB
   TRANSCLIENT -->|POST /v1/audio/transcriptions :8000, role| LLMHUB

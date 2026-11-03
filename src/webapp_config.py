@@ -107,6 +107,12 @@ class WebappConfig:
     # PWAs whose localStorage may be partitioned from Safari's. Empty
     # string disables the password prompt (token-only auth).
     auth_password: str = ""
+    # Owner alert when someone is guessing the password: "telegram" sends
+    # one message to the coding-alerts chat, "none" (the default) sends
+    # nothing. Credentials live only in the ignored config file.
+    notifier: str = "none"
+    telegram_bot_token: str = ""
+    telegram_alert_chat_id: str = ""
     # RMS gate before whisper. Clips quieter than this (dBFS) skip the
     # transcription step entirely so whisper can't hallucinate on silence.
     silence_dbfs_threshold: float = DEFAULT_SILENCE_DBFS_THRESHOLD
@@ -253,11 +259,19 @@ def append_auth_token(url: str, token: Optional[str]) -> str:
     return urlunparse(parsed._replace(query=new_query))
 
 
-# Fields never sent to the client: secrets (auth_token/auth_password), and
-# llm_hub_url/silence_dbfs_threshold which are server-internal (see the
-# field comments above on WebappConfig).
+# Fields never sent to the client: secrets (auth_token/auth_password and the
+# Telegram alert credentials), and llm_hub_url/silence_dbfs_threshold which
+# are server-internal (see the field comments above on WebappConfig).
 CLIENT_HIDDEN_FIELDS = frozenset(
-    {"auth_token", "auth_password", "llm_hub_url", "silence_dbfs_threshold"}
+    {
+        "auth_token",
+        "auth_password",
+        "llm_hub_url",
+        "silence_dbfs_threshold",
+        "notifier",
+        "telegram_bot_token",
+        "telegram_alert_chat_id",
+    }
 )
 
 

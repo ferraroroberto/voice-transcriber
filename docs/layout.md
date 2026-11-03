@@ -23,6 +23,8 @@ voice-transcriber/
 │   ├── activity_log.py            # SQLite events log, 365-day retention
 │   ├── analytics.py               # today's take count / wpm / time-saved
 │   ├── usage_log.py               # vendored: local view/tap usage log (router + SQLite)
+│   ├── login_lockout.py           # vendored: per-client password lock-out + guessing alert
+│   ├── notify/                    # vendored: Telegram notifier (the guessing alert's transport)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
 │   ├── vocabulary.py              # per-language vocab prompts + hot-reload
 │   ├── snippets.py                # word-boundary keyword expansion + hot-reload
