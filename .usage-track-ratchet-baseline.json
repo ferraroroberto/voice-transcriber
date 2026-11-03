@@ -1,8 +1,4 @@
 {
   "version": 1,
-  "entries": [
-    {"key": "app/webapp/static/app.js", "counts": {"dynamic-id": 1}},
-    {"key": "app/webapp/static/history.js", "counts": {"untracked-control": 3}},
-    {"key": "app/webapp/static/index.html", "counts": {"untracked-control": 8, "untracked-sheet": 4}}
-  ]
+  "entries": []
 }

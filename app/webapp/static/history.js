@@ -193,6 +193,7 @@ function dayGroups(rows) {
       sel.type = 'button';
       sel.id = 'selectTakes';
       sel.className = 'day-select';
+      sel.dataset.track = 'history.select';
       sel.textContent = 'Select';
       sel.addEventListener('click', () => setSelecting(true));
       head.append(sel);
@@ -282,6 +283,7 @@ function renderHistoryItem(s) {
   const main = document.createElement('button');
   main.type = 'button';
   main.className = 'history-main';
+  main.dataset.track = 'history.take';
   main.dataset.sessionId = s.session_id;
   if (state.historySelecting) {
     main.setAttribute('aria-pressed', String(picked));
@@ -321,6 +323,7 @@ function renderHistoryItem(s) {
     const more = document.createElement('button');
     more.type = 'button';
     more.className = 'icon-button history-more';
+    more.dataset.track = 'history.take-more';
     more.setAttribute('aria-label', 'More actions');
     more.innerHTML = icon('ellipsis-vertical');
     more.addEventListener('click', () => openTakeSheet(s));
