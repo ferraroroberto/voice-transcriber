@@ -382,10 +382,10 @@
       <div id="settingsPanel" class="settings">
         <h2 class="overline settings-group-title">Dictation</h2>
         <section class="card settings-group">
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Language</span><select id="languageSelect" class="select-native"></select></label>
+          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Language</span><select id="languageSelect" class="select-native" data-track="settings.language"></select></label>
           <div class="setting-row" title="Speak in the language above; the text comes out in English. The first take after a pause can take a few seconds longer."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Translate to English</span><button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Translate to English" data-track="settings.translate"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-mic" /></svg><span class="setting-label">Microphone</span><select id="micSelect" class="select-native"></select></label>
+          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-mic" /></svg><span class="setting-label">Microphone</span><select id="micSelect" class="select-native" data-track="settings.microphone"></select></label>
           <div class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-smartphone" /></svg><span class="setting-label">Prefer the built-in mic<span class="setting-sub">Skips Bluetooth headsets</span></span><button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Prefer the built-in mic" data-track="settings.builtin-mic"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
         </section>
@@ -402,8 +402,8 @@
 
         <h2 class="overline settings-group-title">Polish</h2>
         <section class="card settings-group">
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Model</span><select id="polishModel" class="select-native"></select></label>
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Style</span><select id="polishStyle" class="select-native"></select></label>
+          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Model</span><select id="polishModel" class="select-native" data-track="settings.polish-model"></select></label>
+          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Style</span><select id="polishStyle" class="select-native" data-track="settings.polish-style"></select></label>
           <button id="openPromptSheet" type="button" class="setting-row setting-link" data-track="settings.polish-prompt"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-file-text" /></svg><span class="setting-label">Instructions</span><span class="setting-value">View</span><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></button>
         </section>
 
@@ -477,7 +477,7 @@
        without authenticating, so a close button would either be a no-op or a
        security hole (letting an unauthenticated user "close" their way into
        the app). Accepted in .fleet.toml; design_lint reports it ACCEPTED. -->
-  <dialog id="loginOverlay" class="detail-dialog login-dialog">
+  <dialog id="loginOverlay" class="detail-dialog login-dialog" data-track-view="login">
     <form id="loginForm" class="detail-card login-card" autocomplete="off">
       <h2><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg> Sign in</h2>
       <p class="muted small">Enter the password to use this voice transcriber.</p>
@@ -489,7 +489,7 @@
         placeholder="Password"
         required
       >
-      <button type="submit" class="big-btn">Unlock</button>
+      <button type="submit" class="big-btn" data-track="login.unlock">Unlock</button>
       <div id="loginError" class="login-error" hidden></div>
     </form>
   </dialog>
@@ -498,11 +498,11 @@
        and its one primary (Copy), Redo as a plain row, the take's facts, and
        Delete last as danger text that a second tap confirms. Opened from the
        row's kebab; the row's own tap still copies. -->
-  <dialog id="takeSheet" class="detail-dialog take-sheet" aria-labelledby="takeSheetTitle">
+  <dialog id="takeSheet" class="detail-dialog take-sheet" aria-labelledby="takeSheetTitle" data-track-view="take">
     <div id="takeCard" class="detail-card take-card">
       <div class="detail-header">
         <h2 id="takeSheetTitle" tabindex="-1" autofocus>Take</h2>
-        <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
+        <button type="button" class="icon-button detail-close" aria-label="Close" data-track="take.close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <div id="takeSheetText" class="take-sheet-text" tabindex="0" aria-label="Full text"></div>
       <button id="takeCopy" type="button" class="button-primary detail-save-btn take-sheet-copy" data-track="take.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
@@ -519,11 +519,11 @@
 
   <!-- Settings › Polish › Instructions (#265): the prompt sent with the text
        when you tap Polish, in a sheet instead of a permanent box. -->
-  <dialog id="promptSheet" class="detail-dialog prompt-sheet" aria-labelledby="promptSheetTitle">
+  <dialog id="promptSheet" class="detail-dialog prompt-sheet" aria-labelledby="promptSheetTitle" data-track-view="polish-prompt">
     <div class="detail-card">
       <div class="detail-header">
         <h2 id="promptSheetTitle" tabindex="-1" autofocus>Polish instructions</h2>
-        <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
+        <button type="button" class="icon-button detail-close" aria-label="Close" data-track="polish-prompt.close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <p id="promptSheetNote" class="sheet-note"></p>
       <textarea id="polishPromptPreview" class="text-out prompt-preview" rows="10" readonly aria-label="Polish instructions"></textarea>
@@ -532,11 +532,11 @@
 
   <!-- Settings › History › Delete all takes (#265): the confirmation is this
        sheet, never the browser's confirm(). -->
-  <dialog id="deleteAllSheet" class="detail-dialog" aria-labelledby="deleteAllTitle">
+  <dialog id="deleteAllSheet" class="detail-dialog" aria-labelledby="deleteAllTitle" data-track-view="delete-all">
     <div class="detail-card">
       <div class="detail-header">
         <h2 id="deleteAllTitle" tabindex="-1" autofocus>Delete all takes?</h2>
-        <button type="button" class="icon-button detail-close" aria-label="Close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
+        <button type="button" class="icon-button detail-close" aria-label="Close" data-track="delete-all.close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <p class="sheet-note">Every saved recording and transcript on this PC is removed. This can't be undone.</p>
       <button id="confirmDeleteAll" type="button" class="button-tint danger detail-save-btn" data-track="settings.delete-all-confirm"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes</button>

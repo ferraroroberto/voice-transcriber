@@ -198,6 +198,7 @@ function bindNav() {
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',
     onChange: (tab) => {
+      // dynamic-id-exempt: `tab` is one of the nav's constant data-tab values.
       usage.trackView(tab);
       document.getElementById('paneSettings').hidden = true;
       // History refreshes itself on open — no Refresh button.
