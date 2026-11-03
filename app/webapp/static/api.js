@@ -1,4 +1,4 @@
-/* Network layer — token-aware fetch, retry, the login overlay, and
+/* Network layer — token-aware fetch, retry, the sign-in call, and
  * error-message extraction.
  *
  * Every API call in the app goes through `authFetch`; nothing else
@@ -7,7 +7,8 @@
 
 'use strict';
 
-import { els, getStoredToken, TOKEN_KEY } from './state.js';
+import { requestSignIn } from './_vendored/sign-in/sign-in.js';
+import { getStoredToken, TOKEN_KEY } from './state.js';
 import { truncate } from './ui.js';
 
 export function authFetch(input, init) {
@@ -22,88 +23,17 @@ export function authFetch(input, init) {
   return fetch(input, opts);
 }
 
-// The auth gate is a native <dialog> (fleet modal contract) — Esc must not
-// dismiss it: a closed gate is not an unlocked app. One listener, module-wide.
-if (els.loginOverlay) {
-  els.loginOverlay.addEventListener('cancel', (e) => e.preventDefault());
-}
-
-// The in-flight prompt promise, shared across every re-entrant caller
-// while the gate is open. Without this, each 401 (one per `loadConfig()`
-// call — e.g. a `visibilitychange` re-check on iOS PWA app-switch) would
-// open a fresh dialog listener on top of the one still attached from the
-// last unresolved prompt, so a single Unlock tap fired one `/api/login`
-// POST per stacked listener.
-let _pendingPrompt = null;
-
+// The vendored sign-in sheet owns the dialog, the busy and error states and the
+// shared in-flight promise, so every 401 that lands while it is open awaits the
+// same sign-in. The token goes to this app's own storage key, never the sheet's.
 export function promptForPassword() {
-  if (_pendingPrompt) return _pendingPrompt;
-  _pendingPrompt = new Promise((resolve) => {
-    if (!els.loginOverlay.open) els.loginOverlay.showModal();
-    els.loginPassword.value = '';
-    els.loginError.hidden = true;
-    els.loginError.textContent = '';
-    // Defer focus so iOS Safari opens the keyboard reliably.
-    setTimeout(() => {
-      try { els.loginPassword.focus(); } catch (_) {}
-    }, 80);
-
-    const onSubmit = async (e) => {
-      e.preventDefault();
-      const password = els.loginPassword.value;
-      if (!password) return;
-      els.loginError.hidden = true;
-      const submitBtn = els.loginForm.querySelector('button[type="submit"]');
-      submitBtn.disabled = true;
-      submitBtn.textContent = '…';
-      try {
-        const r = await fetch('/api/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password }),
-        });
-        if (r.status === 503) {
-          const detail = await r.json().catch(() => ({}));
-          els.loginError.textContent =
-            'Password auth not configured: ' +
-            (detail.detail || 'check server config');
-          els.loginError.hidden = false;
-          return;
-        }
-        if (r.status === 401) {
-          els.loginError.textContent = 'Wrong password';
-          els.loginError.hidden = false;
-          els.loginPassword.select();
-          return;
-        }
-        if (!r.ok) {
-          els.loginError.textContent = 'Login failed: ' + r.status;
-          els.loginError.hidden = false;
-          return;
-        }
-        const data = await r.json();
-        if (!data.token) {
-          els.loginError.textContent = 'Server returned no token';
-          els.loginError.hidden = false;
-          return;
-        }
-        try { localStorage.setItem(TOKEN_KEY, data.token); } catch (_) {}
-        els.loginOverlay.close();
-        els.loginForm.removeEventListener('submit', onSubmit);
-        _pendingPrompt = null;
-        resolve(true);
-      } catch (err) {
-        els.loginError.textContent = 'Login failed: ' + (err.message || err);
-        els.loginError.hidden = false;
-      } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Unlock';
-      }
-    };
-
-    els.loginForm.addEventListener('submit', onSubmit);
-  });
-  return _pendingPrompt;
+  return requestSignIn({
+    endpoint: '/api/login',
+    hint: 'Enter the password to use this voice transcriber.',
+    onToken: (token) => {
+      try { localStorage.setItem(TOKEN_KEY, token); } catch (_) {}
+    },
+  }).then(() => true);
 }
 
 // Turn a non-2xx fetch Response into a short, readable error message.

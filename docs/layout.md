@@ -121,7 +121,7 @@ voice-transcriber/
 │   ├── docs_ratchet.py            # vendored docs ratchet (README size, history markers in README/docs)
 │   ├── docs_ratchet_gate.py       # the gate's wrapper around it: exit 3 (the docs could not be read) fails
 │   ├── structure_ratchet.py       # vendored structure ratchet (file size, function length, flat dirs, src→app imports, root layout)
-│   ├── conventions_ratchet.py     # vendored conventions ratchet (no-window, logging-not-print, no-drive-path)
+│   ├── conventions_ratchet.py     # vendored conventions ratchet (no-window, logging-not-print, no-drive-path, password-input-vendored)
 │   ├── conventions_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be parsed) fails
 │   ├── comment_ratchet.py         # vendored comment ratchet (issue references in product-code comments)
 │   ├── comment_ratchet_gate.py    # the gate's wrapper around it: exit 3 (a file could not be scanned) fails

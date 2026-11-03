@@ -13,17 +13,7 @@ extra_roots = ["webapp"]
 
 # Design-lint findings examined and accepted (schema: fleet-config's
 # architecture/README.md, "[[design.accepted]]"). `detail` is the finding's
-# exact string, so it goes stale if the dialog moves off index.html:466.
-# In effect since fleet-config#953: design_lint's modal-header row carries
-# evidence (index.html:466), so this entry matches it and the FAIL reports
-# ACCEPTED.
-[[design.accepted]]
-check  = "modal-header"
-target = "app/webapp/static/index.html"
-detail = "editor-modal header contract violated (design.md modal wants a heading-lg title + square x close, never a footer Cancel): app/webapp/static/index.html:466 no square x close button"
-reason = "#loginOverlay is a non-dismissable auth gate: a x close would be a no-op or a way past authentication"
-record = "https://github.com/ferraroroberto/voice-transcriber/issues/202"
-
+# exact string.
 # The record circle is Record's one primary action (design.md glance card:
 # "the tab's one primary (Record)"), so its solid accent at rest is the
 # primary tier, not a stray. The owner chose accent at rest, red only while
@@ -42,7 +32,7 @@ runtime_data = { src = "src/runtime_data.py", sha = "5d460bd1d9d44eed955c5357d1c
 classify_e2e = { src = "scripts/classify_e2e.py", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "scripts/classify_e2e.py" }
 static_ratchet = { src = "scripts/static_ratchet.py", sha = "5505185c5f4b10eea5ab268e7b6676c6c54340c4", dest = "scripts/static_ratchet.py" }
 docs_ratchet = { src = "scripts/docs_ratchet.py", sha = "5505185c5f4b10eea5ab268e7b6676c6c54340c4", dest = "scripts/docs_ratchet.py" }
-conventions_ratchet = { src = "scripts/conventions_ratchet.py", sha = "5505185c5f4b10eea5ab268e7b6676c6c54340c4", dest = "scripts/conventions_ratchet.py" }
+conventions_ratchet = { src = "scripts/conventions_ratchet.py", sha = "f05859a2bada56296d7f134e471953867c253571", dest = "scripts/conventions_ratchet.py" }
 runtime_write_ratchet = { src = "scripts/runtime_write_ratchet.py", sha = "5505185c5f4b10eea5ab268e7b6676c6c54340c4", dest = "scripts/runtime_write_ratchet.py" }
 runtime_write_resolve = { src = "scripts/runtime_write_resolve.py", sha = "5505185c5f4b10eea5ab268e7b6676c6c54340c4", dest = "scripts/runtime_write_resolve.py" }
 comment_ratchet = { src = "scripts/comment_ratchet.py", sha = "baac1ed97388a3545bd1e52544821ec20f1dc77a", dest = "scripts/comment_ratchet.py" }
@@ -63,6 +53,7 @@ switch = { src = "app/webapp/static/_vendored/switch", sha = "5d460bd1d9d44eed95
 button = { src = "app/webapp/static/_vendored/button", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/button" }
 page-foot = { src = "app/webapp/static/_vendored/page-foot", sha = "35c1f11348e100fa6b5da487411424c6d6ced43c", dest = "app/webapp/static/_vendored/page-foot" }
 modal = { src = "app/webapp/static/_vendored/modal", sha = "713b1d1e36989440679ec4e415ff149b14d96c81", dest = "app/webapp/static/_vendored/modal" }
+sign-in = { src = "app/webapp/static/_vendored/sign-in", sha = "f05859a2bada56296d7f134e471953867c253571", dest = "app/webapp/static/_vendored/sign-in" }
 icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/icon-button" }
 empty-state = { src = "app/webapp/static/_vendored/empty-state", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/empty-state" }
 segmented = { src = "app/webapp/static/_vendored/segmented", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/segmented" }
@@ -116,14 +107,15 @@ baseline = ".structure-ratchet-baseline.json"
 # scripts/conventions_ratchet.py: a rule's hit count in a file may not rise above
 # .conventions-ratchet-baseline.json. no-window: this app spawns whisper-server, ffmpeg and
 # the tunnel on Windows. logging-not-print: app/ and src/ are library code. no-drive-path:
-# paths come from config, never a literal drive. secret-compare and git-wrapper stay off
+# paths come from config, never a literal drive. password-input-vendored: a password input
+# lives only in the vendored sign-in sheet. secret-compare and git-wrapper stay off
 # because the repo has no constant-time-compare or git-spawn helper to route through.
 # Exit 3 (a file could not be parsed) fails the gate as NOT CONFIRMED. Whole tree, never
 # path-routed. Procedure + limits: project-scaffolding docs/conventions-ratchet.md.
 [conventions_ratchet]
 enabled  = true
 baseline = ".conventions-ratchet-baseline.json"
-rules    = ["no-window", "logging-not-print", "no-drive-path"]
+rules    = ["no-window", "logging-not-print", "no-drive-path", "password-input-vendored"]
 
 # [runtime_write_ratchet] -- scripts/runtime_write_ratchet.py fails when a tracked
 # Python file gains a write target (open for writing, Path.write_*, mkdir, a log

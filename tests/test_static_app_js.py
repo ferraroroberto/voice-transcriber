@@ -149,12 +149,12 @@ class TestAppJsSourcePins:
         assert "saveTranscript.innerHTML" in body
         assert "saveTranscript.textContent" not in body
 
-    def test_password_prompt_deduplicates_reentrant_calls(self, app_js: str):
-        """`promptForPassword` must return the same in-flight promise on a
-        re-entrant call while the gate is already open, instead of
-        attaching a second `submit` listener — an iOS PWA background/
-        foreground cycle re-runs `loadConfig()` on every `visibilitychange`,
-        each hitting a 401 while the dialog is still up (issue #178)."""
+    def test_password_prompt_uses_vendored_sign_in_with_existing_token_key(
+        self, app_js: str
+    ):
+        """`promptForPassword` hands the sign-in to the vendored sheet (which
+        shares one in-flight promise across re-entrant 401s) and stores the
+        token under the app's existing key, so no device is signed out."""
         match = re.search(
             r"function promptForPassword\([^\)]*\)\s*\{(.*?)\n\}",
             app_js,
@@ -162,8 +162,10 @@ class TestAppJsSourcePins:
         )
         assert match is not None, "promptForPassword body not found"
         body = match.group(1)
-        assert "if (_pendingPrompt) return _pendingPrompt;" in body
-        assert "_pendingPrompt = null;" in body
+        assert "requestSignIn(" in body
+        assert "endpoint: '/api/login'" in body
+        assert "localStorage.setItem(TOKEN_KEY, token)" in body
+        assert "TOKEN_KEY = 'vt_auth_token'" in app_js
 
     def test_reset_guards_against_mid_recording_tap(self, app_js: str):
         """`onReset` must bail out unless the session is idle — otherwise a
