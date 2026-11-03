@@ -112,7 +112,7 @@ still covers the same logic via the parity port in
 | `tests\test_cli_server_cmd.py` | `server stop` exits 0 once the stop has run; `status` keeps mapping not-running to exit 1 |
 | `tests\test_secret_compare.py` | `secrets_equal` accepts non-ASCII text, and no code outside `src\secret_compare.py` calls `compare_digest` |
 | `tests\webapp\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status`, cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp) |
-| `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths) |
+| `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths); `/api/login` lock-out on a fake clock (401s, then 429 with `Retry-After`, success after the wait, the PC never locked) and the guessing alert on a fake notifier (once per streak, no secrets in the text) |
 | `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty; `set_password.py`'s password-length floor |
 | `tests\webapp\test_webapp_api_activity.py` | `GET /api/activity` — persistent activity log API |
 | `tests\webapp\test_webapp_api_analytics.py` | `GET /api/analytics/summary` — usage analytics API |

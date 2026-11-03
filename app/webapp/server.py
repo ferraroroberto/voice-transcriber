@@ -48,6 +48,7 @@ from src import build_transcription_client, load_app_config
 from src import activity_log
 from src.archive import SessionArchive
 from src.compression import StreamSafeGZipMiddleware
+from src.login_lockout import LoginLockout
 from src.polish import PolishClient
 from src.runtime_data import runtime_db_path
 from src.static_versioning import BuildInfo
@@ -215,9 +216,11 @@ def create_app() -> FastAPI:
     app.state.polish_client = polish_client
     app.state.build_info = BUILD_INFO
     # Bounds the rate at which the un-gated /api/login route can be
-    # exercised. Lives on app.state (not module level) so each app built
-    # in a test gets its own clean counter.
-    app.state.login_limiter = auth.AttemptLimiter()
+    # exercised and alerts the owner on guessing. Lives on app.state (not
+    # module level) so each app built in a test gets its own clean counter.
+    app.state.login_lockout = LoginLockout(
+        on_alert=auth.make_login_alert(lambda: current_webapp_config(app))
+    )
     # Per-session rolling-transcription workers. Keyed by session_id;
     # populated lazily on the first chunk and cleaned up on /finish or
     # session delete.

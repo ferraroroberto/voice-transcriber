@@ -19,6 +19,17 @@ from src.secret_compare import secrets_equal
 # present the token.
 _LOOPBACK_HOSTS = frozenset({"127.0.0.1", "::1", "localhost"})
 
+
+def is_pc_itself(request: Request) -> bool:
+    """True when the request comes from the PC itself.
+
+    uvicorn runs with ``--proxy-headers`` trusting only the local tunnel,
+    so ``client.host`` is the real caller even behind cloudflared; a
+    public request is never reported as loopback. This is the one check
+    that lets the PC skip the token and the password lock-out.
+    """
+    return bool(request.client) and request.client.host in _LOOPBACK_HOSTS
+
 # Endpoints that must remain reachable without the token: liveness probes
 # (/healthz), the iOS profile install (/install-ca), the page boot
 # (/ + /static/*) so the JS can pick up the token from ?token= and
@@ -59,8 +70,7 @@ class BearerTokenMiddleware(BaseHTTPMiddleware):
         if not token:
             return await call_next(request)
 
-        client_host = request.client.host if request.client else ""
-        if client_host in _LOOPBACK_HOSTS:
+        if is_pc_itself(request):
             return await call_next(request)
 
         path = request.url.path
