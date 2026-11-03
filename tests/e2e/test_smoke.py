@@ -2,7 +2,7 @@
 
 Tight by design: ~5 checks that catch the bugs we actually hit on the
 SPA (JS exceptions on boot, empty select dropdowns, broken settings
-panel, missing login overlay). Expand iteratively if regressions slip
+panel, broken sign-in sheet). Expand iteratively if regressions slip
 through — do NOT turn this file into a regression net for every feature.
 """
 
@@ -213,30 +213,63 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     assert deletes == []
 
 
-def test_login_dialog_dom_present(authed_page: Page, base_url: str) -> None:
-    """The login gate is a native <dialog> wired for showModal().
+def test_sign_in_sheet_wrong_then_correct_password(
+    authed_page: Page, base_url: str
+) -> None:
+    """A 401 from /api/config opens the vendored `dialog.sign-in`; a wrong
+    password keeps it open, the right one closes it and writes this app's
+    existing token key.
 
-    We exercise the DOM directly rather than triggering a real 401: the
-    bearer middleware bypasses loopback, so a bad token from 127.0.0.1
-    won't surface the dialog. This still catches the regression we care
-    about — dialog element + password input missing or renamed — plus the
-    auth-gate contract that Esc must not dismiss it.
+    The bearer middleware bypasses loopback, so a real 401 cannot be provoked
+    from 127.0.0.1: /api/login and the first /api/config are stubbed in the
+    browser instead. The sheet is reached through the app's own 401 path.
     """
+    good_token = "tok-e2e-good"
+
+    def config_route(route) -> None:
+        if route.request.headers.get("authorization") == f"Bearer {good_token}":
+            route.continue_()
+        else:
+            route.fulfill(status=401, json={"detail": "unauthorized"})
+
+    def login_route(route) -> None:
+        if '"right"' in (route.request.post_data or ""):
+            route.fulfill(status=200, json={"token": good_token})
+        else:
+            route.fulfill(status=401, json={"detail": "bad password"})
+
+    authed_page.route("**/api/config", config_route)
+    authed_page.route("**/api/login", login_route)
     _navigate_collecting_errors(authed_page, base_url)
-    dialog = authed_page.locator("#loginOverlay")
-    expect(dialog).to_be_hidden()
-    authed_page.evaluate("document.getElementById('loginOverlay').showModal()")
-    expect(dialog).to_be_visible()
-    pw = authed_page.locator("#loginPassword")
-    expect(pw).to_be_editable()
-    pw.fill("dummy")
-    expect(pw).to_have_value("dummy")
-    surface(authed_page, "login.dialog")
-    # Esc is suppressed (api.js cancel handler): a closed gate != unlocked app.
+
+    sheet = authed_page.locator("dialog.sign-in")
+    expect(sheet).to_be_visible()
+    pw = sheet.locator("input[type=password]")
+    expect(pw).to_be_focused()
+    # Esc must not dismiss it: a closed gate is not an unlocked app.
     authed_page.keyboard.press("Escape")
-    expect(dialog).to_be_visible()
-    authed_page.evaluate("document.getElementById('loginOverlay').close()")
-    expect(dialog).to_be_hidden()
+    expect(sheet).to_be_visible()
+
+    pw.fill("wrong")
+    sheet.locator("button[type=submit]").click()
+    expect(sheet.locator(".sign-in-error")).to_have_text("Wrong password")
+    expect(sheet).to_be_visible()
+    assert authed_page.evaluate("localStorage.getItem('vt_auth_token')") != good_token
+
+    pw.fill("right")
+    surface(authed_page, "login.dialog")
+    sheet.locator("button[type=submit]").click()
+    expect(sheet).to_be_hidden()
+    assert authed_page.evaluate("localStorage.getItem('vt_auth_token')") == good_token
+
+
+def test_signed_in_device_never_sees_sign_in_sheet(
+    authed_page: Page, base_url: str
+) -> None:
+    """A device whose token the server accepts boots straight into the app."""
+    _navigate_collecting_errors(authed_page, base_url)
+    authed_page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
+    expect(authed_page.locator("dialog.sign-in")).to_have_count(0)
 
 
 def test_polish_prompt_sheet_opens_from_settings(authed_page: Page, base_url: str) -> None:

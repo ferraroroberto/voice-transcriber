@@ -70,10 +70,6 @@ export const els = {
   appendToggle:     document.getElementById('appendToggle'),
   incognitoToggle:  document.getElementById('incognitoToggle'),
 
-  loginOverlay:     document.getElementById('loginOverlay'),
-  loginForm:        document.getElementById('loginForm'),
-  loginPassword:    document.getElementById('loginPassword'),
-  loginError:       document.getElementById('loginError'),
 
   languageSelect:   document.getElementById('languageSelect'),
   translateToggle:  document.getElementById('translateToggle'),

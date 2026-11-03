@@ -43,6 +43,7 @@
   <link rel="stylesheet" href="/static/_vendored/modal/modal.css?v=__VENDORED_MODAL_MODAL_CSS__">
   <link rel="stylesheet" href="/static/_vendored/empty-state/empty-state.css?v=__VENDORED_EMPTY_STATE_EMPTY_STATE_CSS__">
   <link rel="stylesheet" href="/static/_vendored/button/button.css?v=__VENDORED_BUTTON_BUTTON_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/sign-in/sign-in.css?v=__VENDORED_SIGN_IN_SIGN_IN_CSS__">
   <link rel="stylesheet" href="/static/_vendored/icon-button/icon-button.css?v=__VENDORED_ICON_BUTTON_ICON_BUTTON_CSS__">
   <link rel="stylesheet" href="/static/_vendored/page-foot/page-foot.css?v=__VENDORED_PAGE_FOOT_PAGE_FOOT_CSS__">
   <link rel="stylesheet" href="/static/_vendored/rec-wave/rec-wave.css?v=__VENDORED_REC_WAVE_REC_WAVE_CSS__">
@@ -466,33 +467,6 @@
   </main>
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
-
-  <!-- Auth gate as a native <dialog> (fleet modal contract) — the vendored nav
-       hides itself while it is open via body:has(dialog[open]). Esc-dismissal
-       is suppressed in api.js: a closed gate is not an unlocked app.
-
-       Deliberate modal-header contract exception (#144, #202) — never add a ×:
-       this dialog intentionally has no square × close button. The editor-modal
-       header contract assumes a dismissable box; this one can't be dismissed
-       without authenticating, so a close button would either be a no-op or a
-       security hole (letting an unauthenticated user "close" their way into
-       the app). Accepted in .fleet.toml; design_lint reports it ACCEPTED. -->
-  <dialog id="loginOverlay" class="detail-dialog login-dialog" data-track-view="login">
-    <form id="loginForm" class="detail-card login-card" autocomplete="off">
-      <h2><svg class="icon" aria-hidden="true"><use href="#i-lock" /></svg> Sign in</h2>
-      <p class="muted small">Enter the password to use this voice transcriber.</p>
-      <input
-        id="loginPassword"
-        type="password"
-        inputmode="numeric"
-        autocomplete="current-password"
-        placeholder="Password"
-        required
-      >
-      <button type="submit" class="big-btn" data-track="login.unlock">Unlock</button>
-      <div id="loginError" class="login-error" hidden></div>
-    </form>
-  </dialog>
 
   <!-- A History take's sheet (#261, the vendored modal shell): the full text
        and its one primary (Copy), Redo as a plain row, the take's facts, and
