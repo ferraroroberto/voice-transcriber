@@ -18,7 +18,9 @@
 # dead code ratchet (no function, class or method nothing references, beyond
 # .dead-code-ratchet-baseline.json; exit 3 fails too), the runtime write ratchet (no
 # file's count of write targets resolving under a code folder above
-# .runtime-write-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .runtime-write-ratchet-baseline.json; exit 3 fails too), the usage track ratchet (no
+# control, sheet or built id above .usage-track-ratchet-baseline.json, the usage log
+# wired; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -127,6 +129,14 @@ try {
     Write-Host "==> runtime write ratchet (writes resolving under a code folder)..." -ForegroundColor Cyan
     & $python -m scripts.runtime_write_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "runtime write ratchet failed (a file gained a write under a code folder, or a target could not be resolved)." }
+
+    # Usage track ratchet: a control with no constant tracking id, a <dialog> with no
+    # data-track-view, a built id, or an app that does not reach its usage log. Call the
+    # wrapper: it maps exit 3 (a file could not be read or closed) to a failure
+    # (tests/ratchets/test_ratchet_stages.py pins it). Whole tree, never routed.
+    Write-Host "==> usage track ratchet (tracked controls, sheets and ids, usage log wired)..." -ForegroundColor Cyan
+    & $python -m scripts.usage_track_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "usage track ratchet failed (an untracked control or sheet, a built id, the usage log not wired, or a file could not be read)." }
 
     # Runtime write probe, first half: what already sits untracked or ignored under the
     # code folders, so the probe after the test runs names only what they wrote.
