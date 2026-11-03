@@ -59,6 +59,7 @@ def _wide_layout(page: Page, base_url: str) -> None:
     lst = _box(page, ".history-list-pane")
     assert _box(page, "#takeDetail")["x"] > lst["x"] + lst["width"] - 1
     page.locator("#historyGroups .take-row").first.locator(".history-more").click()
+    page.get_by_role("menuitem", name="Open take").click()
     expect(page.locator("#historyGroups .take-row.open")).to_have_count(1)
     for control in ("#takeCopy", "#takeRedo", "#takeDelete"):
         expect(detail.locator(control)).to_be_visible()

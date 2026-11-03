@@ -167,9 +167,10 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     authed_page: Page, base_url: str
 ) -> None:
     """A take is an action-row (#213): tapping the body fetches the full text
-    to copy, and the one trailing kebab opens the take sheet (#261): full
-    text, Copy, Redo, the facts with Served by, and Delete last, which needs
-    a second tap and never raises the browser's own confirm()."""
+    to copy, and the one trailing kebab opens a menu whose Open take shows
+    the take sheet (#261): full text, Copy, Redo, the facts with Served by,
+    and Delete last, which needs a second tap and never raises the browser's
+    own confirm()."""
     _phone(authed_page)
     _mock_sessions(authed_page)
     full = "take number 0, and the rest of it that the preview cut"
@@ -189,6 +190,7 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
 
     sheet = authed_page.locator("#takeSheet")
     authed_page.locator("#latestMore").click()
+    authed_page.get_by_role("menuitem", name="Open take").click()
     expect(sheet).to_be_visible()
     expect(sheet.locator("#takeSheetText")).to_have_text(full)
     expect(sheet.locator("#takeServedBy")).to_have_text("Speech Model A · Box One")
@@ -210,6 +212,7 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
 
     # An older take predates the stamp; closing disarms the delete row.
     rows.first.locator(".history-more").click()
+    authed_page.get_by_role("menuitem", name="Open take").click()
     expect(sheet.locator("#takeServedBy")).to_have_text("Not recorded")
     expect(sheet.locator("#takeRedo")).to_be_hidden()  # no audio left to redo
     expect(delete).to_have_text("Delete take")

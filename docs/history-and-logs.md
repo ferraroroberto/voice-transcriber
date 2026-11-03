@@ -22,7 +22,7 @@ facts work, *Redo transcription* is hidden, and `POST
 History lives on its **own tab** in the bottom navigation (fleet nav
 contract) and refreshes itself every time you open it. It opens on the
 **Latest take** card: the newest take, whatever app it came from, with a
-full-width **Copy** (the full text from disk) and a ⋮ to its sheet.
+full-width **Copy** (the full text from disk) and a ⋮ menu.
 Below it, the other takes sit in **day groups** (Today, Yesterday, then
 weekday and date), one line each: the time, the start of the text, and a
 meta line such as `61 words · 0:27 · This app`. The list loads the **10
@@ -65,7 +65,9 @@ the take in the middle, one overflow button on the right:
 
 - **Tap the row** — copies the full text from disk (not the 200-char
   preview the list payload carries) and flashes *Copied* on the row.
-- **⋮ sheet** — the take's full text with one **Copy**; *Redo
+- **⋮ menu** — *Refresh* reloads the list in place, and *Open take* shows the
+  take: on a phone a sheet, on a wide window the pane beside the list. It holds
+  the take's full text with one **Copy**; *Redo
   transcription* re-runs whisper on the saved raw audio (useful when a
   phone died mid-record and you want to pull the transcript afterwards);
   the take's facts (*Length*, *Language*, *Source*, *Served by*); and

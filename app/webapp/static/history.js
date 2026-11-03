@@ -12,6 +12,7 @@
 
 import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
 import { icon } from './_vendored/icons/icons.js';
+import { createRowMenu } from './_vendored/row-menu/row-menu.js';
 import { els, state } from './state.js';
 import { authFetch } from './api.js';
 import {
@@ -26,6 +27,23 @@ const HISTORY_PAGE_SIZE = 10;
 // vendored nav's left rail. There the take sheet's card is shown in place,
 // beside the list, instead of in a modal.
 const wideLayout = window.matchMedia('(min-width: 1100px) and (pointer: fine)');
+
+// The kebab's floating menu (vendored row-menu). Open take is the take sheet
+// (the detail pane on a wide window) that holds Copy, Redo, the facts and
+// Delete; Refresh reloads the list. The Latest card and the day rows have one
+// controller each: the Latest card's kebab is one element for the page's life,
+// the rows are rebuilt on every render.
+const rowMenu = createRowMenu();
+const latestMenu = createRowMenu();
+let latestTake = null;
+let latestMenuBound = false;
+
+function takeMenuItems(getTake) {
+  return [
+    { label: 'Open take', glyph: 'file-text', onTap: () => openTakeSheet(getTake()) },
+    { label: 'Refresh', glyph: 'refresh-cw', onTap: () => refreshHistory() },
+  ];
+}
 
 export async function refreshHistory() {
   // Back to page 1; a refresh also leaves Select mode.
@@ -117,6 +135,7 @@ function renderHistory() {
   // The newest take is the Latest card; in Select mode it is a row too.
   const rows = selecting ? takes : takes.slice(1);
   els.historyGroups.replaceChildren(...dayGroups(rows));
+  rowMenu.endRender();
   renderEmptyState(takes.length);
   renderHistoryHeadLine();
   renderSelectBar();
@@ -149,7 +168,11 @@ function renderLatestCard(s) {
   els.latestMeta.textContent = '';
   els.latestMeta.append(...takeMeta(s));
   els.latestCopy.onclick = () => copyTake(s.session_id, els.latestCopy);
-  els.latestMore.onclick = () => openTakeSheet(s);
+  latestTake = s;
+  if (!latestMenuBound) {
+    latestMenu.attach('latest', els.latestMore, takeMenuItems(() => latestTake));
+    latestMenuBound = true;
+  }
 }
 
 const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
@@ -259,7 +282,7 @@ function formatTime(iso) {
 }
 
 // One take is one action-row (design.md): the time as its lead, one line
-// of text, plain meta, and one trailing kebab to the take sheet. Tapping the
+// of text, plain meta, and one trailing kebab that opens the take menu. Tapping the
 // row copies the take; in Select mode it ticks it instead, and the lead
 // shows the tick.
 function renderHistoryItem(s) {
@@ -326,7 +349,7 @@ function renderHistoryItem(s) {
     more.dataset.track = 'history.take-more';
     more.setAttribute('aria-label', 'More actions');
     more.innerHTML = icon('ellipsis-vertical');
-    more.addEventListener('click', () => openTakeSheet(s));
+    rowMenu.attach(s.session_id, more, takeMenuItems(() => s));
     li.append(more);
   }
   return li;
