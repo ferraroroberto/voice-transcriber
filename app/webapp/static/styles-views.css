@@ -372,10 +372,12 @@
   .take-detail .detail-card { background: transparent; }
   .take-detail .take-sheet-text { max-height: 50vh; }
   /* The row whose take the detail pane shows keeps the accent-soft tint, its
-     secondary text in accent-text (fg-muted on the tint is under AA). */
+     secondary text in accent-text (fg-muted on the tint is under AA). The tint
+     fills the card's content box, so it sits the card's own padding in from
+     the border; every row carries the same side padding so the text does not
+     shift when a row is picked. */
+  .history-list .take-row { padding: 0 var(--space-sm); }
   .history-list .take-row.open {
-    margin: 0 -14px;
-    padding: 0 14px;
     background: var(--accent-soft);
     border-radius: var(--radius-md);
   }
