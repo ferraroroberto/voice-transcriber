@@ -132,6 +132,9 @@ Every chunk lands on disk during recording. If the iPhone dies mid-take,
 the partial `raw.webm` is still on the PC. A take's detail sheet exposes
 a "Redo transcription" action so a saved take can always be redriven.
 
+### Service status
+`/api/status` is served from memory. `src/probe_cache.py` refreshes the whisper, hub and ffmpeg probes on worker threads (primed at startup, re-run by a read once an answer is older than 10 s). The handler is a plain `def`, so even its bounded wait (0.2 s) never holds the event loop that `/api/version` and the rest share. An answer is served with its age up to 60 s. A probe with no usable answer is `null` in the reply (`whisper.running`, `llm_hub.reachable`, `ffmpeg_present`); the UI shows it as Unknown and re-asks, never as up or down.
+
 ### Tray = umbrella
 `config/config.json` gains a `webapp.enabled` flag (default `true`).
 When the tray boots it adopt-or-spawns uvicorn on `:8443` the same way

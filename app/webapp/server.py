@@ -162,6 +162,9 @@ async def _lifespan(app: FastAPI):
             "Suggested: winget install Gyan.FFmpeg"
         )
 
+    # Probe once now so the first /api/status read finds an answer.
+    app.state.status_cache.prime()
+
     yield
 
     try:
@@ -215,6 +218,7 @@ def create_app() -> FastAPI:
     app.state.transcription_client = transcription_client
     app.state.polish_client = polish_client
     app.state.build_info = BUILD_INFO
+    app.state.status_cache = config.build_status_cache(app)
     # Bounds the rate at which the un-gated /api/login route can be
     # exercised and alerts the owner on guessing. Lives on app.state (not
     # module level) so each app built in a test gets its own clean counter.

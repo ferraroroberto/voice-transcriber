@@ -89,6 +89,7 @@ still covers the same logic via the parity port in
 | `tests\test_analytics.py` | Today's usage summary — take count / wpm / time-saved, derived from the activity log |
 | `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows |
 | `tests\test_event_loop.py` | Selector event-loop shim wiring + accept-loop resilience — root cause of the :8443 wedge |
+| `tests\test_probe_cache.py` | `ProbeCache` on a fake clock and a stuck probe — fresh/stale/too-old reads, a probe that has not answered is unknown (never up or down), one probe in flight at a time, a failing probe stays unknown |
 | `tests\test_process_supervisor.py` | Shared adopt-or-spawn primitives — TCP probe, stop ladder, readiness poll — composed by both `WhisperServerManager` and `WebappManager` |
 | `tests\test_whisper_server_manager.py` | `WhisperServerManager` across process boundaries — `stop` / `logs` / `status` work off the PID file and log file a prior process left on disk, not in-memory state |
 | `tests\test_e2e_live_guard.py` | Live-tray adoption guard — free-port autoboot vs. refuse-without-opt-in |
@@ -112,6 +113,7 @@ still covers the same logic via the parity port in
 | `tests\test_cli_server_cmd.py` | `server stop` exits 0 once the stop has run; `status` keeps mapping not-running to exit 1 |
 | `tests\test_secret_compare.py` | `secrets_equal` accepts non-ASCII text, and no code outside `src\secret_compare.py` calls `compare_digest` |
 | `tests\webapp\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status`, cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp) |
+| `tests\webapp\test_webapp_status_responsiveness.py` | A stuck `/api/status` probe never holds up `/api/version`, `/api/analytics/summary`, `/api/config` or `/healthz` on the shared event loop, and reports the unanswered probe as `null` within its bounded wait |
 | `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths); `/api/login` lock-out on a fake clock (401s, then 429 with `Retry-After`, success after the wait, the PC never locked) and the guessing alert on a fake notifier (once per streak, no secrets in the text) |
 | `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty; `set_password.py`'s password-length floor |
 | `tests\webapp\test_webapp_api_activity.py` | `GET /api/activity` — persistent activity log API |
