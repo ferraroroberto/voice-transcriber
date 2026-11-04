@@ -43,7 +43,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.webapp.manager import build_uvicorn_command, cert_paths  # noqa: E402
+from app.webapp.manager import build_webapp_command, cert_paths  # noqa: E402
 from src.process_supervisor import stop_popen  # noqa: E402
 from src.tunnel import (  # noqa: E402
     CloudflaredNotFoundError,
@@ -85,9 +85,9 @@ def _spawn_uvicorn(port: int) -> subprocess.Popen:
     # Bound to loopback only -- cloudflared connects to this uvicorn over
     # 127.0.0.1, never the tray's config-driven bind host. Command
     # construction beyond host/port/certs is shared with
-    # `WebappManager._build_command` via `build_uvicorn_command` so a flag
+    # `WebappManager._build_command` via `build_webapp_command` so a flag
     # can never be added to one spawn path only.
-    cmd = [str(_find_python())] + build_uvicorn_command(
+    cmd = [str(_find_python())] + build_webapp_command(
         "127.0.0.1", port, cert_paths(PROJECT_ROOT)
     )
     logger.info(f"🚀 Starting uvicorn: {' '.join(cmd)}")

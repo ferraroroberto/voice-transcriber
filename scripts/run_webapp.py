@@ -1,8 +1,8 @@
 """Standalone webapp launcher for ``webapp.bat`` -- headless boxes, dev
 iteration, or running the webapp without the tray icon / global hotkey.
 
-Builds the exact same ``-m uvicorn ...`` argv the tray's ``WebappManager``
-uses via ``app.webapp.manager.build_uvicorn_command`` (voice-transcriber#160)
+Builds the exact same ``-m app.webapp.serve ...`` argv the tray's ``WebappManager``
+uses via ``app.webapp.manager.build_webapp_command`` (voice-transcriber#160)
 and runs it in the foreground, inheriting this console. ``webapp.bat``
 shells out to this module instead of hand-writing the uvicorn argv itself,
 so a flag added to the tray's spawn path is never missing here
@@ -24,7 +24,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from app.webapp.manager import build_uvicorn_command, cert_paths  # noqa: E402
+from app.webapp.manager import build_webapp_command, cert_paths  # noqa: E402
 
 HOST = "0.0.0.0"
 PORT = 8443
@@ -41,7 +41,7 @@ def main() -> int:
     else:
         print(f"[INFO] HTTPS via {certs[0]}")
 
-    cmd = [sys.executable] + build_uvicorn_command(HOST, PORT, certs)
+    cmd = [sys.executable] + build_webapp_command(HOST, PORT, certs)
     # Foreground, console-visible spawn -- webapp.bat is a deliberately
     # interactive terminal session, so this inherits stdio rather than
     # suppressing the console window.

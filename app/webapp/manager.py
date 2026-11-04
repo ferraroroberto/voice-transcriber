@@ -1,10 +1,10 @@
-"""Webapp process manager — adopt-or-spawn for uvicorn.
+"""Webapp process manager — adopt-or-spawn for the HTTP/2 webapp.
 
 Mirrors `src/whisper_server/manager.py`:
 
 - `status()` checks `GET /healthz` and a low-level TCP probe.
-- `start()` adopts an already-listening uvicorn (no second spawn) or
-  spawns `python -m uvicorn app.webapp.server:app` from this venv.
+- `start()` adopts an already-listening webapp (no second spawn) or
+  spawns `python -m app.webapp.serve` from this venv.
 - `stop()` only terminates a process this manager spawned. An externally
   started uvicorn is left alone.
 
@@ -60,6 +60,8 @@ class WebappRuntimeConfig:
     port: int = 8443
     startup_timeout_seconds: float = 15.0
     request_timeout_seconds: float = 1.0
+    # hypercorn serves HTTP/2 over the certificate; uvicorn is the HTTP/1.1 fallback.
+    server: str = "hypercorn"
     poll_interval_seconds: float = 0.4
 
 
@@ -80,6 +82,7 @@ def load_config(raw: Optional[Dict[str, Any]] = None) -> WebappRuntimeConfig:
         enabled=bool(raw.get("enabled", True)),
         host=str(raw.get("host", "0.0.0.0")),
         port=int(raw.get("port", 8443)),
+        server=str(raw.get("server", "hypercorn")),
     )
 
 
@@ -97,10 +100,13 @@ def _probe_url(scheme: str, host: str, port: int) -> str:
     return f"{scheme}://{host if host != '0.0.0.0' else '127.0.0.1'}:{port}"
 
 
-def build_uvicorn_command(
-    host: str, port: int, certs: Optional[tuple[Path, Path]] = None
+def build_webapp_command(
+    host: str,
+    port: int,
+    certs: Optional[tuple[Path, Path]] = None,
+    server: str = "hypercorn",
 ) -> List[str]:
-    """Build the ``-m uvicorn ...`` argv (everything after the python
+    """Build the ``-m app.webapp.serve ...`` argv (everything after the python
     executable) for spawning the webapp.
 
     Shared by :class:`WebappManager` (the tray-managed webapp) and
@@ -110,8 +116,7 @@ def build_uvicorn_command(
     """
     cmd: List[str] = [
         "-m",
-        "uvicorn",
-        "app.webapp.server:app",
+        "app.webapp.serve",
         "--host",
         host,
         "--port",
@@ -120,16 +125,12 @@ def build_uvicorn_command(
         "warning",
         "--loop",
         LOOP_FACTORY,
-        # The tray's Cloudflare tunnel (cloudflared) connects to this
-        # uvicorn over loopback (webapp/cloudflared.yml points at
-        # https://localhost:8443) -- trust only that immediate peer to
-        # set X-Forwarded-For so request.client.host reflects the real
-        # tunnel caller, not 127.0.0.1. uvicorn already
-        # defaults to this; pinned explicitly so it can't silently
-        # regress on an upstream default change.
-        "--proxy-headers",
-        "--forwarded-allow-ips",
-        "127.0.0.1",
+        # serve.py wraps the app so only a loopback peer (the tray's
+        # cloudflared, webapp/cloudflared.yml -> https://localhost:8443) may
+        # set X-Forwarded-For; request.client.host then reflects the real
+        # tunnel caller, not 127.0.0.1.
+        "--server",
+        server,
     ]
     if certs is not None:
         cert, key = certs
@@ -143,7 +144,7 @@ def build_uvicorn_command(
 
 
 class WebappManager:
-    """Start / stop / health-check the webapp uvicorn process."""
+    """Start / stop / health-check the webapp process."""
 
     def __init__(self, config: Optional[WebappRuntimeConfig] = None) -> None:
         self.config = config or WebappRuntimeConfig()
@@ -293,7 +294,9 @@ class WebappManager:
 
     def _build_command(self) -> List[str]:
         py = sys.executable  # the venv that launched the tray
-        return [py] + build_uvicorn_command(self.config.host, self.config.port, cert_paths())
+        return [py] + build_webapp_command(
+            self.config.host, self.config.port, cert_paths(), self.config.server
+        )
 
     def _wait_until_ready(self) -> None:
         wait_until_ready(

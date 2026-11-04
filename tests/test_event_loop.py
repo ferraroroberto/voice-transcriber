@@ -18,7 +18,7 @@ from pathlib import Path
 import pytest
 
 from app.webapp.event_loop import LOOP_FACTORY, selector_loop_factory
-from app.webapp.manager import WebappManager, WebappRuntimeConfig, build_uvicorn_command
+from app.webapp.manager import WebappManager, WebappRuntimeConfig, build_webapp_command
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 
@@ -57,17 +57,27 @@ def test_manager_build_command_passes_loop_factory():
     assert cmd[cmd.index("--loop") + 1] == LOOP_FACTORY
 
 
-def test_manager_build_command_trusts_loopback_proxy_headers():
-    """Regression pin for issue #117: without --proxy-headers/
-    --forwarded-allow-ips, request.client.host in middleware.py sees the
-    raw TCP peer -- cloudflared connecting over loopback -- and every
-    tunnel request would hit the loopback auth bypass meant only for the
-    local tk window."""
-    mgr = WebappManager(WebappRuntimeConfig(port=18443))
-    cmd = mgr._build_command()
-    assert "--proxy-headers" in cmd
-    assert "--forwarded-allow-ips" in cmd
-    assert cmd[cmd.index("--forwarded-allow-ips") + 1] == "127.0.0.1"
+def test_manager_build_command_launches_serve_module_with_the_configured_server():
+    cmd = WebappManager(WebappRuntimeConfig(port=18443))._build_command()
+    assert cmd[cmd.index("-m") + 1] == "app.webapp.serve"
+    assert cmd[cmd.index("--server") + 1] == "hypercorn"
+    fallback = WebappManager(WebappRuntimeConfig(port=18443, server="uvicorn"))._build_command()
+    assert fallback[fallback.index("--server") + 1] == "uvicorn"
+
+
+def test_served_app_trusts_loopback_proxy_headers_only():
+    """Regression pin for issue #117: without a trusted-proxy rule,
+    request.client.host in middleware.py sees the raw TCP peer --
+    cloudflared connecting over loopback -- and every tunnel request would hit
+    the loopback auth bypass meant only for the local tk window. serve.py
+    wraps the app so only a loopback peer may name the real client."""
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+    from app.webapp.serve import wrap_app
+
+    wrapped = wrap_app(object())
+    assert isinstance(wrapped, ProxyHeadersMiddleware)
+    assert "127.0.0.1" in wrapped.trusted_hosts
 
 
 def test_e2e_autoboot_wires_loop_factory():
@@ -82,7 +92,7 @@ def test_e2e_autoboot_wires_loop_factory():
 def test_webapp_bat_delegates_to_run_webapp_module():
     """webapp.bat (voice-transcriber#174) carries no uvicorn flag list of
     its own — it shells out to scripts/run_webapp.py, which sources the
-    argv from build_uvicorn_command (see
+    argv from build_webapp_command (see
     test_run_webapp_delegates_to_shared_command_builder for the loop/proxy-
     headers wiring pin at that single source)."""
     src = (_REPO_ROOT / "webapp.bat").read_text(encoding="utf-8")
@@ -99,21 +109,19 @@ def test_run_webapp_delegates_to_shared_command_builder():
     WebappManager and run_named_tunnel.py do, so a flag can't go missing
     again."""
     src = (_REPO_ROOT / "scripts" / "run_webapp.py").read_text(encoding="utf-8")
-    assert "from app.webapp.manager import build_uvicorn_command, cert_paths" in src
-    assert "build_uvicorn_command(" in src
+    assert "from app.webapp.manager import build_webapp_command, cert_paths" in src
+    assert "build_webapp_command(" in src
 
 
-def test_build_uvicorn_command_wires_proxy_headers_and_loop():
-    """Regression pin for issue #117 (proxy headers) and #113 (the loop
-    shim) at their single source: WebappManager._build_command and
-    scripts/run_named_tunnel.py's _spawn_uvicorn both delegate to this
-    function (voice-transcriber#160) instead of each carrying their own
-    copy of the uvicorn flag list."""
-    cmd = build_uvicorn_command("127.0.0.1", 18443, None)
-    assert "--proxy-headers" in cmd
-    assert "--forwarded-allow-ips" in cmd
-    assert cmd[cmd.index("--forwarded-allow-ips") + 1] == "127.0.0.1"
+def test_build_webapp_command_wires_the_loop_and_server():
+    """Regression pin for #113 (the loop shim) at its single source:
+    WebappManager._build_command and scripts/run_named_tunnel.py's
+    _spawn_uvicorn both delegate to this function (voice-transcriber#160)
+    instead of each carrying their own copy of the flag list."""
+    cmd = build_webapp_command("127.0.0.1", 18443, None)
     assert cmd[cmd.index("--loop") + 1] == LOOP_FACTORY
+    assert cmd[cmd.index("--server") + 1] == "hypercorn"
+    assert build_webapp_command("127.0.0.1", 18443, None, "uvicorn")[-1] == "uvicorn"
 
 
 def test_run_named_tunnel_spawn_delegates_to_shared_command_builder():
@@ -123,8 +131,8 @@ def test_run_named_tunnel_spawn_delegates_to_shared_command_builder():
     (voice-transcriber#160) -- assert it now sources the command from
     the same place WebappManager does, so a flag can't go missing again."""
     src = (_REPO_ROOT / "scripts" / "run_named_tunnel.py").read_text(encoding="utf-8")
-    assert "from app.webapp.manager import build_uvicorn_command, cert_paths" in src
-    assert "build_uvicorn_command(" in src
+    assert "from app.webapp.manager import build_webapp_command, cert_paths" in src
+    assert "build_webapp_command(" in src
 
 
 async def _noop_handler(reader, writer):
