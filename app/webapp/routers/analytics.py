@@ -22,5 +22,7 @@ router = APIRouter()
 
 
 @router.get("/api/analytics/summary")
-async def get_analytics_summary() -> Dict[str, Any]:
+def get_analytics_summary() -> Dict[str, Any]:
+    # A plain ``def`` runs on a worker thread: the SQLite read must not block
+    # the event loop that every other request shares.
     return asdict(compute_usage_summary())

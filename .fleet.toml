@@ -340,3 +340,9 @@ startup_timeout_s = 90
 [design.review.e2e]
 command = ["-m", "pytest", "tests/e2e", "--e2e-autoboot", "-q"]
 timeout_s = 900
+
+# /perf-review (fleet-config skills/perf-review). "Ready" is the Record head line
+# showing: it is filled from /api/config's language list, so it is visible only
+# once boot data has landed, unlike the record button that paints with the shell.
+[perf.review]
+ready_selector = "#recordHeadLine"

@@ -177,7 +177,7 @@ export function renderTextCard() {
 
   // Polish stays one tap away but says why it can't run: the hub is the
   // only way to reach the LLM.
-  const hubDown = !!state.services && !state.services.llm_hub.reachable;
+  const hubDown = !!state.services && state.services.llm_hub.reachable === false;
   const label = els.polishBtn.querySelector('.polish-label');
   if (state.polishing) label.textContent = 'Polishing…';
   else if (hubDown) label.textContent = 'Polish unavailable';

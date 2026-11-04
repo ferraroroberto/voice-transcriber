@@ -196,8 +196,10 @@ export function initPromptSheet() {
 // Transcription goes to the hub first and falls back to the local whisper
 // server, so it is offline only when both are down, or when ffmpeg (which
 // every take is transcoded through) is missing.
+// A probe that has not answered is null (unknown); only an explicit false counts
+// as down, so "not checked yet" never reads as an outage.
 function transcriptionOffline(s) {
-  return (!s.whisper.running && !s.llm_hub.reachable) || !s.ffmpeg_present;
+  return (s.whisper.running === false && s.llm_hub.reachable === false) || s.ffmpeg_present === false;
 }
 
 // Record's header line: the dictation language as one plain fact,
@@ -214,7 +216,7 @@ export function renderRecordHeadLine() {
     setHeadLine(els.recordHeadLine, "Incognito: not saved", 'neutral');
   } else if (isOn(els.translateToggle)) {
     setHeadLine(els.recordHeadLine, `${language} to English`, 'attention');
-  } else if (s && !s.llm_hub.reachable) {
+  } else if (s && s.llm_hub.reachable === false) {
     setHeadLine(els.recordHeadLine, 'Polish unavailable', 'attention');
   } else {
     setHeadLine(els.recordHeadLine, language);
@@ -229,25 +231,47 @@ export function renderSettingsHeadLine() {
   const line = els.settingsHeadLine;
   if (state.servicesFailed) setHeadLine(line, "Couldn't check services", 'attention');
   else if (!s) return;
-  else if (!s.whisper.running && !s.llm_hub.reachable) setHeadLine(line, 'Transcription offline', 'danger');
-  else if (!s.ffmpeg_present) setHeadLine(line, 'Audio conversion missing', 'danger');
-  else if (!s.llm_hub.reachable) setHeadLine(line, 'Polish unavailable: hub not reachable', 'attention');
-  else if (!s.whisper.running) setHeadLine(line, 'Local fallback down', 'attention');
+  else if (s.whisper.running === false && s.llm_hub.reachable === false) setHeadLine(line, 'Transcription offline', 'danger');
+  else if (s.ffmpeg_present === false) setHeadLine(line, 'Audio conversion missing', 'danger');
+  else if (s.llm_hub.reachable === false) setHeadLine(line, 'Polish unavailable: hub not reachable', 'attention');
+  else if (s.whisper.running === false) setHeadLine(line, 'Local fallback down', 'attention');
+  else if (servicesUnknown(s)) setHeadLine(line, 'Checking services', 'neutral');
   else if (state.staleShell) setHeadLine(line, 'New build, reload', 'attention');
   else setHeadLine(line, 'All services up');
 }
 
+// True when any probe in a status reply has not answered yet (null).
+function servicesUnknown(s) {
+  return s.whisper.running === null || s.llm_hub.reachable === null || s.ffmpeg_present === null;
+}
+
+// One row's [alive, value]: true/false once the probe answered, null (no
+// badge, "Unknown") while it has not.
+function serviceRow(alive, up, down) {
+  if (alive === null) return [null, 'Unknown'];
+  return [alive, alive ? up : down];
+}
+
 // Settings › Services: one avatar row per probe, its corner badge
 // alive (success) or down (danger), the value in plain words. Unknown
-// (the poll failed) shows no badge and says so.
+// (the poll failed, or a probe has not answered yet) shows no badge and says so.
 function renderServices(s) {
-  const rows = s ? [
-    ['svcTranscription', s.llm_hub.reachable || s.whisper.running,
-      s.llm_hub.reachable ? 'Ready' : s.whisper.running ? 'On the local fallback' : 'Down'],
-    ['svcFallback', s.whisper.running, s.whisper.running ? 'Ready' : 'Not running'],
-    ['svcPolish', s.llm_hub.reachable, s.llm_hub.reachable ? 'Ready' : 'Not reachable'],
-    ['svcAudio', s.ffmpeg_present, s.ffmpeg_present ? 'Ready' : 'Missing'],
-  ] : ['svcTranscription', 'svcFallback', 'svcPolish', 'svcAudio'].map((id) => [id, null, 'Unknown']);
+  let rows;
+  if (s) {
+    const hub = s.llm_hub.reachable;
+    const whisper = s.whisper.running;
+    // Transcription is up if either route is; down only once both said so.
+    const route = hub || whisper ? true : (hub === false && whisper === false ? false : null);
+    rows = [
+      ['svcTranscription', ...(route === null ? [null, 'Unknown']
+        : [route, hub ? 'Ready' : route ? 'On the local fallback' : 'Down'])],
+      ['svcFallback', ...serviceRow(whisper, 'Ready', 'Not running')],
+      ['svcPolish', ...serviceRow(hub, 'Ready', 'Not reachable')],
+      ['svcAudio', ...serviceRow(s.ffmpeg_present, 'Ready', 'Missing')],
+    ];
+  } else {
+    rows = ['svcTranscription', 'svcFallback', 'svcPolish', 'svcAudio'].map((id) => [id, null, 'Unknown']);
+  }
   for (const [id, alive, value] of rows) {
     const avatar = document.getElementById(id);
     if (alive === null) delete avatar.dataset.badge;
@@ -259,13 +283,27 @@ function renderServices(s) {
   }
 }
 
+// A reply with an unanswered probe is re-asked shortly, a few times at most,
+// so the Services rows settle without the user reopening Settings.
+const STATUS_RETRY_MS = 2000;
+const STATUS_RETRY_MAX = 3;
+let statusRetryTimer = null;
+let statusRetries = 0;
+
 export async function refreshStatus() {
+  clearTimeout(statusRetryTimer);
   try {
     const r = await authFetch('/api/status');
     if (!r.ok) throw new Error(`/api/status returned ${r.status}`);
     const s = await r.json();
     state.services = s;
     state.servicesFailed = false;
+    if (servicesUnknown(s) && statusRetries < STATUS_RETRY_MAX) {
+      statusRetries += 1;
+      statusRetryTimer = setTimeout(refreshStatus, STATUS_RETRY_MS);
+    } else {
+      statusRetries = 0;
+    }
   } catch (err) {
     console.warn('status poll failed:', err);
     state.services = null;
