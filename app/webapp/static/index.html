@@ -48,6 +48,7 @@
   <link rel="stylesheet" href="/static/_vendored/icon-button/icon-button.css?v=__VENDORED_ICON_BUTTON_ICON_BUTTON_CSS__">
   <link rel="stylesheet" href="/static/_vendored/page-foot/page-foot.css?v=__VENDORED_PAGE_FOOT_PAGE_FOOT_CSS__">
   <link rel="stylesheet" href="/static/_vendored/rec-wave/rec-wave.css?v=__VENDORED_REC_WAVE_REC_WAVE_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/mic-notice/mic-notice.css?v=__VENDORED_MIC_NOTICE_MIC_NOTICE_CSS__">
   <link rel="stylesheet" href="/static/styles.css?v=__STYLES_CSS__">
   <link rel="stylesheet" href="/static/styles-views.css?v=__STYLES_VIEWS_CSS__">
   <title>Whisper</title>
@@ -277,11 +278,7 @@
           </div>
           <span id="recordTimer" class="record-timer" hidden>00:00</span>
           <div id="recordStatus" class="record-status">Tap to start</div>
-          <div id="micNotice" class="mic-notice" hidden>
-            <div id="micInput" class="mic-notice-input" hidden></div>
-            <div id="micWave" class="mic-notice-wave"></div>
-            <div id="micSilent" class="mic-notice-silent" role="status" hidden></div>
-          </div>
+          <div id="micNotice" hidden></div>
           <div class="record-modes">
             <button id="appendToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
                     title="Append the next take to the current text instead of replacing it" data-track="record.append"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>

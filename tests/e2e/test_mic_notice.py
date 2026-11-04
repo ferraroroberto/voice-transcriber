@@ -50,41 +50,70 @@ def test_mic_notice_names_input_and_warns_on_silence(
 
     # Status line: the active input, named by the browser.
     expect(page.locator("#micNotice")).to_be_visible()
-    expect(page.locator("#micInput")).to_have_text(re.compile(r"^Mic: .+"))
+    expect(page.locator("#micNotice .mic-notice-input")).to_have_text(re.compile(r"^Mic: .+"))
     # The strip is drawn by the vendored component, inside the notice.
-    expect(page.locator("#micWave .rec-wave")).to_have_count(1)
-    expect(page.locator("#micWave .rec-wave-bars > i")).not_to_have_count(0)
+    expect(page.locator("#micNotice .rec-wave")).to_have_count(1)
+    expect(page.locator("#micNotice .rec-wave-bars > i")).not_to_have_count(0)
     # One stream: the strip added no getUserMedia call and so no prompt.
     assert page.evaluate("window.__gumCalls") == 1
 
     # A muted input: no sound for the threshold -> the warning appears.
     page.evaluate("window.__vtStream.getAudioTracks().forEach(t => { t.enabled = false; })")
-    expect(page.locator("#micSilent")).to_be_visible(timeout=10_000)
-    expect(page.locator("#micSilent")).to_contain_text("No sound from the microphone")
+    expect(page.locator("#micNotice .mic-notice-silent")).to_be_visible(timeout=10_000)
+    expect(page.locator("#micNotice .mic-notice-silent")).to_contain_text("No sound from the microphone")
     surface(page, "record.mic-silent")
 
     # Sound returns -> the warning clears.
     page.evaluate("window.__vtStream.getAudioTracks().forEach(t => { t.enabled = true; })")
-    expect(page.locator("#micSilent")).to_be_hidden(timeout=10_000)
+    expect(page.locator("#micNotice .mic-notice-silent")).to_be_hidden(timeout=10_000)
 
     # Stopping the take removes the notice and its audio graph.
     page.click("#recordBtn")
     expect(page.locator("#micNotice")).to_be_hidden()
-    expect(page.locator("#micWave .rec-wave")).to_have_count(0)
+    expect(page.locator("#micNotice .rec-wave")).to_have_count(0)
 
 
-def test_silent_warning_names_remote_desktop_for_remote_audio(
+def test_silent_remote_audio_input_warns_with_remote_desktop_text(
     authed_page: Page, base_url: str
 ) -> None:
+    """A silent "Remote Audio" input (a Remote Desktop session) gets the
+    Remote Desktop wording, not the Bluetooth one."""
     page = authed_page
-    page.goto(f"{base_url}/", wait_until="domcontentloaded")
-    page.wait_for_selector("#recordBtn", state="attached")
-    words = page.evaluate(
-        """async () => {
-          const m = await import('/static/mic-notice.js');
-          return [m.silentText('Remote Audio'), m.silentText('AirPods'), m.silentText('')];
-        }"""
+    # Replace the devices with one silent input named "Remote Audio": an
+    # oscillator at zero gain feeds a MediaStream destination, so the analyser
+    # reads exact silence the whole take.
+    page.add_init_script(
+        """
+        (() => {
+          const md = navigator.mediaDevices;
+          const device = {
+            deviceId: 'remote-audio', groupId: 'remote', kind: 'audioinput',
+            label: 'Remote Audio', toJSON() { return this; },
+          };
+          md.enumerateDevices = async () => [device];
+          md.getUserMedia = async () => {
+            const ctx = new AudioContext();
+            await ctx.resume();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            gain.gain.value = 0;
+            const dest = ctx.createMediaStreamDestination();
+            osc.connect(gain).connect(dest);
+            osc.start();
+            const stream = dest.stream;
+            Object.defineProperty(stream.getAudioTracks()[0], 'label', { value: 'Remote Audio' });
+            return stream;
+          };
+        })();
+        """
     )
-    assert "Remote Desktop" in words[0] and "Bluetooth" not in words[0]
-    assert "Bluetooth/AirPods" in words[1]
-    assert "Bluetooth/AirPods" in words[2]
+    mock_session_apis(page, "a take from a remote session")
+    page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    start_recording(page)
+
+    expect(page.locator("#micNotice .mic-notice-input")).to_have_text("Mic: Remote Audio")
+    silent = page.locator("#micNotice .mic-notice-silent")
+    expect(silent).to_be_visible(timeout=10_000)
+    expect(silent).to_contain_text("check the Remote Desktop audio recording setting")
+    expect(silent).not_to_contain_text("Bluetooth")
+    surface(page, "record.mic-silent-remote")
