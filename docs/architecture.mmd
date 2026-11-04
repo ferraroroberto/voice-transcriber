@@ -12,7 +12,7 @@ flowchart TB
   subgraph entry["Entry points"]
     LAUNCHER["launcher.py\nputs repo root on sys.path, dispatches to app.cli.main"]
     TRAYBAT["tray.bat"]
-    WEBAPPBAT["webapp.bat -> scripts/run_webapp.py\n/ webapp_tunnel_named.bat -> scripts/run_named_tunnel.py\nboth source uvicorn argv from WEBAPPMGR's\nbuild_uvicorn_command"]
+    WEBAPPBAT["webapp.bat -> scripts/run_webapp.py\n/ webapp_tunnel_named.bat -> scripts/run_named_tunnel.py\nboth source the serve argv from WEBAPPMGR's\nbuild_webapp_command"]
     SERVERBAT["server.bat"]
   end
   TRAYBAT --> LAUNCHER

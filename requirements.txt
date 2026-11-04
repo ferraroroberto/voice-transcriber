@@ -46,6 +46,7 @@ winotify>=1.1; sys_platform == "win32"
 # Webapp (mobile-first FastAPI UI on :8443)
 fastapi>=0.110
 uvicorn[standard]>=0.27
+hypercorn>=0.18
 python-multipart>=0.0.9
 
 # Self-signed cert + iOS .mobileconfig generation

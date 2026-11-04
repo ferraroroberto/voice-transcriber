@@ -237,7 +237,7 @@ def _autoboot_server() -> Iterator[str]:
         certs = _cert_paths()
         scheme = "https" if certs else "http"
         cmd = [
-            sys.executable, "-m", "uvicorn", "app.webapp.server:app",
+            sys.executable, "-m", "app.webapp.serve",
             "--host", "127.0.0.1", "--port", str(port),
             "--log-level", "warning",
             "--loop",

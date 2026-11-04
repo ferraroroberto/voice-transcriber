@@ -93,7 +93,7 @@ def main() -> int:
     flags = subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW if sys.platform == "win32" else 0
     with log_path.open("w", encoding="utf-8", errors="replace") as log:
         proc = subprocess.Popen(
-            [sys.executable, "-m", "uvicorn", "app.webapp.server:app",
+            [sys.executable, "-m", "app.webapp.serve",
              "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning",
              "--loop", LOOP_FACTORY],
             cwd=str(ROOT), stdout=log, stderr=subprocess.STDOUT,
