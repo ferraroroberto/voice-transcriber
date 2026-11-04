@@ -18,9 +18,36 @@ import {
 } from './ui.js';
 import { refreshHistory } from './history.js';
 import { setupLevelMeter, teardownLevelMeter } from './level.js';
-import { clearTakeLevel, primeLevelSource, watchTakeLevel } from './mic-notice.js';
+import { createLevelSource } from './_vendored/rec-wave/rec-wave.js';
+import { attachMicNotice } from './_vendored/mic-notice/mic-notice.js';
 import { openPartialStream, closePartialStream } from './partials.js';
 import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
+
+// The take's mic notice (input name, level strip, silent-mic warning) is the
+// vendored mic-notice; this module only owns when it starts and ends.
+let levelSource = null;
+let stopNotice = null;
+
+// Built inside the tap: iOS resumes an AudioContext only within a gesture, and
+// the stream arrives later, after the permission prompt.
+function primeLevelSource() {
+  clearTakeLevel();
+  levelSource = createLevelSource();
+}
+
+function watchTakeLevel(stream) {
+  stopNotice = attachMicNotice(els.micNotice, stream, {
+    source: levelSource || undefined,
+    timer: false,
+    onSilent: () => console.info('[recorder] no sound from the input after the first seconds'),
+  });
+}
+
+// Safe to call at any point, twice, or with no take running.
+function clearTakeLevel() {
+  if (stopNotice) { stopNotice(); stopNotice = null; }
+  if (levelSource) { levelSource.close(); levelSource = null; }
+}
 
 function setMode(m) { state.mode = m; }
 

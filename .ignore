@@ -5,12 +5,15 @@
 /app/webapp/static/_vendored/empty-state
 /app/webapp/static/_vendored/home-head
 /app/webapp/static/_vendored/icon-button
+/app/webapp/static/_vendored/mic-notice
 /app/webapp/static/_vendored/modal
 /app/webapp/static/_vendored/nav
 /app/webapp/static/_vendored/page-foot
 /app/webapp/static/_vendored/rec-wave
+/app/webapp/static/_vendored/row-menu
 /app/webapp/static/_vendored/segmented
 /app/webapp/static/_vendored/select-native
+/app/webapp/static/_vendored/sign-in
 /app/webapp/static/_vendored/switch
 /app/webapp/static/_vendored/text-size
 /app/webapp/static/_vendored/toast
@@ -32,7 +35,9 @@
 /scripts/usage_track_ratchet.py
 /scripts/usage_track_scan.py
 /src/compression.py
+/src/login_lockout.py
 /src/no_window.py
+/src/notify
 /src/runtime_data.py
 /src/usage_log.py
 /tests/e2e/_e2e_live_guard.py

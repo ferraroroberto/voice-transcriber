@@ -368,33 +368,6 @@ html, body {
   text-align: center;
 }
 
-/* The take's input name, live level strip (the vendored rec-wave, which takes
-   this colour) and, when the input carries no sound, the attention banner. */
-.mic-notice {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-xs);
-  width: 100%;
-  max-width: 280px;
-  font-size: var(--font-label);
-  color: var(--muted);
-  text-align: center;
-}
-.mic-notice-input {
-  max-width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-.mic-notice-wave { color: var(--accent); }
-.mic-notice-silent {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--attention);
-  border-radius: var(--radius-sm);
-  color: var(--attention-text);
-  font-weight: 600;
-}
-
 /* Mode toggles (Append, Incognito) and Reset: labelled pills under the
    button. A pressed toggle takes the accent (a mode, not an alarm — tone
    map); at rest the edge is the control-border token (3:1). The pill is
