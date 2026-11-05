@@ -31,6 +31,7 @@ import requests
 
 from .app_config import AppConfig, resolve_iso
 from .disfluency import strip_disfluencies
+from .pooled_http import pooled_request
 from .snippets import apply_snippets
 from .speaker_label import strip_speaker_label
 from .vocabulary import prompt_for_language
@@ -273,7 +274,7 @@ def hub_reachable(base_url: str, timeout: float = 2.0) -> bool:
     means the hub is the one that will serve the request.
     """
     try:
-        requests.get(base_url.rstrip("/") + "/v1/models", timeout=timeout)
+        pooled_request("GET", base_url.rstrip("/") + "/v1/models", timeout=timeout)
         return True
     except requests.RequestException:
         return False
