@@ -25,6 +25,9 @@ from src.no_window import NO_WINDOW
 logger = logging.getLogger(__name__)
 
 DEFAULT_SAMPLE_RATE = 16000
+# ffmpeg transcodes far faster than real time; 15 min covers hours of speech on a
+# loaded box and still frees the request worker if ffmpeg wedges on a bad file.
+FFMPEG_TIMEOUT_S = 900
 
 
 class AudioToolMissing(RuntimeError):
@@ -86,7 +89,10 @@ def transcode_to_wav(
             text=True,
             check=False,
             creationflags=NO_WINDOW,
+            timeout=FFMPEG_TIMEOUT_S,
         )
+    except subprocess.TimeoutExpired:
+        raise AudioTranscodeError(f"ffmpeg timed out after {FFMPEG_TIMEOUT_S}s transcoding {src.name}") from None
     except OSError as exc:
         raise AudioTranscodeError(f"ffmpeg failed to launch: {exc}") from exc
 
