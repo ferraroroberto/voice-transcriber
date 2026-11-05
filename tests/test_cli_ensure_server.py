@@ -46,7 +46,7 @@ def _cmd() -> _Cmd:
 
 
 def test_hub_reachable_proceeds_without_starting_whisper(mocker, stopped_whisper):
-    mocker.patch("src.transcription_client.requests.get")
+    mocker.patch("src.transcription_client.pooled_request")
     ensured = _cmd()._ensure_server(_args())
     assert ensured is not None
     _, spawned_here, status = ensured
@@ -57,7 +57,7 @@ def test_hub_reachable_proceeds_without_starting_whisper(mocker, stopped_whisper
 
 def test_both_down_refuses_and_names_both(mocker, stopped_whisper, caplog):
     mocker.patch(
-        "src.transcription_client.requests.get",
+        "src.transcription_client.pooled_request",
         side_effect=requests.ConnectionError("refused"),
     )
     with caplog.at_level(logging.ERROR):

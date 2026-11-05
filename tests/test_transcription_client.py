@@ -378,12 +378,12 @@ class TestTranscriptionUnavailableReason:
         return AppConfig(transcribe_base_url="http://hub:8000")
 
     def test_hub_up_whisper_down_is_available(self, mocker):
-        mocker.patch("src.transcription_client.requests.get")
+        mocker.patch("src.transcription_client.pooled_request")
         assert transcription_unavailable_reason(self._cfg(), False) is None
 
     def test_whisper_up_hub_down_is_available(self, mocker):
         get = mocker.patch(
-            "src.transcription_client.requests.get",
+            "src.transcription_client.pooled_request",
             side_effect=requests.ConnectionError("refused"),
         )
         assert transcription_unavailable_reason(self._cfg(), True) is None
@@ -391,7 +391,7 @@ class TestTranscriptionUnavailableReason:
 
     def test_both_down_names_both(self, mocker):
         mocker.patch(
-            "src.transcription_client.requests.get",
+            "src.transcription_client.pooled_request",
             side_effect=requests.ConnectionError("refused"),
         )
         reason = transcription_unavailable_reason(self._cfg(), False)
@@ -404,5 +404,5 @@ class TestTranscriptionUnavailableReason:
         # answers (even 5xx) is the endpoint that will serve the request.
         resp = MagicMock(spec=requests.Response)
         resp.status_code = 503
-        mocker.patch("src.transcription_client.requests.get", return_value=resp)
+        mocker.patch("src.transcription_client.pooled_request", return_value=resp)
         assert transcription_unavailable_reason(self._cfg(), False) is None
