@@ -116,7 +116,7 @@ All four hot-reload on mtime change — no restart needed after editing.
 Hotkey uses [`pynput.keyboard.GlobalHotKeys`](https://pynput.readthedocs.io/en/latest/keyboard.html#global-hotkeys)
 syntax: angle-bracketed modifiers + a key, `+`-separated.
 
-## `src/whisper_server/whisper_server.yaml` — server-level
+## `config/whisper_server.yaml` — server-level
 
 The key knob is **`mode`**:
 
@@ -125,7 +125,7 @@ The key knob is **`mode`**:
 | `local`    | **This project owns the server.** If `host:port` is already in use by something else, refuse to start and surface a clear error. Otherwise spawn the bundled `whisper-server`. Stop it on exit. |
 | `external` | **Reuse an already-running server if present** (e.g. one started by the sibling [`local-llm-hub`](https://github.com/ferraroroberto/local-llm-hub) hub). If nothing is listening, spawn our own binary. Never stops a server it didn't start. |
 
-Switch by editing the top of `src/whisper_server/whisper_server.yaml`:
+Switch by editing the top of `config/whisper_server.yaml`:
 
 ```yaml
 mode: external   # or: local
@@ -202,18 +202,18 @@ dir vendor\whisper.cpp\whisper-server.exe
 dir vendor\whisper.cpp\models\ggml-large-v3-turbo.bin
 
 REM 2. Server comes up?
-server.bat start
-server.bat status
+scripts\server.bat start
+scripts\server.bat status
 
 REM 3. Quick record test (tap F8 to start, F8 again to stop)
 tray.bat
 ```
 
-If the server doesn't come up, `server.bat logs` prints what
+If the server doesn't come up, `scripts\server.bat logs` prints what
 `whisper-server` printed on startup (backend, model-load lines, system
 info). The output is kept in `.whisper_server.log` beside the PID file, so
-it stays readable after `server.bat start` exits, and `server.bat stop`
-can stop a server an earlier `server.bat start` launched. A CUDA-backed build will log `whisper_backend_init: using CUDA
+it stays readable after `scripts\server.bat start` exits, and `scripts\server.bat stop`
+can stop a server an earlier `scripts\server.bat start` launched. A CUDA-backed build will log `whisper_backend_init: using CUDA
 backend`; a CPU build logs `whisper_backend_init: using CPU backend`.
 
 ## 🎯 GPU / CPU compatibility

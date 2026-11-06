@@ -9,7 +9,7 @@ description = "Always-on voice→text (F8). Owns whisper :8090."
 chips       = ["whisper :8090"]
 depends_on  = ["local-llm-hub"]
 shape       = "webapp-tray"
-extra_roots = ["webapp"]
+extra_roots = []
 
 # Design-lint findings examined and accepted (schema: fleet-config's
 # architecture/README.md, "[[design.accepted]]"). `detail` is the finding's

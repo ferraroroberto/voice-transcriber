@@ -13,7 +13,7 @@ flowchart TB
     LAUNCHER["launcher.py\nputs repo root on sys.path, dispatches to app.cli.main"]
     TRAYBAT["tray.bat"]
     WEBAPPBAT["webapp.bat -> scripts/run_webapp.py\n/ webapp_tunnel_named.bat -> scripts/run_named_tunnel.py\nboth source the serve argv from WEBAPPMGR's\nbuild_webapp_command"]
-    SERVERBAT["server.bat"]
+    SERVERBAT["scripts/server.bat"]
   end
   TRAYBAT --> LAUNCHER
   WEBAPPBAT --> LAUNCHER
@@ -96,7 +96,7 @@ flowchart TB
     TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by service_supervisor.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen"]
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py, disfluency.py"]
     WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
-    WHISPERYAML["whisper_server/whisper_server.yaml\nport 8090, model path, CLI args"]
+    WHISPERYAML["config/whisper_server.yaml\nport 8090, model path, CLI args"]
     PROCSUP["process_supervisor.py\nshared adopt-or-spawn primitives: TCP probe,\nstop ladder, readiness poll — WHISPERMGR + WEBAPPMGR compose it"]
   end
   WHISPERMGR --> WHISPERYAML
