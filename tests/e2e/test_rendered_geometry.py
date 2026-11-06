@@ -23,9 +23,6 @@ from tests.e2e._geometry import (
 
 pytestmark = pytest.mark.smoke
 
-# The vendored nav owns its geometry: the 44px bottom pill is the phone layout
-# (<=520px); above it the tabs are a top segmented control the app cannot restyle.
-_PHONE_NAV_MAX_WIDTH = 520
 _THEME_KEY = "voice-transcriber.theme"
 # Visible, tappable controls; a checkbox-style switch is a classed <button>, and
 # the hidden inputs the app keeps for state are excluded by :visible.
@@ -78,5 +75,5 @@ def test_panes_fit_and_controls_are_tappable(
         assert controls.count() > 0, f"{name}: no controls found to measure"
         assert_min_target(controls)
         assert_no_overlap(controls)
-        if leg[0] <= _PHONE_NAV_MAX_WIDTH:
-            assert_min_target(page.locator("nav.tabs button"))
+        # The vendored nav keeps its 44px floor on a coarse pointer at every width.
+        assert_min_target(page.locator("nav.tabs button"))
