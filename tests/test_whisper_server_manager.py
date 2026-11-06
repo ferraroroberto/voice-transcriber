@@ -1,6 +1,6 @@
 """WhisperServerManager across process boundaries (#244).
 
-`server.bat` is a fresh process per call, so `stop` / `logs` / `status` must
+`scripts/server.bat` is a fresh process per call, so `stop` / `logs` / `status` must
 work off what the spawning process left on disk (PID file + log file), not
 off in-memory state. A real throwaway listener stands in for whisper-server:
 the interpreter binary is the configured "binary" and it binds the port.

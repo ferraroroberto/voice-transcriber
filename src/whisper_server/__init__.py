@@ -2,7 +2,7 @@
 
 This subpackage owns the local whisper.cpp server lifecycle: starting,
 stopping, health-checking, and describing the model that's serving. The
-sibling `whisper_server.yaml` is the single source of truth for paths,
+`config/whisper_server.yaml` is the single source of truth for paths,
 port, CLI args, and the `mode` (local vs external).
 """
 

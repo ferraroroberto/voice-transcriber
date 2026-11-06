@@ -3,11 +3,9 @@
   "band": {"files": 0, "functions": 2},
   "root_extras": [],
   "shape_contract": {
-    "root_files": ["__init__.py", "server.bat"],
-    "redundant": ["webapp/"],
-    "folder_types": {
-      "src/whisper_server": 1
-    }
+    "root_files": [],
+    "redundant": [],
+    "folder_types": {}
   },
   "entries": []
 }

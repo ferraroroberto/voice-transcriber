@@ -1,6 +1,6 @@
 """Whisper-server process manager — mirrors `local-llm-hub/src/backend_process.py`.
 
-One singleton process per project, keyed by the sibling `whisper_server.yaml`.
+One singleton process per project, keyed by `config/whisper_server.yaml`.
 The port is fixed, so the OS guarantees mutual exclusion: if another project
 (or a manual run) already holds the port, `start()` returns cleanly with
 `already running (external)` and ownership is reported as EXTERNAL — the
@@ -292,16 +292,16 @@ def _resolve_binary(project_root: Path, raw: str) -> Path:
 
 
 def load_config(config_path: Optional[Path] = None) -> ServerConfig:
-    """Load `whisper_server.yaml` from next to this file (or an override).
+    """Load `config/whisper_server.yaml` from the project root (or an override).
 
-    The project root is the directory containing the `whisper_server/` folder.
+    The project root is the directory containing `src/`.
     """
+    project_root = Path(__file__).resolve().parent.parent.parent
     if config_path is None:
-        config_path = Path(__file__).resolve().parent / "whisper_server.yaml"
+        config_path = project_root / "config" / "whisper_server.yaml"
     else:
         config_path = Path(config_path).resolve()
 
-    project_root = Path(__file__).resolve().parent.parent.parent
     raw: Dict[str, Any] = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
 
     server = raw.get("server") or {}
@@ -434,8 +434,8 @@ class WhisperServerManager:
 
         try:
             # Output goes to a file the child owns outright, so it outlives
-            # this process (`server.bat start` exits right after spawning)
-            # and `server.bat logs` / `status` can read it later.
+            # this process (`scripts/server.bat start` exits right after spawning)
+            # and `scripts/server.bat logs` / `status` can read it later.
             log_handle = open(self.config.log_file, "wb")
         except OSError as e:
             raise RuntimeError(
@@ -476,7 +476,7 @@ class WhisperServerManager:
         """Stop the server we started. Never touches an EXTERNAL server.
 
         "We started" includes an earlier process of this project (e.g. a
-        previous `server.bat start`): the PID file it wrote identifies it.
+        previous `scripts/server.bat start`): the PID file it wrote identifies it.
         """
         status = self.status()
         if status.ownership == OWNERSHIP_EXTERNAL:

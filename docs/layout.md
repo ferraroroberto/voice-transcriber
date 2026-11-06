@@ -9,7 +9,6 @@ voice-transcriber/
 ├── tray.bat                       # default daily launcher (boots whisper + webapp + Cloudflare tunnel)
 ├── webapp.bat                     # standalone FastAPI webapp launcher (no tunnel)
 ├── webapp_tunnel_named.bat        # webapp + named Cloudflare tunnel, no tray (headless use)
-├── server.bat                     # raw server start|stop|status|logs
 ├── requirements.txt
 ├── .gitignore
 ├── src/                           # ── LOGIC layer (no UI imports) ──
@@ -41,8 +40,7 @@ voice-transcriber/
 │   ├── probe_cache.py             # background-refreshed cache for slow reachability probes (/api/status)
 │   ├── process_supervisor.py      # shared adopt-or-spawn primitives (whisper + webapp managers)
 │   └── whisper_server/
-│       ├── manager.py             # spawn / kill / health / PID / describe
-│       └── whisper_server.yaml    # mode, paths, port, CLI args
+│       └── manager.py             # spawn / kill / health / PID / describe
 ├── app/                           # ── UI surfaces ──
 │   ├── cli/
 │   │   ├── main.py                # argparse dispatcher
@@ -91,6 +89,7 @@ voice-transcriber/
 │   └── cloudflared.sample.yml     # committed template for the gitignored webapp/cloudflared.yml (named tunnel)
 ├── config/
 │   ├── config.json                # app config (language, hotkey, mics, webapp section)
+│   ├── whisper_server.yaml        # whisper-server mode, paths, port, CLI args
 │   ├── polish_prompts.json        # committed — polish-style library (system prompts)
 │   ├── webapp_config.json         # gitignored — polish model/style, retention, mic prefs
 │   └── webapp_config.sample.json  # committed schema example
@@ -109,6 +108,7 @@ voice-transcriber/
 │   ├── iphone-debugging.md        # iOS PWA / cert troubleshooting
 │   └── market-scan/               # market research notes
 ├── scripts/
+│   ├── server.bat                 # raw whisper-server start|stop|status|logs
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF
 │   ├── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
@@ -146,7 +146,6 @@ voice-transcriber/
 
 ## Exceptions
 
-Each is declared once in `.fleet.toml` and here; none is debt.
+No folder is declared in `extra_roots`; the `webapp-tray` preset already lists `webapp/` (the committed `cloudflared.sample.yml` template; the tray reads the gitignored `webapp/cloudflared.yml` copied from it, path in `app/tray/tray.py`, steps in `docs/remote-access.md`).
 
-- `webapp/` (`extra_roots` in `.fleet.toml`): the committed `cloudflared.sample.yml` template; the tray reads the gitignored `webapp/cloudflared.yml` copied from it (path in `app/tray/tray.py`, steps in `docs/remote-access.md`). The `webapp-tray` preset lists no such root, and moving the path would break existing installs' tunnel setup, so the folder stays.
 - The baseline `.structure-ratchet-baseline.json` is empty: no file, function or directory is over its limit, so any new offender fails the gate. The webapp API tests live in `tests/webapp/` to keep `tests/` under the module limit.
