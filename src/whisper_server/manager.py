@@ -436,6 +436,7 @@ class WhisperServerManager:
             # Output goes to a file the child owns outright, so it outlives
             # this process (`scripts/server.bat start` exits right after spawning)
             # and `scripts/server.bat logs` / `status` can read it later.
+            # runtime-write-exempt: log file path comes from the whisper-server config (runtime log, read by server.bat)
             log_handle = open(self.config.log_file, "wb")
         except OSError as e:
             raise RuntimeError(
@@ -670,6 +671,7 @@ class WhisperServerManager:
 
     def _write_pid_file(self, pid: int) -> None:
         try:
+            # runtime-write-exempt: pid file path comes from the whisper-server config (runtime pid file, read by server.bat)
             self.config.pid_file.write_text(str(pid), encoding="utf-8")
         except OSError as e:
             logger.warning(f"⚠️  Could not write PID file {self.config.pid_file}: {e}")

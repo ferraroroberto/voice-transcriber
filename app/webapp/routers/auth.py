@@ -89,7 +89,9 @@ def ensure_log_handler() -> None:
     ):
         return
     try:
+        # runtime-write-exempt: _AUTH_LOG_PATH is <repo>/webapp/auth.log, a runtime log outside the code folders
         _AUTH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        # runtime-write-exempt: _AUTH_LOG_PATH is <repo>/webapp/auth.log, a runtime log outside the code folders
         fh = logging.FileHandler(_AUTH_LOG_PATH, encoding="utf-8")
         fh.setLevel(logging.INFO)
         fh.setFormatter(

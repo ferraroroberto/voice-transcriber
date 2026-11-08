@@ -142,6 +142,7 @@ class Session:
         mid-recording never loses data.
         """
         path = self.folder / RAW_AUDIO_FILENAME
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         with path.open("ab") as fh:
             fh.write(chunk)
         size = path.stat().st_size
@@ -150,11 +151,13 @@ class Session:
 
     def write_wav(self, wav_bytes: bytes) -> Path:
         path = self.folder / WAV_AUDIO_FILENAME
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         path.write_bytes(wav_bytes)
         return path
 
     def write_transcript(self, text: str) -> Path:
         path = self.folder / TRANSCRIPT_FILENAME
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         path.write_text(text, encoding="utf-8")
         self.meta.transcript_chars = len(text)
         return path
@@ -167,13 +170,16 @@ class Session:
         response_payload: dict,
         prompt_id: Optional[str] = None,
     ) -> Path:
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         (self.folder / POLISHED_FILENAME).write_text(
             polished_text, encoding="utf-8"
         )
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         (self.folder / POLISH_REQUEST_FILENAME).write_text(
             json.dumps(request_payload, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         (self.folder / POLISH_RESPONSE_FILENAME).write_text(
             json.dumps(response_payload, indent=2, ensure_ascii=False),
             encoding="utf-8",
@@ -196,6 +202,7 @@ class Session:
 
     def write_meta(self) -> Path:
         path = self.folder / META_FILENAME
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         path.write_text(
             json.dumps(asdict(self.meta), indent=2, ensure_ascii=False),
             encoding="utf-8",
@@ -228,6 +235,7 @@ class SessionArchive:
 
     def __init__(self, root: Optional[Path] = None) -> None:
         self.root = Path(root) if root is not None else DEFAULT_ARCHIVE_DIR
+        # runtime-write-exempt: archive root is <repo>/archive or a caller-supplied dir, outside the code folders
         self.root.mkdir(parents=True, exist_ok=True)
 
     # ------------------------------------------------------ create / lookup
@@ -249,6 +257,7 @@ class SessionArchive:
             / ts.strftime("%d")
             / session_id
         )
+        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
         folder.mkdir(parents=True, exist_ok=True)
 
         meta = SessionMeta(

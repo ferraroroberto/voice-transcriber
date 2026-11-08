@@ -99,6 +99,7 @@ def main() -> int:
     )
 
     out_dir: Path = args.out_dir
+    # runtime-write-exempt: operator-chosen certificate output directory from --out-dir
     out_dir.mkdir(parents=True, exist_ok=True)
 
     hostnames = _local_hostnames()
@@ -130,14 +131,18 @@ def main() -> int:
 
     profile_bytes = _build_mobileconfig(ca_cert)
     profile_path = out_dir / MOBILECONFIG_FILENAME
+    # runtime-write-exempt: operator-chosen certificate output directory from --out-dir
     profile_path.write_bytes(profile_bytes)
     logger.info(f"📱 wrote {profile_path}")
 
     # Mirror into the static dir so the webapp can serve it at /install-ca.
+    # runtime-write-exempt: the webapp serves the CA profile from its static dir at /install-ca; relocating it changes a live served path
     STATIC_DIR.mkdir(parents=True, exist_ok=True)
     static_profile = STATIC_DIR / MOBILECONFIG_FILENAME
+    # runtime-write-exempt: the webapp serves the CA profile from its static dir at /install-ca; relocating it changes a live served path
     static_profile.write_bytes(profile_bytes)
     static_ca = STATIC_DIR / "ca.crt"
+    # runtime-write-exempt: the webapp serves the CA root from its static dir for device install; relocating it changes a live served path
     static_ca.write_bytes(ca_cert.public_bytes(serialization.Encoding.DER))
     logger.info(f"📱 mirrored profile → {static_profile}")
     logger.info(f"🤖 wrote Android-friendly DER → {static_ca}")
@@ -356,6 +361,7 @@ def _build_leaf(ca_key, ca_cert, hostnames: Set[str], ips: Set[ipaddress.IPv4Add
 
 
 def _write_pem(path: Path, blob: bytes) -> None:
+    # runtime-write-exempt: PEM destination is the operator-chosen certificate output directory
     path.write_bytes(blob)
     logger.info(f"💾 wrote {path}")
 

@@ -122,6 +122,7 @@ async def upload_and_transcribe(
         raise HTTPException(status_code=400, detail="empty upload")
 
     raw_path = session.raw_path()
+    # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
     raw_path.write_bytes(raw_bytes)
     session.meta.raw_bytes = len(raw_bytes)
     session.meta.raw_format = file.content_type or "audio/webm;codecs=opus"
