@@ -6,8 +6,8 @@ nothing in here imports any UI framework. See `CLAUDE.md` for the
 """
 
 from .app_config import (
-    AppConfig,
     WHISPER_LANGUAGES,
+    AppConfig,
     load_app_config,
     resolve_iso,
 )

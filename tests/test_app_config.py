@@ -10,13 +10,12 @@ import pytest
 
 # Local imports
 from src.app_config import (
-    AppConfig,
     VALID_LOG_LEVELS,
     WHISPER_LANGUAGES,
+    AppConfig,
     load_app_config,
     resolve_iso,
 )
-
 
 # ---------------------------------------------------------------------------
 # resolve_iso — language name normalisation

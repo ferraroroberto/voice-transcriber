@@ -17,6 +17,7 @@ from src import (
 )
 from src.recording_pipeline import TakeResult, handle_take
 from src.webapp_config import load_webapp_config
+
 from .base import BaseCommand, language_type
 
 logger = logging.getLogger(__name__)

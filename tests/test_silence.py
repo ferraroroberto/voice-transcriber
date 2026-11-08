@@ -22,7 +22,6 @@ from src.silence import (
     rms_dbfs_from_wav,
 )
 
-
 # ---------------------------------------------------------------------------
 # rms_dbfs_from_samples — covers None/empty/int16/float/odd dtype.
 # ---------------------------------------------------------------------------

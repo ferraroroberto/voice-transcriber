@@ -16,6 +16,7 @@ import logging
 import sys
 
 from src import attach_app_log_handler, load_app_config
+
 from .commands import COMMANDS, get_command
 
 logger = logging.getLogger(__name__)

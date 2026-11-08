@@ -12,15 +12,17 @@ from typing import Any, Dict
 # Third-party imports
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 
+from app.webapp.audio import find_ffmpeg
+from app.webapp.routers._helpers import (
+    PROJECT_ROOT,
+    adopt_webapp_config,
+    current_webapp_config,
+    maybe_json,
+)
 from src.app_config import resolve_iso
 from src.polish_prompts import load_polish_prompts
 from src.probe_cache import ProbeCache
 from src.webapp_config import WebappConfig, config_to_client_dict, update_webapp_config
-
-from app.webapp.audio import find_ffmpeg
-from app.webapp.routers._helpers import (
-    PROJECT_ROOT, adopt_webapp_config, current_webapp_config, maybe_json,
-)
 
 router = APIRouter()
 

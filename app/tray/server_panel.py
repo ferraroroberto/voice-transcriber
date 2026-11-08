@@ -16,6 +16,7 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
+
 from .diagnostics_window import DiagnosticsWindow
 
 logger = logging.getLogger(__name__)

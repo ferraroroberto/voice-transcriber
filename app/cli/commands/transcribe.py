@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 
 from src import TranscriptionError, build_transcription_client
+
 from .base import BaseCommand, language_type
 
 logger = logging.getLogger(__name__)

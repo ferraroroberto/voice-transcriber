@@ -37,14 +37,15 @@ from typing import Optional
 
 # Third-party imports
 import pyperclip
-from PIL import Image
 import pystray
+from PIL import Image
 
 try:
     from winotify import Notification as _WinToast  # type: ignore
 except ImportError:  # non-Windows or package missing
     _WinToast = None
 
+from app.tray.single_instance import SingleInstance
 from src import (
     AppConfig,
     AudioRecorder,
@@ -57,7 +58,7 @@ from src.mic_glyph import draw_mic
 from src.recorder import Recording
 from src.recording_pipeline import handle_take
 from src.webapp_config import append_auth_token, load_webapp_config
-from app.tray.single_instance import SingleInstance
+
 from .app import TranscriberApp
 from .hotkey_controller import HotkeyController
 from .recording_popup import RecordingPopup

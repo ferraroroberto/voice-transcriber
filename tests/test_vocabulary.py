@@ -85,7 +85,8 @@ class TestPromptForLanguage:
 
 class TestCacheReload:
     def test_cache_hot_reloads_on_mtime_change(self, isolate_vocab):
-        import os, time
+        import os
+        import time
         _write(isolate_vocab, {"en": ["one"]})
         # First call primes the cache.
         assert vocab.prompt_for_language("en") == "one"

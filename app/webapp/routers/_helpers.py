@@ -14,7 +14,9 @@ from typing import Any, Dict
 from fastapi import FastAPI, Request
 
 from src.webapp_config import (
-    WebappConfig, config_mtime, reload_if_changed,
+    WebappConfig,
+    config_mtime,
+    reload_if_changed,
 )
 
 # routers/_helpers.py → routers → webapp → app → repo root.

@@ -24,13 +24,12 @@ from typing import Any, Callable, Dict, Optional
 # Third-party imports
 from fastapi import APIRouter, HTTPException, Request
 
+from app.webapp.middleware import is_pc_itself
+from app.webapp.routers._helpers import PROJECT_ROOT, current_webapp_config, maybe_json
 from src.login_lockout import LockoutAlert, LoginLockout, retry_after_header
 from src.notify import Notifier, NotifierError, TelegramConfig, build_notifier
 from src.secret_compare import secrets_equal
 from src.webapp_config import WebappConfig
-
-from app.webapp.middleware import is_pc_itself
-from app.webapp.routers._helpers import PROJECT_ROOT, current_webapp_config, maybe_json
 
 logger = logging.getLogger(__name__)
 

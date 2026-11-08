@@ -14,7 +14,8 @@ against which dictation is compared. Both are ``None`` when there is no
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, time as dtime
+from datetime import datetime
+from datetime import time as dtime
 from typing import Optional
 
 from src import activity_log

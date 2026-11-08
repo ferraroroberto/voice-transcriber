@@ -26,21 +26,22 @@ if TYPE_CHECKING:
 
 # Third-party imports
 import pyperclip
-from pynput import keyboard
 import sounddevice as sd
+from pynput import keyboard
 
 from src import (
     AppConfig,
     AudioRecorder,
-    resolve_iso,
     TranscriptionError,
     build_transcription_client,
+    resolve_iso,
     transcription_unavailable_reason,
 )
 from src.gain import MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
 from src.recording_pipeline import finalize_transcript, handle_take
 from src.webapp_config import load_webapp_config, update_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
+
 from .polish_panel import PolishPanel
 from .recording_popup import RecordingPopup
 from .server_panel import ServerPanel
