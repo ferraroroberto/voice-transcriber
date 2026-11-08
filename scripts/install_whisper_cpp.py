@@ -200,6 +200,7 @@ def _download(url: str, dest: Path) -> None:
         total = int(resp.headers.get("Content-Length") or 0)
         downloaded = 0
         next_pct = 5
+        # runtime-write-exempt: download destination under the operator-chosen whisper.cpp install root
         with dest.open("wb") as out:
             while True:
                 chunk = resp.read(1024 * 1024)
@@ -234,6 +235,7 @@ def _flatten_if_nested(root: Path) -> None:
     if len(entries) == 1 and entries[0].is_dir():
         nested = entries[0]
         for child in list(nested.iterdir()):
+            # runtime-write-exempt: flattens the extracted archive inside the operator-chosen whisper.cpp install root
             shutil.move(str(child), str(root / child.name))
         nested.rmdir()
 
@@ -254,6 +256,7 @@ def _lift_binary_and_dlls(root: Path) -> None:
             target = root / sibling.name
             if target.exists():
                 continue
+            # runtime-write-exempt: moves release siblings inside the operator-chosen whisper.cpp install root
             shutil.move(str(sibling), str(target))
         try:
             bin_dir.rmdir()

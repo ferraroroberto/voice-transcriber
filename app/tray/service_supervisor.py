@@ -19,6 +19,8 @@ import time
 from pathlib import Path
 from typing import Callable, Optional
 
+from app.webapp.manager import WebappManager
+from app.webapp.manager import load_config as load_webapp_runtime_config
 from src import AppConfig
 from src.process_supervisor import stop_popen
 from src.tunnel import (
@@ -31,7 +33,6 @@ from src.tunnel import (
 )
 from src.webapp_config import load_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
-from app.webapp.manager import WebappManager, load_config as load_webapp_runtime_config
 
 logger = logging.getLogger(__name__)
 

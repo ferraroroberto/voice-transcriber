@@ -6,9 +6,10 @@ from __future__ import annotations
 # Standard library imports
 from datetime import datetime
 
+from app.webapp.routers.sessions import humanize_backend_id
+
 # Local imports
 from src.polish import PolishError, PolishResult
-from app.webapp.routers.sessions import humanize_backend_id
 
 
 class TestHumanizeBackendId:

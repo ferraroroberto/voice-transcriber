@@ -16,9 +16,8 @@ from typing import Any, Dict
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, Response
 
-from src.static_versioning import BuildInfo
-
 from app.webapp.routers._helpers import STATIC_DIR
+from src.static_versioning import BuildInfo
 
 logger = logging.getLogger(__name__)
 

@@ -24,13 +24,12 @@ from typing import Any, Callable, Dict, Optional
 # Third-party imports
 from fastapi import APIRouter, HTTPException, Request
 
+from app.webapp.middleware import is_pc_itself
+from app.webapp.routers._helpers import PROJECT_ROOT, current_webapp_config, maybe_json
 from src.login_lockout import LockoutAlert, LoginLockout, retry_after_header
 from src.notify import Notifier, NotifierError, TelegramConfig, build_notifier
 from src.secret_compare import secrets_equal
 from src.webapp_config import WebappConfig
-
-from app.webapp.middleware import is_pc_itself
-from app.webapp.routers._helpers import PROJECT_ROOT, current_webapp_config, maybe_json
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +89,9 @@ def ensure_log_handler() -> None:
     ):
         return
     try:
+        # runtime-write-exempt: _AUTH_LOG_PATH is <repo>/webapp/auth.log, a runtime log outside the code folders
         _AUTH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        # runtime-write-exempt: _AUTH_LOG_PATH is <repo>/webapp/auth.log, a runtime log outside the code folders
         fh = logging.FileHandler(_AUTH_LOG_PATH, encoding="utf-8")
         fh.setLevel(logging.INFO)
         fh.setFormatter(

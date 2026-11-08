@@ -133,9 +133,10 @@ class TestPolishHelpers:
         assert _resolve_model("claude_opus", cfg) == "claude_opus"
 
     def test_resolve_model_rejects_unknown(self, webapp_client, sample_polish_payload):
-        from app.webapp.routers.sessions import _resolve_model
-        from fastapi import HTTPException
         import pytest
+        from fastapi import HTTPException
+
+        from app.webapp.routers.sessions import _resolve_model
         cfg = MagicMock()
         cfg.polish_model_default = sample_polish_payload["polish_model_default"]
         cfg.polish_models_available = sample_polish_payload["polish_models_available"]

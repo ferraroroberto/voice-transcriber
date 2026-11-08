@@ -153,8 +153,8 @@ class WebappManager:
         self._session.verify = False  # self-signed cert in HTTPS mode
         # Suppress requests' "InsecureRequestWarning" for the self-signed loopback probe.
         try:
-            from urllib3.exceptions import InsecureRequestWarning
             import urllib3
+            from urllib3.exceptions import InsecureRequestWarning
             urllib3.disable_warnings(InsecureRequestWarning)
         except Exception:
             pass

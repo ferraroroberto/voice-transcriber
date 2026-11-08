@@ -79,7 +79,9 @@ def _connect(path: Optional[Path] = None) -> Iterator[sqlite3.Connection]:
     one or two events per process.
     """
     target = Path(path) if path is not None else DEFAULT_DB_PATH
+    # runtime-write-exempt: db path is the runtime database path (runtime_db_path) or a caller-supplied path, never a code folder
     target.parent.mkdir(parents=True, exist_ok=True)
+    # runtime-write-exempt: db path is the runtime database path (runtime_db_path) or a caller-supplied path, never a code folder
     conn = sqlite3.connect(str(target), timeout=10)
     conn.row_factory = sqlite3.Row
     try:

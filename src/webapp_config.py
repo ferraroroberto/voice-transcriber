@@ -222,11 +222,13 @@ def _field_value(cfg: WebappConfig, name: str) -> Any:
 def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
     """Atomically write the config back to disk."""
     target = Path(path) if path is not None else DEFAULT_CONFIG_PATH
+    # runtime-write-exempt: config path is the live webapp_config.json or a caller-supplied path, under config/
     target.parent.mkdir(parents=True, exist_ok=True)
 
     payload = {f.name: _field_value(cfg, f.name) for f in fields(WebappConfig)}
 
     tmp = target.with_suffix(target.suffix + ".tmp")
+    # runtime-write-exempt: config path is the live webapp_config.json or a caller-supplied path, under config/
     tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
     os.replace(tmp, target)
     logger.info(f"💾 Saved webapp_config to {target}")

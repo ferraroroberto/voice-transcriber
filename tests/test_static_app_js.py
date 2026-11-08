@@ -27,7 +27,6 @@ import pytest
 
 from src.no_window import NO_WINDOW
 
-
 STATIC_DIR = Path(__file__).resolve().parent.parent / "app" / "webapp" / "static"
 
 

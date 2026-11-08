@@ -16,18 +16,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Third-party imports
-from fastapi import APIRouter, File, FastAPI, HTTPException, Request, UploadFile
+from fastapi import APIRouter, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
-
-from src.app_config import resolve_iso
-from src import TranscriptionClient, TranscriptionError
-from src import activity_log
-from src.archive import SessionArchive, parse_created_at
-from src.gain import apply_gain_to_wav
-from src.polish import PolishClient, PolishError
-from src.polish_prompts import PolishPrompt, get_prompt
-from src.silence import is_silent_wav
-from src.webapp_config import WebappConfig
 
 from app.webapp.audio import (
     AudioToolMissing,
@@ -37,6 +27,14 @@ from app.webapp.audio import (
 )
 from app.webapp.partial_worker import PartialWorker, encode_sse
 from app.webapp.routers._helpers import current_webapp_config, maybe_json
+from src import TranscriptionClient, TranscriptionError, activity_log
+from src.app_config import resolve_iso
+from src.archive import SessionArchive, parse_created_at
+from src.gain import apply_gain_to_wav
+from src.polish import PolishClient, PolishError
+from src.polish_prompts import PolishPrompt, get_prompt
+from src.silence import is_silent_wav
+from src.webapp_config import WebappConfig
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +122,7 @@ async def upload_and_transcribe(
         raise HTTPException(status_code=400, detail="empty upload")
 
     raw_path = session.raw_path()
+    # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
     raw_path.write_bytes(raw_bytes)
     session.meta.raw_bytes = len(raw_bytes)
     session.meta.raw_format = file.content_type or "audio/webm;codecs=opus"

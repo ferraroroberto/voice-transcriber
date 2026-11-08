@@ -44,6 +44,7 @@ def main() -> int:
         return 1
 
     dest = Path(args.dest).resolve()
+    # runtime-write-exempt: operator-chosen model directory from --dest, not a code folder
     dest.mkdir(parents=True, exist_ok=True)
     expected = dest / args.model
     if expected.exists():

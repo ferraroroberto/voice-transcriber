@@ -7,6 +7,7 @@ import argparse
 import logging
 
 from src.whisper_server import WhisperServerManager
+
 from .base import BaseCommand
 
 logger = logging.getLogger(__name__)

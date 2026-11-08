@@ -35,7 +35,6 @@ from src.webapp_config import (
     update_webapp_config,
 )
 
-
 # ---------------------------------------------------------------------------
 # Source-of-truth contract: no model-name literals in Python.
 # ---------------------------------------------------------------------------
@@ -386,6 +385,7 @@ class TestReloadIfChanged:
     def test_rewritten_file_is_reloaded(self, tmp_path):
         import os
         from dataclasses import replace
+
         from src.webapp_config import config_mtime, reload_if_changed
 
         path = tmp_path / "webapp_config.json"

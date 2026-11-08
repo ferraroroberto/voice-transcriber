@@ -15,12 +15,12 @@ import pytest
 # Local imports
 from src.archive import (
     META_FILENAME,
-    POLISHED_FILENAME,
     POLISH_REQUEST_FILENAME,
     POLISH_RESPONSE_FILENAME,
+    POLISHED_FILENAME,
     RAW_AUDIO_FILENAME,
-    SessionArchive,
     TRANSCRIPT_FILENAME,
+    SessionArchive,
 )
 
 

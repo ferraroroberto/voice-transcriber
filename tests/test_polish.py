@@ -17,7 +17,6 @@ from src.polish import (
     _extract_text,
 )
 
-
 # ---------------------------------------------------------------------------
 # _extract_text — strips <think> blocks and pulls the assistant message.
 # ---------------------------------------------------------------------------

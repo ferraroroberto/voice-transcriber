@@ -44,8 +44,17 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
-from src import build_transcription_client, load_app_config
-from src import activity_log
+from app.webapp.audio import find_ffmpeg
+from app.webapp.middleware import BearerTokenMiddleware
+from app.webapp.partial_worker import PartialWorker
+from app.webapp.routers import activity, analytics, auth, config, misc, sessions
+from app.webapp.routers._helpers import (
+    PROJECT_ROOT,
+    STATIC_DIR,
+    adopt_webapp_config,
+    current_webapp_config,
+)
+from src import activity_log, build_transcription_client, load_app_config
 from src.archive import SessionArchive
 from src.compression import StreamSafeGZipMiddleware
 from src.login_lockout import LoginLockout
@@ -55,14 +64,6 @@ from src.static_versioning import BuildInfo
 from src.usage_log import usage_router
 from src.webapp_config import WebappConfig, load_webapp_config, text_retention_days
 from src.whisper_server import WhisperServerManager
-
-from app.webapp.audio import find_ffmpeg
-from app.webapp.middleware import BearerTokenMiddleware
-from app.webapp.partial_worker import PartialWorker
-from app.webapp.routers import activity, analytics, auth, config, misc, sessions
-from app.webapp.routers._helpers import (
-    PROJECT_ROOT, STATIC_DIR, adopt_webapp_config, current_webapp_config,
-)
 
 logger = logging.getLogger(__name__)
 

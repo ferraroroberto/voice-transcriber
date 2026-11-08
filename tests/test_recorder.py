@@ -20,7 +20,6 @@ import pytest
 from src import recorder as recorder_module
 from src.recorder import AudioRecorder, RecordingError
 
-
 MIC_INFO = {"name": "USB Mic (on hub)", "max_input_channels": 1}
 
 

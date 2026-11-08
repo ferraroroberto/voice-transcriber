@@ -60,12 +60,12 @@ import subprocess
 import sys
 import tempfile
 import time
-import urllib3
 from pathlib import Path
 from typing import IO, Iterator, Optional
 
 import pytest
 import requests
+import urllib3
 from playwright.sync_api import BrowserContext, Page
 
 from app.webapp.event_loop import LOOP_FACTORY

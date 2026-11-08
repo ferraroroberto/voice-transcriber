@@ -208,6 +208,7 @@ class PartialWorker:
         # actively-appending raw.webm isn't read mid-write by ffmpeg.
         snap_raw = self.session.folder / "partial_raw.webm"
         try:
+            # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
             shutil.copyfile(raw_path, snap_raw)
         except OSError as exc:
             logger.warning(f"⚠️  could not snapshot raw audio: {exc}")
@@ -240,6 +241,7 @@ class PartialWorker:
         self.last_bytes_at_partial = size
 
         try:
+            # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
             (self.session.folder / "transcript_partial.txt").write_text(
                 text, encoding="utf-8"
             )

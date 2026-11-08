@@ -128,7 +128,9 @@ def persist_tunnel_url(hostname: str, url_file: Path) -> None:
     if token:
         url = append_auth_token(url, token)
     try:
+        # runtime-write-exempt: url_file is the tunnel-URL file the launcher hub reads; its location is caller-configured
         url_file.parent.mkdir(parents=True, exist_ok=True)
+        # runtime-write-exempt: url_file is the tunnel-URL file the launcher hub reads; its location is caller-configured
         url_file.write_text(url + "\n", encoding="utf-8")
         logger.info(f"📡 Tunnel URL → {url_file}")
         logger.info(f"   {url}")

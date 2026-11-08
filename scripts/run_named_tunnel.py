@@ -43,6 +43,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
+from _no_window import no_window_kwargs  # noqa: E402
+from _utf8 import reconfigure_utf8_streams  # noqa: E402
+
 from app.webapp.manager import build_webapp_command, cert_paths  # noqa: E402
 from src.process_supervisor import stop_popen  # noqa: E402
 from src.tunnel import (  # noqa: E402
@@ -54,8 +57,6 @@ from src.tunnel import (  # noqa: E402
     remove_tunnel_url_file,
     spawn_cloudflared,
 )
-from _no_window import no_window_kwargs  # noqa: E402
-from _utf8 import reconfigure_utf8_streams  # noqa: E402
 
 logger = logging.getLogger("run_named_tunnel")
 

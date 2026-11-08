@@ -1,4 +1,4 @@
-# Pre-ship gate on CI (issue #39).
+# Pre-ship gate on CI.
 #
 # Runs the exact same gate as the local `scripts/verify-before-ship.ps1` so the
 # checks run without relying on the developer remembering. The local gate stays
