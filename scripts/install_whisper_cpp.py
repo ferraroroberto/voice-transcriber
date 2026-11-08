@@ -19,7 +19,6 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import shutil
 import subprocess
 import sys
 import tarfile
@@ -34,6 +33,8 @@ from typing import Iterable, List, Optional
 # (e.g. a test using importlib.util.spec_from_file_location), which doesn't.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _no_window import no_window_kwargs  # noqa: E402
+
+from src import runtime_files  # noqa: E402  (_no_window put the repo root on sys.path)
 
 log = logging.getLogger(__name__)
 
@@ -200,8 +201,7 @@ def _download(url: str, dest: Path) -> None:
         total = int(resp.headers.get("Content-Length") or 0)
         downloaded = 0
         next_pct = 5
-        # runtime-write-exempt: download destination under the operator-chosen whisper.cpp install root
-        with dest.open("wb") as out:
+        with runtime_files.open_for_write(dest, "wb") as out:
             while True:
                 chunk = resp.read(1024 * 1024)
                 if not chunk:
@@ -235,8 +235,7 @@ def _flatten_if_nested(root: Path) -> None:
     if len(entries) == 1 and entries[0].is_dir():
         nested = entries[0]
         for child in list(nested.iterdir()):
-            # runtime-write-exempt: flattens the extracted archive inside the operator-chosen whisper.cpp install root
-            shutil.move(str(child), str(root / child.name))
+            runtime_files.move(child, root / child.name)
         nested.rmdir()
 
 
@@ -256,8 +255,7 @@ def _lift_binary_and_dlls(root: Path) -> None:
             target = root / sibling.name
             if target.exists():
                 continue
-            # runtime-write-exempt: moves release siblings inside the operator-chosen whisper.cpp install root
-            shutil.move(str(sibling), str(target))
+            runtime_files.move(sibling, target)
         try:
             bin_dir.rmdir()
         except OSError:

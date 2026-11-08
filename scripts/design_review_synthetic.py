@@ -1,4 +1,4 @@
-"""Throwaway webapp for ``/design-review``'s synthetic and ``--e2e`` runs (#297).
+"""Throwaway webapp for ``/design-review``'s synthetic and ``--e2e`` runs.
 
 ``[design.review.synthetic]`` in ``.fleet.toml`` runs this with the repo's venv
 python, from the repo root. It boots the same disposable webapp the e2e suite's

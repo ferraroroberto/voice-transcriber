@@ -11,8 +11,6 @@ See `README.md` for setup and usage; it indexes the topic docs under `docs/` (la
 
 **Design inventory (fleet-config#1383):** every surface an e2e test opens carries `surface(page, "<tab>.<surface>")` (vendored `tests/e2e/_surface.py`, `[vendored] surface_capture`; `[design.review] theme_storage_key` lets it flip this app's explicit theme). It is inert on every normal run. `/design-review measure voice-transcriber --e2e` arms it on the disposable instance `scripts/design_review_synthetic.py` boots (declared in `.fleet.toml [design.review.synthetic]`; the suite runs with `--e2e-autoboot` so the live-tray guard never fires) and keeps only the tests whose **own body** calls `surface(`. Put the call **after** the test's assertions: the capture flips the theme in place and a colour transition in flight reads as the other theme to a later computed-style assertion. Where both projections run, the first one to reach a surface wins (Chromium desktop).
 
-**CI:** the `e2e` workflow's typical green run is ~2m35s; investigate at >6 min; the job self-caps at `timeout-minutes: 15`.
-
 The pre-ship gate also runs eight ratchets: vendored `scripts/<name>_ratchet.py`, rules in `.fleet.toml [<name>_ratchet]`, baseline `.<name-with-hyphens>-ratchet-baseline.json` (e.g. `.doc-refs-ratchet-baseline.json`). All read the whole tree, so none is path-routed; all but structure run through `python -m scripts.<name>_ratchet_gate` (structure runs the script directly); exit 3 (a detector could not run, or a file could not be read, parsed, scanned or measured) fails as NOT CONFIRMED, never a pass or a skip. Fix at the source rather than baselining; shrink a baseline in the PR that removes the debt (`--update-baseline`); adding needs `--allow-additions` and shows in review.
 - **static**: a duplicate block (jscpd via `npx`, so Node is a prerequisite) or a ruff finding (unused import/variable `F401,F841`, bugbear `B`, security `S` with `S113` strict) not in the baseline.
 - **conventions**: four fleet conventions as `ast` rules — `no-window` (a `subprocess` spawn without `creationflags`), `logging-not-print` (a `print` in `app/` or `src/` library code) `no-drive-path` (a string literal starting with a drive letter) and `password-input-vendored` (a `type="password"` input outside `_vendored/sign-in/`: sign-in goes through the vendored sheet, never a bespoke modal); fails when a file's hit count for a rule rises above the baseline. `must-use` holds a bare `requests` call to `src/pooled_http.py`. `subprocess-timeout` fails a blocking `subprocess.run`/`call`/`check_*` with no `timeout=`: size the timeout to the call and give its expiry its own error; only a foreground, interactive runner takes the exempt marker. `secret-compare` and `git-wrapper` are off because the repo has no such helper. A call that must break a rule keeps a reasoned `# <rule>-exempt: <why>` marker.
@@ -38,3 +36,8 @@ Before declaring any webapp-touching change done, run the pre-ship gate:
   - app/webapp/static/**/*.{js,html}
 - key views:                      # single tabbed SPA served at `/`
   - /          (Record · History bottom-tab panes + Settings from the header gear, vendored fleet nav)
+
+## CI expectations
+
+- Workflow `.github/workflows/e2e.yml`, job `verify-before-ship`, on every PR and push to `main`: it runs the same `scripts/verify-before-ship.ps1` gate as the local run. **Advisory, not required** — the local gate is the contract.
+- Typical green run is ~2m35s; investigate at >6 min; the job self-caps at `timeout-minutes: 15`.

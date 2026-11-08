@@ -27,7 +27,7 @@ from app.webapp.audio import (
 )
 from app.webapp.partial_worker import PartialWorker, encode_sse
 from app.webapp.routers._helpers import current_webapp_config, maybe_json
-from src import TranscriptionClient, TranscriptionError, activity_log
+from src import TranscriptionClient, TranscriptionError, activity_log, runtime_files
 from src.app_config import resolve_iso
 from src.archive import SessionArchive, parse_created_at
 from src.gain import apply_gain_to_wav
@@ -122,8 +122,7 @@ async def upload_and_transcribe(
         raise HTTPException(status_code=400, detail="empty upload")
 
     raw_path = session.raw_path()
-    # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-    raw_path.write_bytes(raw_bytes)
+    runtime_files.save_bytes(raw_path, raw_bytes)
     session.meta.raw_bytes = len(raw_bytes)
     session.meta.raw_format = file.content_type or "audio/webm;codecs=opus"
     session.write_meta()

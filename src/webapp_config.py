@@ -11,12 +11,12 @@ from __future__ import annotations
 # Standard library imports
 import json
 import logging
-import os
 from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 from urllib.parse import urlencode, urlparse, urlunparse
 
+from . import runtime_files
 from .gain import DEFAULT_GAIN_BOOST_DB
 from .polish_prompts import DEFAULT_PROMPT_ID as DEFAULT_POLISH_PROMPT_ID
 from .silence import DEFAULT_SILENCE_DBFS as DEFAULT_SILENCE_DBFS_THRESHOLD
@@ -222,15 +222,13 @@ def _field_value(cfg: WebappConfig, name: str) -> Any:
 def save_webapp_config(cfg: WebappConfig, path: Optional[Path] = None) -> Path:
     """Atomically write the config back to disk."""
     target = Path(path) if path is not None else DEFAULT_CONFIG_PATH
-    # runtime-write-exempt: config path is the live webapp_config.json or a caller-supplied path, under config/
-    target.parent.mkdir(parents=True, exist_ok=True)
+    runtime_files.make_dirs(target.parent)
 
     payload = {f.name: _field_value(cfg, f.name) for f in fields(WebappConfig)}
 
     tmp = target.with_suffix(target.suffix + ".tmp")
-    # runtime-write-exempt: config path is the live webapp_config.json or a caller-supplied path, under config/
-    tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-    os.replace(tmp, target)
+    runtime_files.save_text(tmp, json.dumps(payload, indent=2))
+    runtime_files.replace(tmp, target)
     logger.info(f"💾 Saved webapp_config to {target}")
     return target
 

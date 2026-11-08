@@ -36,6 +36,8 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Iterator, List, Optional
 
+from src import runtime_files
+
 logger = logging.getLogger(__name__)
 
 DEFAULT_ARCHIVE_DIR = Path(__file__).resolve().parent.parent / "archive"
@@ -142,8 +144,7 @@ class Session:
         mid-recording never loses data.
         """
         path = self.folder / RAW_AUDIO_FILENAME
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        with path.open("ab") as fh:
+        with runtime_files.open_for_write(path, "ab") as fh:
             fh.write(chunk)
         size = path.stat().st_size
         self.meta.raw_bytes = size
@@ -151,14 +152,12 @@ class Session:
 
     def write_wav(self, wav_bytes: bytes) -> Path:
         path = self.folder / WAV_AUDIO_FILENAME
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        path.write_bytes(wav_bytes)
+        runtime_files.save_bytes(path, wav_bytes)
         return path
 
     def write_transcript(self, text: str) -> Path:
         path = self.folder / TRANSCRIPT_FILENAME
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        path.write_text(text, encoding="utf-8")
+        runtime_files.save_text(path, text)
         self.meta.transcript_chars = len(text)
         return path
 
@@ -170,19 +169,14 @@ class Session:
         response_payload: dict,
         prompt_id: Optional[str] = None,
     ) -> Path:
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        (self.folder / POLISHED_FILENAME).write_text(
-            polished_text, encoding="utf-8"
-        )
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        (self.folder / POLISH_REQUEST_FILENAME).write_text(
+        runtime_files.save_text(self.folder / POLISHED_FILENAME, polished_text)
+        runtime_files.save_text(
+            self.folder / POLISH_REQUEST_FILENAME,
             json.dumps(request_payload, indent=2, ensure_ascii=False),
-            encoding="utf-8",
         )
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        (self.folder / POLISH_RESPONSE_FILENAME).write_text(
+        runtime_files.save_text(
+            self.folder / POLISH_RESPONSE_FILENAME,
             json.dumps(response_payload, indent=2, ensure_ascii=False),
-            encoding="utf-8",
         )
         self.meta.polish_model = model
         self.meta.polish_prompt_id = prompt_id
@@ -202,10 +196,8 @@ class Session:
 
     def write_meta(self) -> Path:
         path = self.folder / META_FILENAME
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        path.write_text(
-            json.dumps(asdict(self.meta), indent=2, ensure_ascii=False),
-            encoding="utf-8",
+        runtime_files.save_text(
+            path, json.dumps(asdict(self.meta), indent=2, ensure_ascii=False)
         )
         return path
 
@@ -235,8 +227,7 @@ class SessionArchive:
 
     def __init__(self, root: Optional[Path] = None) -> None:
         self.root = Path(root) if root is not None else DEFAULT_ARCHIVE_DIR
-        # runtime-write-exempt: archive root is <repo>/archive or a caller-supplied dir, outside the code folders
-        self.root.mkdir(parents=True, exist_ok=True)
+        runtime_files.make_dirs(self.root)
 
     # ------------------------------------------------------ create / lookup
 
@@ -257,8 +248,7 @@ class SessionArchive:
             / ts.strftime("%d")
             / session_id
         )
-        # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-        folder.mkdir(parents=True, exist_ok=True)
+        runtime_files.make_dirs(folder)
 
         meta = SessionMeta(
             session_id=session_id,

@@ -25,7 +25,7 @@ from typing import Any, Callable, Dict, Optional
 from fastapi import APIRouter, HTTPException, Request
 
 from app.webapp.middleware import is_pc_itself
-from app.webapp.routers._helpers import PROJECT_ROOT, current_webapp_config, maybe_json
+from app.webapp.routers._helpers import current_webapp_config, maybe_json
 from src.login_lockout import LockoutAlert, LoginLockout, retry_after_header
 from src.notify import Notifier, NotifierError, TelegramConfig, build_notifier
 from src.secret_compare import secrets_equal
@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 # Dedicated logger for password attempts — written to webapp/auth.log.
 auth_logger = logging.getLogger("vt.auth")
-_AUTH_LOG_PATH = PROJECT_ROOT / "webapp" / "auth.log"
+_AUTH_LOG_PATH = Path(__file__).resolve().parents[3] / "webapp" / "auth.log"
 
 APP_NAME = "voice-transcriber"
 
@@ -89,9 +89,7 @@ def ensure_log_handler() -> None:
     ):
         return
     try:
-        # runtime-write-exempt: _AUTH_LOG_PATH is <repo>/webapp/auth.log, a runtime log outside the code folders
         _AUTH_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-        # runtime-write-exempt: _AUTH_LOG_PATH is <repo>/webapp/auth.log, a runtime log outside the code folders
         fh = logging.FileHandler(_AUTH_LOG_PATH, encoding="utf-8")
         fh.setLevel(logging.INFO)
         fh.setFormatter(

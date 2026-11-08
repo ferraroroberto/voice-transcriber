@@ -35,6 +35,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
+from src import runtime_files
 from src.runtime_data import runtime_db_path
 
 logger = logging.getLogger("activity_log")
@@ -79,10 +80,8 @@ def _connect(path: Optional[Path] = None) -> Iterator[sqlite3.Connection]:
     one or two events per process.
     """
     target = Path(path) if path is not None else DEFAULT_DB_PATH
-    # runtime-write-exempt: db path is the runtime database path (runtime_db_path) or a caller-supplied path, never a code folder
-    target.parent.mkdir(parents=True, exist_ok=True)
-    # runtime-write-exempt: db path is the runtime database path (runtime_db_path) or a caller-supplied path, never a code folder
-    conn = sqlite3.connect(str(target), timeout=10)
+    runtime_files.make_dirs(target.parent)
+    conn = runtime_files.connect_sqlite(target, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
         conn.execute("PRAGMA journal_mode=WAL")

@@ -56,6 +56,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _no_window import no_window_kwargs  # noqa: E402
 from _utf8 import reconfigure_utf8_streams  # noqa: E402
 
+from src import runtime_files  # noqa: E402  (_no_window put the repo root on sys.path)
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 CERT_DIR = PROJECT_ROOT / "webapp" / "certificates"
 STATIC_DIR = PROJECT_ROOT / "app" / "webapp" / "static"
@@ -99,8 +101,7 @@ def main() -> int:
     )
 
     out_dir: Path = args.out_dir
-    # runtime-write-exempt: operator-chosen certificate output directory from --out-dir
-    out_dir.mkdir(parents=True, exist_ok=True)
+    runtime_files.make_dirs(out_dir)
 
     hostnames = _local_hostnames()
     ip_addresses = _local_ip_addresses()
@@ -131,8 +132,7 @@ def main() -> int:
 
     profile_bytes = _build_mobileconfig(ca_cert)
     profile_path = out_dir / MOBILECONFIG_FILENAME
-    # runtime-write-exempt: operator-chosen certificate output directory from --out-dir
-    profile_path.write_bytes(profile_bytes)
+    runtime_files.save_bytes(profile_path, profile_bytes)
     logger.info(f"📱 wrote {profile_path}")
 
     # Mirror into the static dir so the webapp can serve it at /install-ca.
@@ -361,8 +361,7 @@ def _build_leaf(ca_key, ca_cert, hostnames: Set[str], ips: Set[ipaddress.IPv4Add
 
 
 def _write_pem(path: Path, blob: bytes) -> None:
-    # runtime-write-exempt: PEM destination is the operator-chosen certificate output directory
-    path.write_bytes(blob)
+    runtime_files.save_bytes(path, blob)
     logger.info(f"💾 wrote {path}")
 
 

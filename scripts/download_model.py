@@ -19,6 +19,10 @@ from pathlib import Path
 log = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+# Run as `python scripts/download_model.py`, sys.path[0] is scripts/, not the repo root.
+sys.path.insert(0, str(PROJECT_ROOT))
+from src import runtime_files  # noqa: E402
+
 DEFAULT_DIR = PROJECT_ROOT / "vendor" / "whisper.cpp" / "models"
 DEFAULT_MODEL = "ggml-large-v3-turbo.bin"
 HF_REPO = "ggerganov/whisper.cpp"
@@ -44,8 +48,7 @@ def main() -> int:
         return 1
 
     dest = Path(args.dest).resolve()
-    # runtime-write-exempt: operator-chosen model directory from --dest, not a code folder
-    dest.mkdir(parents=True, exist_ok=True)
+    runtime_files.make_dirs(dest)
     expected = dest / args.model
     if expected.exists():
         log.info("Model already present at %s", expected)

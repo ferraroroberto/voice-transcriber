@@ -4,11 +4,11 @@ Every script under ``scripts/`` that shells out to an external executable
 (tailscale, certutil, nvidia-smi, whisper-server --help, ...) needs
 ``creationflags=subprocess.CREATE_NO_WINDOW`` on win32 so a parent with no
 console of its own (pythonw, a scheduled task, a fresh setup run) doesn't
-flash a console window per spawn (fleet-config#412).
+flash a console window per spawn.
 
-A thin re-export of ``src/no_window.py``'s ``NO_WINDOW`` (voice-transcriber#243)
--- that module is the one definition, consolidated instead of re-inlining the
-``sys.platform`` ternary at every runtime call site. ``scripts/`` still needs
+A thin re-export of ``src/no_window.py``'s ``NO_WINDOW`` -- that module is
+the one definition, so no call site re-inlines the ``sys.platform`` ternary.
+``scripts/`` still needs
 this sibling because it inserts its own directory onto ``sys.path``, not a
 package import: each script's own directory (not the repo root) lands on
 ``sys.path[0]`` when run directly as ``python scripts/foo.py``, so ``src``

@@ -2,12 +2,10 @@
 iteration, or running the webapp without the tray icon / global hotkey.
 
 Builds the exact same ``-m app.webapp.serve ...`` argv the tray's ``WebappManager``
-uses via ``app.webapp.manager.build_webapp_command`` (voice-transcriber#160)
-and runs it in the foreground, inheriting this console. ``webapp.bat``
-shells out to this module instead of hand-writing the uvicorn argv itself,
-so a flag added to the tray's spawn path is never missing here
-(voice-transcriber#174) -- it had already drifted (missing
-``--log-level warning``) before this consolidation.
+uses via ``app.webapp.manager.build_webapp_command`` and runs it in the
+foreground, inheriting this console. ``webapp.bat`` shells out to this module
+instead of hand-writing the uvicorn argv itself, so a flag added to the tray's
+spawn path is never missing here.
 """
 
 from __future__ import annotations
