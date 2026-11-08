@@ -135,6 +135,13 @@ helper = ["src/pooled_http.py"]
 why    = "CLAUDE.md: outbound-connection discipline, one pooled session"
 paths  = ["app/", "src/"]
 
+# The one module that opens a SQLite connection; it refuses a path under a code folder.
+[[conventions_ratchet.must_use]]
+call   = ["sqlite3.connect"]
+helper = ["src/runtime_files.py"]
+why    = "runtime databases open through the guarded writer, which refuses a code-folder path"
+paths  = ["app/", "src/"]
+
 # [runtime_write_ratchet] -- scripts/runtime_write_ratchet.py fails when a tracked
 # Python file gains a write target (open for writing, Path.write_*, mkdir, a log
 # FileHandler, sqlite3.connect, a copy destination) whose path resolves under a code
@@ -170,6 +177,8 @@ rules    = ["untracked-control", "untracked-sheet", "dynamic-id", "usage-log-wir
 enabled  = true
 baseline = ".comment-ratchet-baseline.json"
 exclude  = ["**/_vendored/**"]
+docstrings      = true
+history_phrases = true
 
 # [instruction_ratchet] -- the scaffold's baseline-and-ratchet for the deterministic rules
 # of the fleet's prompt audit over this repo's instruction files (CLAUDE.md and AGENTS.md;
@@ -182,6 +191,10 @@ exclude  = ["**/_vendored/**"]
 [instruction_ratchet]
 enabled  = true
 baseline = ".instruction-ratchet-baseline.json"
+ci_expectations     = true
+agents_pointer      = true
+claude_md_max_lines = 120
+repeated_text_words = 12
 
 # [doc_refs_ratchet] -- the scaffold's baseline-and-ratchet for references in the docs. The
 # gate (scripts/verify-before-ship.ps1) runs scripts/doc_refs_ratchet.py through

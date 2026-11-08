@@ -15,11 +15,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import shutil
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, AsyncIterator, Awaitable, Callable, Dict, List, Optional
+
+from src import runtime_files
 
 logger = logging.getLogger(__name__)
 
@@ -208,8 +209,7 @@ class PartialWorker:
         # actively-appending raw.webm isn't read mid-write by ffmpeg.
         snap_raw = self.session.folder / "partial_raw.webm"
         try:
-            # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-            shutil.copyfile(raw_path, snap_raw)
+            runtime_files.copy_file(raw_path, snap_raw)
         except OSError as exc:
             logger.warning(f"⚠️  could not snapshot raw audio: {exc}")
             return
@@ -241,9 +241,8 @@ class PartialWorker:
         self.last_bytes_at_partial = size
 
         try:
-            # runtime-write-exempt: target is the session archive folder (runtime archive dir, outside the code folders), passed in at run time
-            (self.session.folder / "transcript_partial.txt").write_text(
-                text, encoding="utf-8"
+            runtime_files.save_text(
+                self.session.folder / "transcript_partial.txt", text
             )
         except OSError as exc:
             logger.debug(f"persist partial failed: {exc}")

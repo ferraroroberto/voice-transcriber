@@ -69,7 +69,7 @@ export async function onPolish() {
   }
 }
 
-// Clear (formerly Reset): the text, the session and any lingering incognito
+// Clear: the text, the session and any lingering incognito
 // take, so the next record starts fresh.
 export function onReset() {
   // A tap mid-recording/upload/transcribe would null state.sessionId (and,

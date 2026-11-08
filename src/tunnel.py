@@ -23,6 +23,7 @@ from typing import Optional
 
 import yaml
 
+from src import runtime_files
 from src.no_window import NO_WINDOW
 from src.webapp_config import append_auth_token, load_webapp_config
 
@@ -128,10 +129,8 @@ def persist_tunnel_url(hostname: str, url_file: Path) -> None:
     if token:
         url = append_auth_token(url, token)
     try:
-        # runtime-write-exempt: url_file is the tunnel-URL file the launcher hub reads; its location is caller-configured
-        url_file.parent.mkdir(parents=True, exist_ok=True)
-        # runtime-write-exempt: url_file is the tunnel-URL file the launcher hub reads; its location is caller-configured
-        url_file.write_text(url + "\n", encoding="utf-8")
+        runtime_files.make_dirs(url_file.parent)
+        runtime_files.save_text(url_file, url + "\n")
         logger.info(f"📡 Tunnel URL → {url_file}")
         logger.info(f"   {url}")
         if token:
