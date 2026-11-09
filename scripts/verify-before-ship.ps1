@@ -35,18 +35,46 @@
 # its own disposable webapp and tears it down on exit, so the running tray
 # is never touched. Exits non-zero on the first failure with the offending
 # output left visible.
+#
+# Verdict line: the last stdout line is `GATE-RESULT: PASS` or `GATE-RESULT: FAIL`
+# on every path that can still run code. Never pipe the gate when its exit code
+# matters (a pipeline reports its last command's status, so `... | tail -40` turns
+# a red run green); a caller that cannot avoid a pipe asserts on that line. A run
+# with no such line is not a pass.
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $python = Join-Path $repoRoot ".venv\Scripts\python.exe"
 $sw = [System.Diagnostics.Stopwatch]::StartNew()
 
+# gate-verdict:begin
+# The verdict is the last stdout line of every path that can still run code. A
+# terminating error under the "Stop" preference above would otherwise print to
+# stderr only and exit 1, leaving a piped caller an empty, apparently clean run,
+# so the trap reports it on stdout first. Exit codes stay 0 (pass) and 1 (fail).
+function Write-GateResult($verdict) {
+    Write-Host "GATE-RESULT: $verdict"
+}
+
+function Complete-Gate([int]$Code) {
+    Write-GateResult $(if ($Code -eq 0) { "PASS" } else { "FAIL" })
+    exit $Code
+}
+
+trap {
+    Write-Host ""
+    Write-Host "[FAIL] the gate aborted on an unhandled error:" -ForegroundColor Red
+    Write-Host ("       {0}" -f $_.Exception.Message) -ForegroundColor Red
+    Complete-Gate 1
+}
+
 function Fail($message) {
     Write-Host ""
     Write-Host "[X] $message" -ForegroundColor Red
     Write-Host ("Failed after {0:n1}s." -f $sw.Elapsed.TotalSeconds) -ForegroundColor Red
-    exit 1
+    Complete-Gate 1
 }
+# gate-verdict:end
 
 if (-not (Test-Path $python)) {
     Fail ".venv missing -- run setup.bat first."
@@ -212,4 +240,4 @@ finally {
 $sw.Stop()
 Write-Host ""
 Write-Host ("[OK] Ready to ship -- all checks passed in {0:n1}s." -f $sw.Elapsed.TotalSeconds) -ForegroundColor Green
-exit 0
+Complete-Gate 0
