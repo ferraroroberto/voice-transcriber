@@ -59,6 +59,7 @@ modal = { src = "app/webapp/static/_vendored/modal", sha = "713b1d1e36989440679e
 sign-in = { src = "app/webapp/static/_vendored/sign-in", sha = "6c8ae06472edc4c7448a767656060cd2b79cefe9", dest = "app/webapp/static/_vendored/sign-in" }
 row-menu = { src = "app/webapp/static/_vendored/row-menu", sha = "f05859a2bada56296d7f134e471953867c253571", dest = "app/webapp/static/_vendored/row-menu" }
 icon-button = { src = "app/webapp/static/_vendored/icon-button", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/icon-button" }
+icons = { src = "app/webapp/static/_vendored/icons", sha = "da2e9350daee6ab9d25d399daca21663aa509030", dest = "app/webapp/static/_vendored/icons" }
 empty-state = { src = "app/webapp/static/_vendored/empty-state", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/empty-state" }
 segmented = { src = "app/webapp/static/_vendored/segmented", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/segmented" }
 usage-log = { src = "app/webapp/static/_vendored/usage-log", sha = "6c8ae06472edc4c7448a767656060cd2b79cefe9", dest = "app/webapp/static/_vendored/usage-log" }
