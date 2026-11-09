@@ -22,7 +22,7 @@ from tests.e2e._surface import surface
 
 pytestmark = [pytest.mark.smoke, pytest.mark.desktop_only]
 
-def test_mic_notice_names_input_and_warns_on_silence(
+def test_mic_notice_names_input_warns_on_silence_and_words_it_for_the_input(
     authed_page: Page, base_url: str
 ) -> None:
     page = authed_page
@@ -71,17 +71,13 @@ def test_mic_notice_names_input_and_warns_on_silence(
     page.click("#recordBtn")
     expect(page.locator("#micNotice")).to_be_hidden()
     expect(page.locator("#micNotice .rec-wave")).to_have_count(0)
+    expect(page.locator("#recordLabel")).to_have_text("Record")
 
-
-def test_silent_remote_audio_input_warns_with_remote_desktop_text(
-    authed_page: Page, base_url: str
-) -> None:
-    """A silent "Remote Audio" input (a Remote Desktop session) gets the
-    Remote Desktop wording, not the Bluetooth one."""
-    page = authed_page
-    # Replace the devices with one silent input named "Remote Audio": an
-    # oscillator at zero gain feeds a MediaStream destination, so the analyser
-    # reads exact silence the whole take.
+    # A silent "Remote Audio" input (a Remote Desktop session) gets the Remote
+    # Desktop wording, not the Bluetooth one. Replace the devices with one
+    # silent input of that name: an oscillator at zero gain feeds a MediaStream
+    # destination, so the analyser reads exact silence the whole take. It is a
+    # second init script (it runs after the first, so it wins) on a fresh load.
     page.add_init_script(
         """
         (() => {
@@ -107,7 +103,6 @@ def test_silent_remote_audio_input_warns_with_remote_desktop_text(
         })();
         """
     )
-    mock_session_apis(page, "a take from a remote session")
     page.goto(f"{base_url}/", wait_until="domcontentloaded")
     start_recording(page)
 
