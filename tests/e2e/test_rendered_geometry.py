@@ -49,31 +49,38 @@ def _set_theme(page: Page, theme: str) -> None:
     assert resolved == theme, f"theme {theme!r} did not apply (got {resolved!r})"
 
 
-@pytest.mark.parametrize("leg", MATRIX, ids=matrix_id)
 def test_panes_fit_and_controls_are_tappable(
-    authed_page: Page, base_url: str, browser_name: str, leg: tuple[int, str]
+    authed_page: Page, base_url: str, browser_name: str
 ) -> None:
+    """One page load walks every matrix leg: a leg is a viewport width and a
+    theme applied in place, so none needs a page of its own."""
     page = authed_page
     page.goto(f"{base_url}/", wait_until="domcontentloaded")
     page.wait_for_selector("#recordBtn", state="attached", timeout=5_000)
-    apply_matrix_leg(page, *leg, set_theme=_set_theme)
     # Hit floors are a touch-pointer contract: only the iPhone projection has one.
     coarse = page.evaluate("matchMedia('(pointer: coarse)').matches")
     assert coarse == (browser_name == "webkit"), (
         f"pointer projection mismatch on {browser_name}: coarse={coarse}"
     )
 
-    for name, opener, pane in _PANES:
-        page.locator(opener).first.click()
-        page.wait_for_selector(pane, state="visible", timeout=5_000)
-        assert_no_horizontal_overflow(page)
-        if not coarse:
-            continue
-        # The tab bar floats over the scrolling pane by design, so it is measured
-        # for its own floor but not for overlap against the content beneath it.
-        controls = page.locator(f"{pane} :is({_CONTROLS})")
-        assert controls.count() > 0, f"{name}: no controls found to measure"
-        assert_min_target(controls)
-        assert_no_overlap(controls)
-        # The vendored nav keeps its 44px floor on a coarse pointer at every width.
-        assert_min_target(page.locator("nav.tabs button"))
+    for leg in MATRIX:
+        apply_matrix_leg(page, *leg, set_theme=_set_theme)
+        for name, opener, pane in _PANES:
+            where = f"{matrix_id(leg)} {name}"
+            page.locator(opener).first.click()
+            page.wait_for_selector(pane, state="visible", timeout=5_000)
+            try:
+                assert_no_horizontal_overflow(page)
+                if not coarse:
+                    continue
+                # The tab bar floats over the scrolling pane by design, so it is
+                # measured for its own floor but not for overlap against the
+                # content beneath it.
+                controls = page.locator(f"{pane} :is({_CONTROLS})")
+                assert controls.count() > 0, "no controls found to measure"
+                assert_min_target(controls)
+                assert_no_overlap(controls)
+                # The vendored nav keeps its 44px floor on a coarse pointer at every width.
+                assert_min_target(page.locator("nav.tabs button"))
+            except AssertionError as exc:
+                raise AssertionError(f"{where}: {exc}") from exc

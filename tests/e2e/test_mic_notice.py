@@ -22,26 +22,51 @@ from tests.e2e._surface import surface
 
 pytestmark = [pytest.mark.smoke, pytest.mark.desktop_only]
 
-def test_mic_notice_names_input_and_warns_on_silence(
+_COUNT_GUM_JS = """
+(() => {
+  const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+  navigator.mediaDevices.getUserMedia = async (c) => {
+    window.__gumCalls = (window.__gumCalls || 0) + 1;
+    const s = await gum(c);
+    window.__vtStream = s;
+    return s;
+  };
+})();
+"""
+
+_REMOTE_AUDIO_JS = """
+(() => {
+  const md = navigator.mediaDevices;
+  const device = {
+    deviceId: 'remote-audio', groupId: 'remote', kind: 'audioinput',
+    label: 'Remote Audio', toJSON() { return this; },
+  };
+  md.enumerateDevices = async () => [device];
+  md.getUserMedia = async () => {
+    const ctx = new AudioContext();
+    await ctx.resume();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    gain.gain.value = 0;
+    const dest = ctx.createMediaStreamDestination();
+    osc.connect(gain).connect(dest);
+    osc.start();
+    const stream = dest.stream;
+    Object.defineProperty(stream.getAudioTracks()[0], 'label', { value: 'Remote Audio' });
+    return stream;
+  };
+})();
+"""
+
+
+def test_mic_notice_names_input_warns_on_silence_and_words_it_for_the_input(
     authed_page: Page, base_url: str
 ) -> None:
     page = authed_page
     # Count getUserMedia calls and keep the live MediaStream reachable so the
     # test can mute its track (a disabled track delivers exact zeros, which is
     # what a muted or unrouted input looks like to the analyser).
-    page.add_init_script(
-        """
-        (() => {
-          const gum = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
-          navigator.mediaDevices.getUserMedia = async (c) => {
-            window.__gumCalls = (window.__gumCalls || 0) + 1;
-            const s = await gum(c);
-            window.__vtStream = s;
-            return s;
-          };
-        })();
-        """
-    )
+    page.add_init_script(_COUNT_GUM_JS)
     mock_session_apis(page, "a long take about nothing in particular")
     page.goto(f"{base_url}/", wait_until="domcontentloaded")
     expect(page.locator("#micNotice")).to_be_hidden()
@@ -71,43 +96,14 @@ def test_mic_notice_names_input_and_warns_on_silence(
     page.click("#recordBtn")
     expect(page.locator("#micNotice")).to_be_hidden()
     expect(page.locator("#micNotice .rec-wave")).to_have_count(0)
+    expect(page.locator("#recordLabel")).to_have_text("Record")
 
-
-def test_silent_remote_audio_input_warns_with_remote_desktop_text(
-    authed_page: Page, base_url: str
-) -> None:
-    """A silent "Remote Audio" input (a Remote Desktop session) gets the
-    Remote Desktop wording, not the Bluetooth one."""
-    page = authed_page
-    # Replace the devices with one silent input named "Remote Audio": an
-    # oscillator at zero gain feeds a MediaStream destination, so the analyser
-    # reads exact silence the whole take.
-    page.add_init_script(
-        """
-        (() => {
-          const md = navigator.mediaDevices;
-          const device = {
-            deviceId: 'remote-audio', groupId: 'remote', kind: 'audioinput',
-            label: 'Remote Audio', toJSON() { return this; },
-          };
-          md.enumerateDevices = async () => [device];
-          md.getUserMedia = async () => {
-            const ctx = new AudioContext();
-            await ctx.resume();
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            gain.gain.value = 0;
-            const dest = ctx.createMediaStreamDestination();
-            osc.connect(gain).connect(dest);
-            osc.start();
-            const stream = dest.stream;
-            Object.defineProperty(stream.getAudioTracks()[0], 'label', { value: 'Remote Audio' });
-            return stream;
-          };
-        })();
-        """
-    )
-    mock_session_apis(page, "a take from a remote session")
+    # A silent "Remote Audio" input (a Remote Desktop session) gets the Remote
+    # Desktop wording, not the Bluetooth one. Replace the devices with one
+    # silent input of that name: an oscillator at zero gain feeds a MediaStream
+    # destination, so the analyser reads exact silence the whole take. It is a
+    # second init script (it runs after the first, so it wins) on a fresh load.
+    page.add_init_script(_REMOTE_AUDIO_JS)
     page.goto(f"{base_url}/", wait_until="domcontentloaded")
     start_recording(page)
 

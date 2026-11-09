@@ -1,8 +1,9 @@
-"""Page header contract (issue #226, fleet NAV-03): Settings is never a tab.
+"""Page header contract (fleet NAV-03): Settings is never a tab.
 
 Every pane opens with the vendored ``home-head`` row, carrying the theme
 toggle and the Settings gear on every tab, and the nav lists only the real
-destinations.
+destinations. The vendored ``page-foot`` ends every tab, and each pane's
+context line names only exceptions.
 """
 
 from __future__ import annotations
@@ -10,9 +11,14 @@ from __future__ import annotations
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests.e2e._surface import surface
+
 pytestmark = pytest.mark.smoke
 
 _PANES = (("#paneRecord", "Record"), ("#paneHistory", "History"), ("#paneSettings", "Settings"))
+_PHONE_PILL = "window.matchMedia('(pointer: coarse) and (max-width: 520px)').matches"
+# Mirrors the nav's --nav-fade-tail fallback: how far the bottom fade reaches above the pill.
+_FADE_TAIL_PX = 24
 
 
 def _open(page: Page, base_url: str) -> None:
@@ -20,54 +26,67 @@ def _open(page: Page, base_url: str) -> None:
     page.wait_for_selector("#recordBtn", state="attached", timeout=5_000)
 
 
-def test_settings_is_never_a_tab_and_every_pane_has_the_gear(
+def _assert_footer_clear_of_the_fade(page: Page, where: str) -> None:
+    """Scrolled to the end, the footer sits wholly above the pill's fade."""
+    foot = page.locator(".page-foot")
+    expect(page.locator("#buildReadout")).to_contain_text("Build: ")
+    page.evaluate("window.scrollTo(0, document.documentElement.scrollHeight)")
+    expect(foot).to_be_in_viewport()
+    box = foot.bounding_box()
+    assert box is not None
+    if page.evaluate(_PHONE_PILL):
+        pill = page.locator(".tabs").bounding_box()
+        assert pill is not None
+        fade_top = pill["y"] - _FADE_TAIL_PX
+        assert box["y"] + box["height"] <= fade_top, (
+            f"{where}: footer ends at {box['y'] + box['height']:.0f}px, "
+            f"inside the bottom fade that starts at {fade_top:.0f}px"
+        )
+
+
+def test_every_pane_has_the_header_and_footer_and_settings_is_the_gear(
     authed_page: Page, base_url: str
 ) -> None:
-    _open(authed_page, base_url)
-    expect(authed_page.locator('.tabs .tab[data-tab="settings"]')).to_have_count(0)
-    expect(authed_page.locator(".tabs .tab")).to_have_count(2)
-
+    page = authed_page
+    _open(page, base_url)
+    expect(page.locator('.tabs .tab[data-tab="settings"]')).to_have_count(0)
+    expect(page.locator(".tabs .tab")).to_have_count(2)
     for pane, title in _PANES:
-        head = authed_page.locator(f"{pane} > .card.home-head")
+        head = page.locator(f"{pane} > .card.home-head")
         expect(head).to_have_count(1)
         expect(head.locator(".home-title")).to_contain_text(title)
         expect(head.locator(".theme-toggle")).to_have_count(1)
         expect(head.locator(".home-settings")).to_have_count(1)
 
+    # Record -> Settings: the gear reveals the panel and the Record pane yields.
+    panel = page.locator("#settingsPanel")
+    expect(panel).to_be_attached()
+    expect(panel).to_be_hidden()
+    _assert_footer_clear_of_the_fade(page, "record")
+    page.click("#paneRecord .home-settings")
+    expect(panel).to_be_visible()
+    expect(page.locator("#paneRecord")).to_be_hidden()
+    _assert_footer_clear_of_the_fade(page, "settings")
+    surface(page, "settings.pane")
+    page.click("#tabRecord")
+    expect(panel).to_be_hidden()
+    expect(page.locator("#paneRecord")).to_be_visible()
 
-def test_gear_and_theme_toggle_work_from_any_tab(authed_page: Page, base_url: str) -> None:
-    _open(authed_page, base_url)
-    authed_page.click("#tabHistory")
-    authed_page.click("#paneHistory .theme-toggle")
-    first = authed_page.evaluate("document.documentElement.dataset.theme")
-    authed_page.click("#paneHistory .theme-toggle")
-    second = authed_page.evaluate("document.documentElement.dataset.theme")
+    # History: the theme toggle flips the theme and the gear still reaches
+    # Settings from here; choosing a tab leaves Settings again.
+    page.click("#tabHistory")
+    _assert_footer_clear_of_the_fade(page, "history")
+    page.click("#paneHistory .theme-toggle")
+    first = page.evaluate("document.documentElement.dataset.theme")
+    page.click("#paneHistory .theme-toggle")
+    second = page.evaluate("document.documentElement.dataset.theme")
     assert {first, second} == {"light", "dark"}, (first, second)
-
-    authed_page.click("#paneHistory .home-settings")
-    expect(authed_page.locator("#paneSettings")).to_be_visible()
-    expect(authed_page.locator("#paneHistory")).to_be_hidden()
-    authed_page.click("#tabHistory")
-    expect(authed_page.locator("#paneSettings")).to_be_hidden()
-    expect(authed_page.locator("#paneHistory")).to_be_visible()
-
-
-_PAINT = """els => els.map(el => {
-    const s = getComputedStyle(el);
-    return [s.backgroundColor, s.borderTopWidth];
-})"""
-
-
-def test_header_toggles_and_dialog_close_are_unpainted_glyphs(
-    authed_page: Page, base_url: str
-) -> None:
-    """They are .icon-button's (project-scaffolding#339): a glyph on nothing at rest."""
-    _open(authed_page, base_url)
-    toggles = authed_page.locator("#paneRecord > .card.home-head .home-toggle")
-    closes = authed_page.locator(".detail-close")
-    assert toggles.count() == 2 and closes.count() >= 1
-    for paint in toggles.evaluate_all(_PAINT) + closes.evaluate_all(_PAINT):
-        assert paint == ["rgba(0, 0, 0, 0)", "0px"]
+    page.click("#paneHistory .home-settings")
+    expect(page.locator("#paneSettings")).to_be_visible()
+    expect(page.locator("#paneHistory")).to_be_hidden()
+    page.click("#tabHistory")
+    expect(page.locator("#paneSettings")).to_be_hidden()
+    expect(page.locator("#paneHistory")).to_be_visible()
 
 
 def _assert_one_row(page: Page, pane: str) -> None:

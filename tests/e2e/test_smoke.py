@@ -1,16 +1,19 @@
 """Smoke tests for the voice-transcriber webapp.
 
-Tight by design: ~5 checks that catch the bugs we actually hit on the
-SPA (JS exceptions on boot, empty select dropdowns, broken settings
-panel, broken sign-in sheet). Expand iteratively if regressions slip
-through — do NOT turn this file into a regression net for every feature.
+One test per user-visible flow of the SPA's first screens: boot and the Record
+pane's rendered contracts, dictating and polishing text, changing a setting,
+and signing in. A new check joins the flow it belongs to rather than getting a
+test of its own.
 """
 
 from __future__ import annotations
 
+import json
+
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests.e2e._helpers import assert_toast_paint
 from tests.e2e._surface import surface
 
 pytestmark = pytest.mark.smoke
@@ -27,48 +30,60 @@ def _navigate_collecting_errors(page: Page, base_url: str) -> list[str]:
     return errors
 
 
-def test_page_loads_without_console_errors(authed_page: Page, base_url: str) -> None:
-    errors = _navigate_collecting_errors(authed_page, base_url)
-    # Give the boot script a beat to settle: fetchConfig, history poll,
-    # mic enumeration. Anything thrown during that fans out as pageerror.
-    authed_page.wait_for_timeout(500)
-    assert errors == [], "JS errors during boot:\n  - " + "\n  - ".join(errors)
+_FAMILY_JS = "(sel) => getComputedStyle(document.querySelector(sel)).fontFamily"
+_BORDER_JS = "(sel) => getComputedStyle(document.querySelector(sel)).borderTopColor"
+# The token's own resolved colour, via a throwaway probe so the check follows
+# the stylesheet instead of hard-coding a hex.
+_CONTROL_BORDER_JS = """() => {
+  const probe = document.createElement('div');
+  probe.style.borderTop = '1px solid var(--control-border)';
+  document.body.appendChild(probe);
+  const color = getComputedStyle(probe).borderTopColor;
+  probe.remove();
+  return color;
+}"""
+_PAINT_JS = """els => els.map(el => {
+    const s = getComputedStyle(el);
+    return [s.backgroundColor, s.borderTopWidth];
+})"""
 
 
-def test_polish_options_populated(authed_page: Page, base_url: str) -> None:
-    _navigate_collecting_errors(authed_page, base_url)
-    # renderPolishOptions runs after /api/config resolves. Both selects
-    # must end up with at least one <option> or the dropdowns are empty.
-    # state="attached" not "visible" — <option> inside a collapsed <select>
-    # has no layout box so the default visible state never resolves.
-    authed_page.wait_for_selector("#polishModel option", state="attached", timeout=5_000)
-    authed_page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
-    model_count = authed_page.locator("#polishModel option").count()
-    style_count = authed_page.locator("#polishStyle option").count()
-    assert model_count >= 1, f"#polishModel rendered no options (got {model_count})"
-    assert style_count >= 1, f"#polishStyle rendered no options (got {style_count})"
-
-
-def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
+def test_record_pane_boots_and_renders_its_contracts(
+    authed_page: Page, base_url: str
+) -> None:
     """The recorder is one untitled card (#262): an accent "Record" circle in
     sentence case, then Append and Incognito as labelled switch pills (no
     glyph-only toggle). Reset is the Text card's Clear since #263.
 
-    We do NOT click Record — that would start real mic capture.
+    The page boots without a script error, with both Polish dropdowns filled
+    and no sign-in sheet for a device the server accepts, and the pane draws
+    to the design contracts: one type face, 3:1 control borders in both
+    themes, glyph-only header toggles. We do NOT click Record: that would
+    start real mic capture.
     """
-    _navigate_collecting_errors(authed_page, base_url)
-    recorder = authed_page.locator(".recorder-card")
+    page = authed_page
+    errors = _navigate_collecting_errors(page, base_url)
+
+    # renderPolishOptions runs after /api/config resolves. Both selects must
+    # end up with an <option> or the dropdowns are empty. state="attached" not
+    # "visible": an <option> in a collapsed <select> has no layout box.
+    page.wait_for_selector("#polishModel option", state="attached", timeout=5_000)
+    page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
+    # Give the boot script a beat to settle (fetchConfig, history poll, mic
+    # enumeration): anything thrown during that fans out as pageerror.
+    page.wait_for_timeout(500)
+    assert errors == [], "JS errors during boot:\n  - " + "\n  - ".join(errors)
+    expect(page.locator("dialog.sign-in")).to_have_count(0)
+
+    recorder = page.locator(".recorder-card")
     expect(recorder).to_have_class("card recorder-card")
     expect(recorder.locator(".card-title")).to_have_count(0)
     for control_id, text in (("appendToggle", "Append"), ("incognitoToggle", "Incognito")):
         expect(recorder.locator(f".record-modes #{control_id}")).to_have_text(text)
-    for switch_id in ("appendToggle", "incognitoToggle"):
-        expect(recorder.locator(f"#{switch_id}")).to_have_attribute("role", "switch")
-
-    record_btn = recorder.locator("#recordBtn")
-    expect(record_btn).to_be_visible()
+        expect(recorder.locator(f"#{control_id}")).to_have_attribute("role", "switch")
+    expect(recorder.locator("#recordBtn")).to_be_visible()
     expect(recorder.locator("#recordLabel")).to_have_text("Record")
-    fill, accent = authed_page.evaluate("""() => {
+    fill, accent = page.evaluate("""() => {
         const probe = document.createElement('div');
         probe.style.background = 'var(--accent-fill)';
         document.body.appendChild(probe);
@@ -77,14 +92,50 @@ def test_record_zone_renders(authed_page: Page, base_url: str) -> None:
         return [getComputedStyle(document.getElementById('recordBtn')).backgroundColor, want];
     }""")
     assert fill == accent, (fill, accent)
-    expect(authed_page.locator("#modelRoute")).to_have_count(0)
-    surface(authed_page, "record.idle")
+    expect(page.locator("#modelRoute")).to_have_count(0)
+
+    # Form controls don't inherit the page font by themselves; the vendored
+    # base layer pulls the body's face onto them.
+    body_family = page.evaluate(_FAMILY_JS, "body")
+    assert "system-ui" in body_family, f"body lost the fleet font stack: {body_family!r}"
+    for selector in (".tabs .tab", "#recordBtn", "#gainBoostDb", "#polishModel", "#polishPromptPreview"):
+        family = page.evaluate(_FAMILY_JS, selector)
+        assert family == body_family, f"{selector} renders in {family!r}, body in {body_family!r}"
+
+    # The header toggles and a dialog's close are .icon-button's: a glyph on
+    # nothing at rest (project-scaffolding#339).
+    toggles = page.locator("#paneRecord > .card.home-head .home-toggle")
+    closes = page.locator(".detail-close")
+    assert toggles.count() == 2 and closes.count() >= 1
+    for paint in toggles.evaluate_all(_PAINT_JS) + closes.evaluate_all(_PAINT_JS):
+        assert paint == ["rgba(0, 0, 0, 0)", "0px"]
+
+    # WCAG 1.4.11: the icon-only incognito chip and the text areas draw their
+    # edge in --control-border, whichever theme is up. Both themes must really
+    # resolve to different tokens, or the second pass proves nothing.
+    # Transitions are off so a colour still easing toward the new theme cannot
+    # read as the old one.
+    page.add_style_tag(content="*, *::before, *::after { transition: none !important; }")
+    tokens = set()
+    for scheme in ("light", "dark"):
+        page.evaluate("t => { document.documentElement.dataset.theme = t; }", scheme)
+        token = page.evaluate(_CONTROL_BORDER_JS)
+        tokens.add(token)
+        for selector in ("#incognitoToggle", "#transcript", "#polished", "#polishPromptPreview"):
+            border = page.evaluate(_BORDER_JS, selector)
+            assert border == token, (
+                f"{selector} ({scheme}) borders in {border!r}, control-border is {token!r}"
+            )
+    assert len(tokens) == 2, f"the themes resolved one control-border token: {tokens}"
+    page.evaluate("() => { delete document.documentElement.dataset.theme; }")
+    surface(page, "record.idle")
 
 
 def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None:
     """One Text card (#263): no Polish card; the verbs appear with text;
     Save only for text History doesn't hold; Polish is one tap away and the
     Polished segment exists only once a polish does; Copy follows the view.
+    Polish's success toast is neutral: only an error tints.
     """
     page = authed_page
     page.route("**/api/status", lambda route: route.fulfill(json={
@@ -112,17 +163,18 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     surface(page, "record.text")
 
     page.click("#polishBtn")
+    expect(page.locator("#toast")).to_contain_text("Polish done")
+    assert_toast_paint(page, error=False)
     expect(page.locator("#textView")).to_be_visible()
     expect(page.locator("#polished")).to_be_visible()
     expect(page.locator("#polished")).to_have_value("A tidy invented sentence.")
     expect(page.locator("#transcript")).to_be_hidden()
     expect(page.locator("#saveTranscript")).to_be_hidden()  # the polish made a session
     expect(page.locator("#polishBtn")).to_have_text("Polish again")
-    copied = page.evaluate("""() => {
-        const shown = document.querySelector('#textView [aria-pressed="true"]').dataset.view;
-        return shown;
-    }""")
-    assert copied == "polished"
+    shown = page.evaluate(
+        "document.querySelector('#textView [aria-pressed=\"true\"]').dataset.view"
+    )
+    assert shown == "polished"
     surface(page, "record.text-polished")
 
     page.click('#textView .segmented-item[data-view="transcript"]')
@@ -135,31 +187,20 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     expect(page.locator("#textView")).to_be_hidden()
 
 
-def test_settings_gear_opens_settings(authed_page: Page, base_url: str) -> None:
-    """Settings is the header gear, never a tab (fleet NAV-03, issue #226):
-    hidden by default, revealed by the gear, with the Record pane yielding;
-    choosing a tab leaves it again. Catches a missing pane and broken gear
-    or nav wiring in one shot."""
-    _navigate_collecting_errors(authed_page, base_url)
-    panel = authed_page.locator("#settingsPanel")
-    expect(panel).to_be_attached()
-    expect(panel).to_be_hidden()
-    authed_page.click("#paneRecord .home-settings")
-    expect(panel).to_be_visible()
-    expect(authed_page.locator("#paneRecord")).to_be_hidden()
-    surface(authed_page, "settings.pane")
-    authed_page.click("#tabRecord")
-    expect(panel).to_be_hidden()
-    expect(authed_page.locator("#paneRecord")).to_be_visible()
+# step -> root font-size in px (93.75% / 100% / 112.5% of the 16px default)
+_TEXT_STEPS = {"small": 15.0, "default": 16.0, "large": 18.0}
+_ROOT_PX = "parseFloat(getComputedStyle(document.documentElement).fontSize)"
+_BODY_PX = "parseFloat(getComputedStyle(document.body).fontSize)"
+_TITLE_PX = "parseFloat(getComputedStyle(document.querySelector('#paneSettings .home-title')).fontSize)"
 
 
 def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     """Settings (#265): inset groups with no Save button; each control posts
     only its own field the moment it changes, and a refused save puts the
-    control back with an error toast. Delete all takes is a sheet, Services
-    shows the probes and About the build (also the page footer's readout)."""
-    import json
-
+    control back with an error toast. Delete all takes and the Polish prompt
+    are sheets, Services shows the probes and About the build (also the page
+    footer's readout). The text size scales the root font and survives a
+    reload (fleet text-size setting)."""
     page = authed_page
     posted: list[dict] = []
 
@@ -179,6 +220,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
         "whisper": {"running": False}, "llm_hub": {"reachable": True}, "ffmpeg_present": True,
     }))
     _navigate_collecting_errors(page, base_url)
+    page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
     page.click("#paneRecord .home-settings")
     expect(page.locator("#saveSettings")).to_have_count(0)
     expect(page.locator("#settingsPanel .settings-group-title")).to_have_count(7)
@@ -193,6 +235,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     retention.press("Enter")
     retention.blur()
     expect(page.locator("#toast")).to_contain_text("Couldn't save")
+    assert_toast_paint(page, error=True)
     expect(retention).to_have_value(before)
 
     expect(page.locator("#svcFallbackValue")).to_have_text("Not running")
@@ -211,6 +254,35 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     sheet.locator(".detail-close").click()
     expect(sheet).to_be_hidden()
     assert deletes == []
+
+    # Settings › Polish › Instructions shows the prompt a Polish sends in a
+    # sheet: it names the chosen style and closes from its x.
+    page.click("#openPromptSheet")
+    prompt = page.locator("#promptSheet")
+    expect(prompt).to_be_visible()
+    expect(page.locator("#promptSheetNote")).to_contain_text("Style:")
+    surface(page, "settings.prompt-sheet")
+    prompt.locator(".detail-close").click()
+    expect(prompt).to_be_hidden()
+
+    # Every rem-based type role scales with the root: body text and a heading.
+    for step, px in _TEXT_STEPS.items():
+        page.click(f'#textSizeControl [data-textsize="{step}"]')
+        assert page.evaluate("document.documentElement.dataset.textsize") == step
+        assert page.evaluate(_ROOT_PX) == px, step
+        assert page.evaluate(_BODY_PX) == px, step
+        assert page.evaluate(_TITLE_PX) == px, step
+        expect(
+            page.locator(f'#textSizeControl [data-textsize="{step}"]')
+        ).to_have_attribute("aria-pressed", "true")
+    page.click('#textSizeControl [data-textsize="large"]')
+    assert page.evaluate("localStorage.getItem('voice-transcriber.textsize')") == "large"
+    page.reload(wait_until="commit")
+    # The inline head script stamps the attribute as the document is parsed,
+    # so it is already there at domcontentloaded, well before any module runs.
+    page.wait_for_load_state("domcontentloaded")
+    assert page.evaluate("document.documentElement.dataset.textsize") == "large"
+    assert page.evaluate(_ROOT_PX) == _TEXT_STEPS["large"]
 
 
 def test_sign_in_sheet_wrong_then_correct_password(
@@ -261,27 +333,3 @@ def test_sign_in_sheet_wrong_then_correct_password(
     sheet.locator("button[type=submit]").click()
     expect(sheet).to_be_hidden()
     assert authed_page.evaluate("localStorage.getItem('vt_auth_token')") == good_token
-
-
-def test_signed_in_device_never_sees_sign_in_sheet(
-    authed_page: Page, base_url: str
-) -> None:
-    """A device whose token the server accepts boots straight into the app."""
-    _navigate_collecting_errors(authed_page, base_url)
-    authed_page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
-    expect(authed_page.locator("dialog.sign-in")).to_have_count(0)
-
-
-def test_polish_prompt_sheet_opens_from_settings(authed_page: Page, base_url: str) -> None:
-    """Settings › Polish › Instructions shows the prompt a Polish sends in a
-    sheet (#265): it names the chosen style and closes from its x."""
-    _navigate_collecting_errors(authed_page, base_url)
-    authed_page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
-    authed_page.click("#paneRecord .home-settings")
-    authed_page.click("#openPromptSheet")
-    sheet = authed_page.locator("#promptSheet")
-    expect(sheet).to_be_visible()
-    expect(authed_page.locator("#promptSheetNote")).to_contain_text("Style:")
-    surface(authed_page, "settings.prompt-sheet")
-    sheet.locator(".detail-close").click()
-    expect(sheet).to_be_hidden()

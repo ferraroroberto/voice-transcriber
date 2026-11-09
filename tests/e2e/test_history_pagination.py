@@ -76,15 +76,17 @@ def _texts(page: Page, ids: list[str]) -> None:
         )
 
 
-def test_latest_card_day_groups_and_paging(
+def test_latest_card_day_groups_select_mode_and_paging(
     authed_page: Page, base_url: str
 ) -> None:
     """History opens on the Latest take card (one-tap Copy of the newest
-    take), then one-line rows under a heading per day; "Show older takes"
-    extends the day it continues instead of repeating its heading."""
+    take), then one-line rows under a heading per day. Select mode replaces
+    the checkbox column: rows tick instead of copying, the bar copies oldest
+    first, and leaving restores the rows. "Show older takes" extends the day
+    it continues instead of repeating its heading."""
     _phone(authed_page)
     _mock_sessions(authed_page)
-    _texts(authed_page, ["sess-00"])
+    _texts(authed_page, ["sess-00", "sess-02"])
     authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
     authed_page.click("#tabHistory")
 
@@ -113,27 +115,6 @@ def test_latest_card_day_groups_and_paging(
     heads = authed_page.locator("#historyGroups .day-head")
     expect(heads).to_have_count(3)  # days of takes 1-3, 4-7, 8-9
     surface(authed_page, "history.list")
-
-    load_more.click()
-    expect(rows).to_have_count(_TOTAL - 1)  # second page appended
-    expect(load_more).to_be_hidden()  # has_more=false → button hidden
-    expect(heads).to_have_count(4)  # 8-11 is still one day: no repeated heading
-    counts = [int(t) for t in heads.locator(".day-count").all_inner_texts()]
-    assert counts == [3, 4, 4, 3], counts
-    # Delete-all lives in Settings › History since #265, never beside Copy.
-    expect(authed_page.locator("#paneHistory #cleanAll")).to_have_count(0)
-
-
-def test_select_mode_copies_oldest_first(authed_page: Page, base_url: str) -> None:
-    """Select mode replaces the checkbox column: rows tick instead of
-    copying, the bar copies oldest first, and leaving restores the rows."""
-    _phone(authed_page)
-    _mock_sessions(authed_page)
-    _texts(authed_page, ["sess-00", "sess-02"])
-    authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
-    authed_page.click("#tabHistory")
-    rows = authed_page.locator("#historyGroups .take-row")
-    expect(rows).to_have_count(_PAGE - 1)
     expect(authed_page.locator(".take-row .take-tick:visible")).to_have_count(0)
 
     authed_page.click("#selectTakes")
@@ -161,6 +142,15 @@ def test_select_mode_copies_oldest_first(authed_page: Page, base_url: str) -> No
     authed_page.click("#selectCancel")
     expect(authed_page.locator("#selectBar")).to_be_hidden()
     expect(authed_page.locator("#historyGroups .history-more")).to_have_count(_PAGE - 1)
+
+    load_more.click()
+    expect(rows).to_have_count(_TOTAL - 1)  # second page appended
+    expect(load_more).to_be_hidden()  # has_more=false → button hidden
+    expect(heads).to_have_count(4)  # 8-11 is still one day: no repeated heading
+    counts = [int(t) for t in heads.locator(".day-count").all_inner_texts()]
+    assert counts == [3, 4, 4, 3], counts
+    # Delete-all lives in Settings › History since #265, never beside Copy.
+    expect(authed_page.locator("#paneHistory #cleanAll")).to_have_count(0)
 
 
 def test_row_taps_copy_and_kebab_opens_the_take_sheet(
