@@ -103,7 +103,7 @@ export const state = {
   audioCtx:    null,
   analyser:    null,
   wakeLock:    null,        // active screen WakeLockSentinel while recording
-  mode:        'idle',
+  mode:        'idle',      // the take lifecycle state; written only by take.js
   config:      null,
   services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
   servicesFailed: false,      // the last /api/status poll failed (said as such, never as "up")

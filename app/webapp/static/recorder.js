@@ -1,11 +1,11 @@
 /* Recording lifecycle — mic capture, chunked upload, background-finalise
- * / resume. The record → upload → finish state machine: idle → recording
- * → uploading → transcribing → idle.
+ * / resume. The states and their legal moves are declared in take.js
+ * (idle → starting → recording → finishing → idle); this module drives them.
  *
  * The VU meter + VAD auto-stop live in level.js, the rolling-transcription
  * SSE stream lives in partials.js, and the screen wake lock lives in
- * wakelock.js — this module owns only the state-machine transitions and
- * wires those three in at the right points.
+ * wakelock.js — this module owns the moves between states and the one
+ * teardown (endCapture) that every way out of `recording` goes through.
  */
 
 'use strict';
@@ -22,6 +22,7 @@ import { createLevelSource } from './_vendored/rec-wave/rec-wave.js';
 import { attachMicNotice } from './_vendored/mic-notice/mic-notice.js';
 import { openPartialStream, closePartialStream } from './partials.js';
 import { acquireWakeLock, releaseWakeLock } from './wakelock.js';
+import { beginTake, endTake, isTake, transition } from './take.js';
 
 // The take's mic notice (input name, level strip, silent-mic warning) is the
 // vendored mic-notice; this module only owns when it starts and ends.
@@ -48,8 +49,6 @@ function clearTakeLevel() {
   if (stopNotice) { stopNotice(); stopNotice = null; }
   if (levelSource) { levelSource.close(); levelSource = null; }
 }
-
-function setMode(m) { state.mode = m; }
 
 // Record-button label states, sentence case: the mic glyph over
 // "Record" at rest (matches the idle markup in index.html), a stop square
@@ -113,18 +112,34 @@ export async function populateMics() {
 // ----------------------------------------------------- record flow
 
 export async function onRecordToggle() {
-  if (state.mode === 'idle') return startRecording();
-  if (state.mode === 'recording') return stopRecording();
+  if (isTake('idle')) return startRecording();
+  if (isTake('recording')) return stopRecording('stop');
 }
 
-async function startRecording() {
-  setMode('starting');
+// A start that failed for a reason worth telling the user; the message is the
+// toast. Anything else thrown during start gets the generic one.
+class StartError extends Error {}
+
+async function startRecording({ forceAppend = false } = {}) {
+  if (!transition('starting', 'record tapped')) return;
+  beginTake({ forceAppend });
+  finishStarted = false;
+  finishNote = '';
   hideResumeButton();
+  try {
+    await openTake();
+  } catch (err) {
+    failTake(err);
+  }
+}
+
+// Everything between the tap and the mic being live. Any throw lands in
+// failTake, so no step has to reset the mode by hand.
+async function openTake() {
   // Built inside the tap: iOS resumes an AudioContext only within a gesture.
   primeLevelSource();
 
   const stream = await acquireStream();
-  if (!stream) { clearTakeLevel(); return; }
 
   // Re-enumerate now that labels may be visible (iOS reveals after grant).
   populateMics();
@@ -134,22 +149,23 @@ async function startRecording() {
   await cleanupIncognitoSession();
 
   const incognito = isOn(els.incognitoToggle);
-  const session = await createSession(stream, incognito);
-  if (!session) { clearTakeLevel(); return; }
-  state.sessionId = session.session_id;
+  const session = await createSession(incognito);
   if (incognito) state.incognitoSessionId = session.session_id;
 
+  state.partialBaseTranscript =
+    (appendActive() && state.transcript)
+      ? state.transcript.replace(/\s+$/, '')
+      : '';
   armRecorder(stream);
+  state.sessionId = session.session_id;
 
   state.startedAt = Date.now();
-  setMode('recording');
+  transition('recording', 'mic live');
   // Live partials land in the transcript, so show it.
   state.textView = 'transcript';
   renderTextCard();
 
-  resetTakeState();
-
-  setupLevelMeter(stream, stopRecording);
+  setupLevelMeter(stream, () => stopRecording('silence'));
   watchTakeLevel(stream);
   acquireWakeLock();
   startTimer();
@@ -162,9 +178,27 @@ async function startRecording() {
   els.recordBtn.setAttribute('aria-pressed', 'true');
 }
 
+// A throw anywhere in openTake. Before the mic went live the take is dropped
+// and the button is usable again; once recording the recorder is running, so
+// the take finishes the normal way and what was streamed is kept.
+function failTake(err) {
+  console.error('[recorder] starting the take failed:', err);
+  if (isTake('recording')) {
+    showToast('Recording hit a problem — finishing the take', 'error');
+    stopRecording('setup failed');
+    return;
+  }
+  endCapture();
+  disarmRecorder();
+  releaseCachedStream();
+  els.recordStatus.textContent = '';
+  showToast(err instanceof StartError ? err.message : 'Could not start recording', 'error');
+  transition('idle', 'start failed');
+}
+
 // The live mic stream for the current constraints: the cached grant when it
-// still matches, otherwise a fresh getUserMedia. Null (mode reset to idle)
-// when the user denies the permission.
+// still matches, otherwise a fresh getUserMedia. Throws a StartError when the
+// user denies the permission.
 async function acquireStream() {
   const constraints = buildAudioConstraints();
   const wantedKey = JSON.stringify(constraints);
@@ -183,19 +217,17 @@ async function acquireStream() {
       video: false,
     });
   } catch (err) {
-    setMode('idle');
-    els.recordStatus.textContent = '';
-    showToast('Mic permission denied', 'error');
-    return null;
+    console.warn('mic permission denied:', err);
+    throw new StartError('Mic permission denied');
   }
   state.stream = stream;
   state.streamKey = wantedKey;
   return stream;
 }
 
-// POST the server-side session for this take. Null (stream stopped, mode reset
-// to idle) when the request fails.
-async function createSession(stream, incognito) {
+// POST the server-side session for this take. Throws a StartError when the
+// request fails.
+async function createSession(incognito) {
   try {
     const sessionRes = await authFetch('/api/sessions', {
       method: 'POST',
@@ -209,24 +241,14 @@ async function createSession(stream, incognito) {
     if (!sessionRes.ok) throw new Error(`HTTP ${sessionRes.status}`);
     return await sessionRes.json();
   } catch (err) {
-    // A rejected fetch (tunnel blip) must not leave the mode on
-    // 'starting' — onRecordToggle only acts on idle/recording.
     console.warn('creating the session failed:', err);
-    stream.getTracks().forEach(t => t.stop());
-    setMode('idle');
-    els.recordStatus.textContent = '';
-    showToast('Could not create session', 'error');
-    return null;
+    throw new StartError('Could not create session');
   }
 }
 
 function armRecorder(stream) {
   const mimeType = pickMimeType();
   state.mimeType = mimeType;
-  state.uploadChain = Promise.resolve();
-  state.pendingUploads = 0;
-  state.bytesSent = 0;
-  state.hadDroppedChunk = false;
   state.recorder = new MediaRecorder(stream, mimeType ? {mimeType} : undefined);
   state.stream = stream;
 
@@ -237,39 +259,97 @@ function armRecorder(stream) {
     enqueueChunkUpload(e.data);
   };
   state.recorder.onstop = () => onRecorderStopped(mimeType);
+  // The recorder can end a take on its own (unsupported state, encoder
+  // failure) and so can the mic (unplugged, permission revoked); both take
+  // the same way out as a tap on Stop.
+  state.recorder.onerror = e => {
+    console.error('[recorder] MediaRecorder error', e && e.error);
+    stopRecording('recorder-error');
+  };
+  watchMicEnd(stream);
   state.recorder.start(1000); // 1 s chunk cadence — survives connection drops
 }
 
-// Reset latency-collapse plumbing per-take.
-function resetTakeState() {
-  state.partialVersion = 0;
-  state.partialBaseTranscript =
-    (appendActive() && state.transcript)
-      ? state.transcript.replace(/\s+$/, '')
-      : '';
-  state.vadSilenceSince = 0;
-  state.vadStopFired = false;
-  state.backgroundFinalized = false;
+// Drop the recorder's handlers and the reference so a stale recorder can't
+// finish a later take.
+function disarmRecorder() {
+  const rec = state.recorder;
+  state.recorder = null;
+  if (!rec) return;
+  rec.ondataavailable = null;
+  rec.onstop = null;
+  rec.onerror = null;
+  if (rec.state !== 'inactive') {
+    try { rec.stop(); } catch (_) {}
+  }
 }
 
-function stopRecording() {
-  if (!state.recorder) return;
-  setMode('uploading');
-  els.recordStatus.textContent = 'Uploading…';
-  els.recordLabel.innerHTML = LABEL_BUSY;
-  els.recordBtn.disabled = true;
-  state.recorder.stop();
-  // Keep `state.stream` alive so the next record reuses the grant —
-  // the iOS mic indicator will linger but no re-prompt. Released on
-  // visibilitychange/pagehide or when the mic selection changes.
+// The cached stream is reused across takes, so the listener lives only as
+// long as this take (removed in endCapture).
+let stopWatchingMic = null;
+
+function watchMicEnd(stream) {
+  const onEnded = () => stopRecording('mic-lost');
+  const tracks = stream.getAudioTracks();
+  tracks.forEach(t => t.addEventListener('ended', onEnded));
+  stopWatchingMic = () => tracks.forEach(t => t.removeEventListener('ended', onEnded));
+}
+
+// Everything a take owes on the way out of `recording`, whatever ended it:
+// a tap, silence, backgrounding, the recorder or the mic. Safe to call twice.
+// `state.stream` stays cached so the next record reuses the grant — the iOS
+// mic indicator lingers but there is no re-prompt; it is released on
+// visibilitychange/pagehide or when the mic selection changes.
+function endCapture() {
   stopTimer();
   teardownLevelMeter();
   clearTakeLevel();
   releaseWakeLock();
-  // The /finish call will broadcast a `final` SSE event then close
-  // the worker; closing here too is harmless and frees the connection
-  // a fraction earlier.
+  // The /finish call will broadcast a `final` SSE event then close the
+  // worker; closing here too frees the connection a fraction earlier.
   closePartialStream();
+  if (stopWatchingMic) { stopWatchingMic(); stopWatchingMic = null; }
+}
+
+// Why a take ended without the user asking, shown in the status line and a
+// toast so it never looks like a normal stop.
+const SELF_STOP_NOTES = {
+  'recorder-stopped': 'The recorder stopped',
+  'recorder-error': 'The recorder hit an error',
+  'mic-lost': 'The mic was disconnected',
+};
+
+// The reason the current take finished, when it was not a normal stop.
+let finishNote = '';
+
+// onRecorderStopped has begun for this take; its second call is a no-op.
+let finishStarted = false;
+
+function withNote(text) {
+  return finishNote ? `${finishNote} — ${text}` : text;
+}
+
+// recording → finishing: the button goes busy and the capture is torn down.
+// False when the take was not recording (already finishing, or never live).
+function beginFinish(reason) {
+  if (!transition('finishing', reason)) return false;
+  finishNote = SELF_STOP_NOTES[reason] || '';
+  if (finishNote) showToast(finishNote + ' — finishing the take', 'error');
+  els.recordStatus.textContent = withNote('Uploading…');
+  els.recordLabel.innerHTML = LABEL_BUSY;
+  els.recordBtn.disabled = true;
+  endCapture();
+  return true;
+}
+
+function stopRecording(reason = 'stop') {
+  if (!state.recorder || !beginFinish(reason)) return;
+  if (state.recorder.state === 'inactive') {
+    // Already stopped (an errored recorder): its stop event may be past.
+    onRecorderStopped(state.mimeType);
+    return;
+  }
+  try { state.recorder.stop(); } catch (err) { onRecorderStopped(state.mimeType); }
 }
 
 // Mobile browsers can't keep a web page recording in the background.
@@ -282,9 +362,9 @@ function stopRecording() {
 // silently lost. With Append on, the next take continues the same
 // transcript when the user returns.
 export function finalizeForBackground() {
-  if (state.mode !== 'recording') return;
+  if (!isTake('recording')) return;
   state.backgroundFinalized = true;
-  stopRecording();
+  stopRecording('background');
 }
 
 // "Continue this text" — shown only after a take was finalised by
@@ -292,9 +372,8 @@ export function finalizeForBackground() {
 // force-appends onto the existing transcript regardless of the
 // Append toggle, so the seam across the app-switch is invisible.
 export function resumeRecording() {
-  if (state.mode !== 'idle') return;
-  state.forceAppend = true;
-  startRecording();
+  if (!isTake('idle')) return;
+  startRecording({ forceAppend: true });
 }
 
 function showResumeButton() {
@@ -357,21 +436,25 @@ function enqueueChunkUpload(chunk) {
   });
 }
 
+// The recorder's stop event for this take; runs once however the take ended.
 async function onRecorderStopped(mimeType) {
+  if (finishStarted) return;
+  finishStarted = true;
+  // A recorder that stopped by itself arrives here still `recording`.
+  if (isTake('recording')) beginFinish('recorder-stopped');
   // Captured before the finally clears the flag — drives whether the
   // Resume button is offered once this take settles.
   const wasBackgrounded = state.backgroundFinalized;
   try {
     // Wait for any in-flight chunks to land before asking the server
     // to transcode + transcribe.
-    const startWait = Date.now();
     const flushStatus = setInterval(() => {
       if (state.pendingUploads > 0) {
-        els.recordStatus.textContent =
-          `Finalising upload · ${state.pendingUploads} chunk${state.pendingUploads === 1 ? '' : 's'} left`;
+        els.recordStatus.textContent = withNote(
+          `Finalising upload · ${state.pendingUploads} chunk${state.pendingUploads === 1 ? '' : 's'} left`);
       }
     }, 200);
-    els.recordStatus.textContent = 'Finalising upload…';
+    els.recordStatus.textContent = withNote('Finalising upload…');
     await state.uploadChain;
     clearInterval(flushStatus);
 
@@ -429,7 +512,7 @@ async function onRecorderStopped(mimeType) {
     const speed = elapsedSec > 0 ? (elapsedSec / (serverMs / 1000)).toFixed(1) : '?';
     els.recordStatus.textContent = state.backgroundFinalized
       ? 'Saved while you were away — Continue adds to the same text'
-      : `Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`;
+      : withNote(`Done in ${(serverMs / 1000).toFixed(1)} s · ${speed}× realtime — tap Copy or Polish`);
     refreshHistory();
   } catch (err) {
     console.error(err);
@@ -441,10 +524,11 @@ async function onRecorderStopped(mimeType) {
     els.recordLabel.innerHTML = LABEL_RECORD;
     els.recordTimer.hidden = true;
     els.recordBtn.setAttribute('aria-pressed', 'false');
-    setMode('idle');
+    state.recorder = null;
+    finishNote = '';
+    transition('idle', 'take settled');
     renderTextCard();
-    state.backgroundFinalized = false;
-    state.forceAppend = false;
+    endTake();
     // Offer the one-tap continue only when this take ended because the
     // app was backgrounded and there is a transcript to continue.
     if (wasBackgrounded && state.transcript) showResumeButton();

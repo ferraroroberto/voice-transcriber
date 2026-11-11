@@ -374,3 +374,12 @@ timeout_s = 900
 # once boot data has landed, unlike the record button that paints with the shell.
 [perf.review]
 ready_selector = "#recordHeadLine"
+
+# The browser recorder's take lifecycle (idle, starting, recording, finishing): the one
+# module that owns the states and the legal moves between them. See docs/take-lifecycle.md
+# and project-scaffolding docs/implicit-state-machines.md. `isTake` is the reader's way in;
+# the machine has no derive function because its state is stored, not inferred.
+[[state_machines]]
+name   = "take"
+module = "app/webapp/static/take.js"
+type   = "TAKE_STATES"

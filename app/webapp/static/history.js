@@ -14,6 +14,7 @@ import { emptyStateEl } from './_vendored/empty-state/empty-state.js';
 import { icon } from './_vendored/icons/icons.js';
 import { createRowMenu } from './_vendored/row-menu/row-menu.js';
 import { els, state } from './state.js';
+import { isTake } from './take.js';
 import { authFetch } from './api.js';
 import {
   capitalize, copyText, formatWhen, renderTextCard, renderTranscript, setHeadLine,
@@ -408,7 +409,7 @@ async function copyTake(id, flag) {
 // session, Save reappears). Only while idle: mid-take the id is still the
 // live /chunk and /finish target. `id` null means every take was removed.
 function releaseDeletedSession(id) {
-  if (state.mode !== 'idle' || !state.sessionId) return;
+  if (!isTake('idle') || !state.sessionId) return;
   if (id && state.sessionId !== id) return;
   state.sessionId = null;
   renderTextCard();
@@ -593,7 +594,7 @@ export function initTakeSheet() {
 async function retranscribe(id) {
   // Redo repoints state.sessionId at the old take; mid-recording that would
   // redirect the live take's remaining /chunk and /finish calls to it.
-  if (state.mode !== 'idle') {
+  if (!isTake('idle')) {
     showToast('Finish the current take first', 'error');
     return;
   }

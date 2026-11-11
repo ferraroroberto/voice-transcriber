@@ -7,6 +7,7 @@
 'use strict';
 
 import { els, state } from './state.js';
+import { isTake } from './take.js';
 import { icon } from './_vendored/icons/icons.js';
 import { renderHeadStatus } from './_vendored/home-head/home-head.js';
 import { showToast } from './_vendored/toast/toast.js';
@@ -139,7 +140,7 @@ function clock(sec) {
 // The meta line under the text: "Today 08:48 · 212 words · 1:40" for a take,
 // the polish style for the Polished view, a note while the text is live.
 function textMetaLine() {
-  if (state.mode === 'recording' && state.transcript) return 'Live text · refined when you stop';
+  if (isTake('recording') && state.transcript) return 'Live text · refined when you stop';
   if (state.textView === 'polished') {
     return state.polishStyle ? `Polished · ${state.polishStyle}` : 'Polished';
   }
@@ -183,7 +184,7 @@ export function renderTextCard() {
   else if (hubDown) label.textContent = 'Polish unavailable';
   else label.textContent = state.polished ? 'Polish again' : 'Polish';
   els.polishBtn.title = hubDown ? 'Polish unavailable: hub not reachable' : '';
-  els.polishBtn.disabled = state.polishing || hubDown || !state.transcript || state.mode !== 'idle';
+  els.polishBtn.disabled = state.polishing || hubDown || !state.transcript || !isTake('idle');
 
   // Save only for text History does not hold yet (pasted, no session).
   els.saveTranscript.hidden = !state.transcript || !!state.sessionId;
