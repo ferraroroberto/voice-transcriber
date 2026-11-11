@@ -3,6 +3,7 @@
 /app/webapp/serve.py
 /app/webapp/static/_vendored/base
 /app/webapp/static/_vendored/button
+/app/webapp/static/_vendored/card
 /app/webapp/static/_vendored/empty-state
 /app/webapp/static/_vendored/home-head
 /app/webapp/static/_vendored/icon-button
