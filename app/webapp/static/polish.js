@@ -5,6 +5,7 @@
 'use strict';
 
 import { els, state } from './state.js';
+import { endTake, isTake } from './take.js';
 import { authFetch, readErrorMessage } from './api.js';
 import {
   renderPolished, renderTextCard, renderTranscript, showToast, truncate, tryAutoCopy,
@@ -77,11 +78,11 @@ export function onReset() {
   // running MediaRecorder — every subsequent chunk then 404s against
   // "null" and the eventual Stop loses the take.
   // Reset is only meaningful once a take has settled back to idle.
-  if (state.mode !== 'idle') return;
+  if (!isTake('idle')) return;
   cleanupIncognitoSession();
   closePartialStream();
   hideResumeButton();
-  state.forceAppend = false;
+  endTake();
   state.sessionId = null;
   renderTranscript('');
   state.partialVersion = 0;

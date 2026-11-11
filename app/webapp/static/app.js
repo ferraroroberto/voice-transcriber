@@ -36,6 +36,7 @@ import {
 } from './recorder.js';
 import { closePartialStream } from './partials.js';
 import { acquireWakeLock } from './wakelock.js';
+import { isTake } from './take.js';
 import {
   initDeleteAll,
   initSelectMode,
@@ -266,22 +267,22 @@ function bindPageLifecycle() {
   // the tab becomes visible again, in case Tailscale was asleep.
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      if (state.mode === 'recording') {
+      if (isTake('recording')) {
         // App switch / screen lock mid-record — finalise the take so it
         // is saved rather than dying silently. See finalizeForBackground.
         finalizeForBackground();
-      } else if (state.mode === 'idle') {
+      } else if (isTake('idle')) {
         releaseCachedStream();
       }
     } else if (document.visibilityState === 'visible') {
-      if (state.backgroundFinalized && state.mode === 'uploading') {
+      if (state.backgroundFinalized && isTake('finishing')) {
         els.recordStatus.innerHTML =
           icon('pause') + ' Paused while you were away — finalising…';
       }
       // The platform auto-releases the screen wake lock whenever the page
       // is hidden; re-acquire if we came back while still recording (the
       // Android background-record case the original one-shot missed).
-      if (state.mode === 'recording') acquireWakeLock();
+      if (isTake('recording')) acquireWakeLock();
       // Re-fetch config when it never loaded, or when we're running on the
       // offline fallback (a cold-Tailscale first load) — so the real server
       // flags, including rolling transcription, replace the guesses once the
@@ -293,7 +294,7 @@ function bindPageLifecycle() {
     // pagehide can mean the page is being discarded outright — make a
     // best-effort finalise so the take is saved, not just left as
     // streamed chunks for History → Redo to recover.
-    if (state.mode === 'recording') finalizeForBackground();
+    if (isTake('recording')) finalizeForBackground();
     releaseCachedStream();
     closePartialStream();
   });

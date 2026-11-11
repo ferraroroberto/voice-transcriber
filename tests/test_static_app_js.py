@@ -177,7 +177,7 @@ class TestAppJsSourcePins:
         )
         assert match is not None, "onReset body not found"
         body = match.group(1)
-        assert "state.mode !== 'idle'" in body or 'state.mode !== "idle"' in body
+        assert "!isTake('idle')" in body
 
     def test_no_hardcoded_alias_list_in_offline_fallback(self, app_js: str):
         """`applyConfigDefaults` should not hardcode the alias list — the

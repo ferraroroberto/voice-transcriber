@@ -7,6 +7,7 @@
 'use strict';
 
 import { els, state, getStoredToken } from './state.js';
+import { isTake } from './take.js';
 import { formatBytes, renderTextCard } from './ui.js';
 
 export function openPartialStream(sessionId) {
@@ -67,7 +68,7 @@ function applyPartial(data) {
   state.transcript = merged;
   els.transcript.value = merged;
   renderTextCard();
-  if (state.mode === 'recording' && Date.now() >= state.vadStatusOwnedUntil) {
+  if (isTake('recording') && Date.now() >= state.vadStatusOwnedUntil) {
     els.recordStatus.textContent =
       `Recording · partial v${state.partialVersion} · ${formatBytes(state.bytesSent)} streamed`;
   }

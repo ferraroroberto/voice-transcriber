@@ -68,7 +68,8 @@ voice-transcriber/
 │       └── static/
 │           ├── index.html         # tabbed SPA (Record · History; Settings opens from the header gear), big-button mobile-first
 │           ├── app.js             # module wiring / boot sequence
-│           ├── recorder.js        # MediaRecorder record/upload/finish state machine
+│           ├── take.js            # the take lifecycle: states, legal moves, transition(), isTake()
+│           ├── recorder.js        # MediaRecorder capture and upload; drives the take lifecycle
 │           ├── level.js           # VAD auto-stop
 │           ├── vad.js             # pure VAD helpers (Silence length → trigger ms)
 │           ├── labels.js          # pure label helpers (polish-model alias → display label)

@@ -11,6 +11,7 @@
 'use strict';
 
 import { els, state } from './state.js';
+import { isTake } from './take.js';
 import { formatBytes, isOn } from './ui.js';
 import { silenceTriggerMs } from './vad.js';
 
@@ -69,7 +70,7 @@ function maybeFireAutoStop(loudness, threshold, onAutoStop) {
   // it. Settings apply instantly, so there is no Save button.
   const enabled = isOn(els.vadAutoStopToggle);
   if (!enabled) return;
-  if (state.mode !== 'recording' || state.vadStopFired) return;
+  if (!isTake('recording') || state.vadStopFired) return;
   const now = Date.now();
   // Ignore the first ~600 ms — the AnalyserNode warms up and a fresh
   // mic stream can flat-line briefly before audio reaches it.
@@ -105,7 +106,7 @@ function maybeFireAutoStop(loudness, threshold, onAutoStop) {
     // 500 ms grace before actually stopping; if the user resumes
     // talking the next tick clears state.vadStopFired's effect.
     setTimeout(() => {
-      if (!state.vadStopFired || state.mode !== 'recording') return;
+      if (!state.vadStopFired || !isTake('recording')) return;
       // One last loudness probe — if the user resumed talking during
       // the grace window, abort the stop.
       if (state.analyser) {
