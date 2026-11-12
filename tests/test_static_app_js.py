@@ -334,6 +334,32 @@ class TestNeutralToast:
         assert "'success'" not in app_js
 
 
+class TestElsHandlesExist:
+    """Every `els.<name>` the app touches must be a key of state.js's `els`
+    table. A handle left behind when its element moved (the level strip went
+    to the vendored mic-notice) reads `undefined`, and the first property
+    access throws inside a timer where no e2e test looks."""
+
+    def test_every_els_reference_has_an_entry(self):
+        state_src = (STATIC_DIR / "state.js").read_text(encoding="utf-8")
+        table = re.search(
+            r"export const els = \{(.*?)\n\};", state_src, re.DOTALL
+        )
+        assert table is not None, "els table not found in state.js"
+        keys = set(re.findall(r"^\s*(\w+):", table.group(1), re.MULTILINE))
+        assert keys, "els table parsed empty"
+
+        missing: dict[str, list[str]] = {}
+        for module in sorted(STATIC_DIR.glob("*.js")):
+            if module.name == "state.js":
+                continue
+            src = module.read_text(encoding="utf-8")
+            for name in set(re.findall(r"\bels\.(\w+)", src)):
+                if name not in keys:
+                    missing.setdefault(module.name, []).append(name)
+        assert not missing, f"els handles with no entry in state.js: {missing}"
+
+
 class TestAutoStopSilenceLength:
     """Settings › Sound › Silence length must drive the VAD auto-stop
     trigger (#283). The control was renamed in #265 and the stale DOM
