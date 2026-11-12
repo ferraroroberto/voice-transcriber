@@ -484,30 +484,6 @@ textarea.text-out.editable::placeholder {
 .text-clear { margin-left: auto; }
 
 /* ---------- buttons ---------- */
-.big-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 0;
-  border-radius: var(--radius-md);
-  font-family: var(--font);
-  font-size: var(--font-label);
-  font-weight: 600;
-  padding: 14px var(--space-md);
-  min-height: 48px;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.big-btn .icon { width: var(--icon-inline); height: var(--icon-inline); }
-/* Accent-tinted ghost recipe — home-automation's canonical .big-btn
-   (accent tint + accent text + soft accent border), applied to every
-   accent button in the app. The status-coloured exception is the record
-   circle's live state. */
-.big-btn { background: var(--accent-soft); border: 1px solid var(--accent-border-soft); color: var(--accent-text); flex: 1; }
-.big-btn:active { transform: scale(0.98); }
-.big-btn[disabled] { background: var(--card-off); border-color: var(--line); color: var(--muted); cursor: not-allowed; }
-
 /* The compact footprint for a quiet list-foot button (History's "Show
    older takes"). Color/border/radius/cursor come from the vendored tier
    (_vendored/button/button.css); this block only restates the smaller
