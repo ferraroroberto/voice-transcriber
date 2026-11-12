@@ -1,7 +1,10 @@
 # 🎙️ Voice Transcription
 
-Local, fast, always-on voice-to-text powered by a bundled
-[`whisper.cpp`](https://github.com/ggerganov/whisper.cpp) server.
+Local, fast, always-on voice-to-text. Audio goes to the local-llm-hub
+first (parakeet with a whisper failover); a bundled
+[`whisper.cpp`](https://github.com/ggerganov/whisper.cpp) server is the
+fallback when the hub is unreachable (see `transcribe_base_url` in
+[configuration](docs/configuration.md)).
 Designed as a drop-in WhisperFlow replacement: tray-resident app, global
 hotkey, instant record → transcribe → clipboard. CUDA on by default (via
 the cuBLAS prebuilt), falls back to CPU cleanly.
@@ -85,7 +88,8 @@ One line per feature; each links to its reference doc.
 
 - [ferraroroberto/local-llm-hub](https://github.com/ferraroroberto/local-llm-hub)
   — the sibling hub for local LLMs. When it's running it already owns
-  port 8090 with a whisper-server; set `mode: external` here to reuse
-  that instance instead of spawning your own.
+  port 8090 with a whisper-server; the app reuses that instance by default
+  (`mode: external` in `config/whisper_server.yaml`), and `mode: local` opts
+  out so it spawns and owns its own.
 - [ggerganov/whisper.cpp](https://github.com/ggerganov/whisper.cpp)
   — upstream inference engine and release artefacts.
