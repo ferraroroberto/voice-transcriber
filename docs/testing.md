@@ -92,7 +92,7 @@ still covers the same logic via the parity port in
 | `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows |
 | `tests\test_event_loop.py` | Selector event-loop shim wiring + accept-loop resilience — root cause of the :8443 wedge |
 | `tests\test_probe_cache.py` | `ProbeCache` on a fake clock and a stuck probe — fresh/stale/too-old reads, a probe that has not answered is unknown (never up or down), one probe in flight at a time, a failing probe stays unknown |
-| `tests\test_process_supervisor.py` | Shared adopt-or-spawn primitives — TCP probe, stop ladder, readiness poll — composed by both `WhisperServerManager` and `WebappManager` |
+| `tests\test_process_supervisor.py` | Shared adopt-or-spawn primitives — TCP probe, ownership ladder, spawn recipe, stop ladder, readiness poll, and a guard that neither manager calls `Popen` itself — composed by both `WhisperServerManager` and `WebappManager` |
 | `tests\test_whisper_server_manager.py` | `WhisperServerManager` across process boundaries — `stop` / `logs` / `status` work off the PID file and log file a prior process left on disk, not in-memory state |
 | `tests\test_e2e_live_guard.py` | Live-tray adoption guard — free-port autoboot vs. refuse-without-opt-in |
 | `tests\test_gate_result.py` | The gate's last stdout line is `GATE-RESULT: PASS` or `GATE-RESULT: FAIL` on a pass, a failed stage, a missing `.venv` and an early terminating error (the verdict helper runs for real over captured stdout); exit codes stay 0 and 1 and every `exit` goes through the verdict |

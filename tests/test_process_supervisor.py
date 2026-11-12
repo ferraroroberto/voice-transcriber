@@ -10,6 +10,7 @@ subprocess-light regression net for the shared mechanics themselves.
 
 from __future__ import annotations
 
+import ast
 import socket
 import subprocess
 import sys
@@ -19,7 +20,12 @@ import pytest
 
 from src.no_window import NO_WINDOW
 from src.process_supervisor import (
+    OWNERSHIP_EXTERNAL,
+    OWNERSHIP_NONE,
+    OWNERSHIP_OURS,
     is_port_in_use,
+    ownership_of,
+    spawn_managed,
     stop_pid,
     stop_popen,
     wait_until_ready,
@@ -139,3 +145,90 @@ class TestWaitUntilReady:
                 not_alive_message=lambda: "not alive",
                 timeout_message="timed out",
             )
+
+
+class TestOwnershipOf:
+    @staticmethod
+    def _proc(alive: bool):
+        class _P:
+            def poll(self):
+                return None if alive else 0
+
+        return _P()
+
+    def test_ours_needs_a_live_child_and_a_reachable_service(self):
+        assert ownership_of(self._proc(True), reachable=True) == OWNERSHIP_OURS
+
+    def test_a_reachable_service_without_a_live_child_is_external(self):
+        assert ownership_of(None, reachable=True) == OWNERSHIP_EXTERNAL
+        assert ownership_of(self._proc(False), reachable=True) == OWNERSHIP_EXTERNAL
+
+    def test_unreachable_is_none_even_with_a_live_child(self):
+        assert ownership_of(self._proc(True), reachable=False) == OWNERSHIP_NONE
+        assert ownership_of(None, reachable=False) == OWNERSHIP_NONE
+
+
+class TestSpawnManaged:
+    def test_child_gets_utf8_env_and_the_extra_overlay(self, tmp_path):
+        out = tmp_path / "env.txt"
+        script = (
+            "import os, sys; "
+            "open(sys.argv[1], 'w').write("
+            "os.environ['PYTHONUTF8'] + os.environ['PYTHONIOENCODING'] + os.environ['PROBE'])"
+        )
+        proc = spawn_managed(
+            [str(PYTHON), "-c", script, str(out)],
+            name="probe",
+            cwd=tmp_path,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            extra_env={"PROBE": "x"},
+            not_found_message=lambda exc: "unused",
+        )
+        assert proc.wait(timeout=10) == 0
+        assert out.read_text() == "1utf-8x"
+
+    def test_missing_executable_raises_the_callers_message(self, tmp_path):
+        with pytest.raises(RuntimeError, match="no such launcher"):
+            spawn_managed(
+                [str(tmp_path / "does-not-exist.exe")],
+                name="probe",
+                cwd=tmp_path,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                not_found_message=lambda exc: "no such launcher",
+            )
+
+    def test_other_launch_failures_name_the_service(self, tmp_path):
+        with pytest.raises(RuntimeError, match="failed to launch probe"):
+            spawn_managed(
+                [123],  # type: ignore[list-item]  # a non-path argv entry: TypeError, not FileNotFoundError
+                name="probe",
+                cwd=tmp_path,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                not_found_message=lambda exc: "unused",
+            )
+
+
+MANAGER_SOURCES = (
+    Path("src/whisper_server/manager.py"),
+    Path("app/webapp/manager.py"),
+)
+
+
+@pytest.mark.parametrize("path", MANAGER_SOURCES, ids=str)
+def test_managers_spawn_only_through_the_supervisor(path):
+    """The structural guard for the duplication class: the spawn recipe and
+    the ownership ladder live in `process_supervisor`, so a manager calling
+    `subprocess.Popen` itself has re-forked the lifecycle."""
+    root = Path(__file__).resolve().parent.parent
+    tree = ast.parse((root / path).read_text(encoding="utf-8"))
+    popen_calls = [
+        node.lineno
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Attribute)
+        and node.func.attr == "Popen"
+    ]
+    assert popen_calls == [], f"{path} calls Popen directly at lines {popen_calls}"

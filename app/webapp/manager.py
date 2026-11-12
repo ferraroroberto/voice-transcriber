@@ -1,6 +1,8 @@
 """Webapp process manager — adopt-or-spawn for the HTTP/2 webapp.
 
-Mirrors `src/whisper_server/manager.py`:
+Same lifecycle as `src/whisper_server/manager.py`, both built on the
+shared `src/process_supervisor.py` (ownership ladder, spawn recipe, stop
+ladder, readiness wait):
 
 - `status()` checks `GET /healthz` and a low-level TCP probe.
 - `start()` adopts an already-listening webapp (no second spawn) or
@@ -17,7 +19,6 @@ from __future__ import annotations
 
 # Standard library imports
 import logging
-import os
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -29,12 +30,13 @@ import requests
 
 from app.tray.single_instance import cross_process_lock
 from app.webapp.event_loop import LOOP_FACTORY
-from src.no_window import NO_WINDOW
 from src.process_supervisor import (
     OWNERSHIP_EXTERNAL,
     OWNERSHIP_NONE,
     OWNERSHIP_OURS,
     is_port_in_use,
+    ownership_of,
+    spawn_managed,
     stop_popen,
     wait_until_ready,
 )
@@ -183,22 +185,22 @@ class WebappManager:
         return is_port_in_use(self.config.host, self.config.port)
 
     def status(self) -> WebappStatus:
-        running_here = self._proc is not None and self._proc.poll() is None
         reachable = self.is_reachable() or self.is_port_in_use()
+        ownership = ownership_of(self._proc, reachable=reachable)
 
-        if running_here and reachable:
+        if ownership == OWNERSHIP_OURS:
             return WebappStatus(
                 running=True,
-                ownership=OWNERSHIP_OURS,
+                ownership=ownership,
                 pid=self._proc.pid,
                 port=self.config.port,
                 base_url=self.base_url,
                 detail="running (started by this process)",
             )
-        if reachable:
+        if ownership == OWNERSHIP_EXTERNAL:
             return WebappStatus(
                 running=True,
-                ownership=OWNERSHIP_EXTERNAL,
+                ownership=ownership,
                 pid=None,
                 port=self.config.port,
                 base_url=self.base_url,
@@ -206,7 +208,7 @@ class WebappManager:
             )
         return WebappStatus(
             running=False,
-            ownership=OWNERSHIP_NONE,
+            ownership=ownership,
             pid=None,
             port=self.config.port,
             base_url=self.base_url,
@@ -240,26 +242,14 @@ class WebappManager:
             cmd = self._build_command()
             logger.info(f"🚀 Starting webapp: {' '.join(cmd)}")
 
-            env = os.environ.copy()
-            env["PYTHONIOENCODING"] = "utf-8"
-            env["PYTHONUTF8"] = "1"
-
-            try:
-                popen_kwargs: Dict[str, Any] = dict(
-                    cwd=str(PROJECT_ROOT),
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
-                    env=env,
-                )
-                if sys.platform == "win32":
-                    popen_kwargs["creationflags"] = (
-                        subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW
-                    )
-                self._proc = subprocess.Popen(cmd, **popen_kwargs)
-            except FileNotFoundError as exc:
-                raise RuntimeError(f"❌ python launcher not found: {exc}") from exc
-            except Exception as exc:
-                raise RuntimeError(f"❌ failed to launch webapp: {exc}") from exc
+            self._proc = spawn_managed(
+                cmd,
+                name="webapp",
+                cwd=PROJECT_ROOT,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                not_found_message=lambda exc: f"❌ python launcher not found: {exc}",
+            )
 
             if wait:
                 self._wait_until_ready()

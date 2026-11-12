@@ -24,12 +24,13 @@ import requests
 import yaml
 
 from src import runtime_files
-from src.no_window import NO_WINDOW
 from src.process_supervisor import (
     OWNERSHIP_EXTERNAL,
     OWNERSHIP_NONE,
     OWNERSHIP_OURS,
     is_port_in_use,
+    ownership_of,
+    spawn_managed,
     stop_pid,
     stop_popen,
     wait_until_ready,
@@ -357,24 +358,24 @@ class WhisperServerManager:
         return is_port_in_use(self.config.host, self.config.port)
 
     def status(self) -> ServerStatus:
-        running_here = self._proc is not None and self._proc.poll() is None
         reachable = self.is_reachable() or self.is_port_in_use()
+        ownership = ownership_of(self._proc, reachable=reachable)
 
-        if running_here and reachable:
+        if ownership == OWNERSHIP_OURS:
             return ServerStatus(
                 running=True,
-                ownership=OWNERSHIP_OURS,
+                ownership=ownership,
                 pid=self._proc.pid,
                 port=self.config.port,
                 base_url=self.config.base_url,
                 detail="running (started by this process)",
             )
 
-        if reachable:
+        if ownership == OWNERSHIP_EXTERNAL:
             pid = self._read_pid_file()
             return ServerStatus(
                 running=True,
-                ownership=OWNERSHIP_EXTERNAL,
+                ownership=ownership,
                 pid=pid,
                 port=self.config.port,
                 base_url=self.config.base_url,
@@ -383,7 +384,7 @@ class WhisperServerManager:
 
         return ServerStatus(
             running=False,
-            ownership=OWNERSHIP_NONE,
+            ownership=ownership,
             port=self.config.port,
             base_url=self.config.base_url,
             detail="not running",
@@ -426,12 +427,14 @@ class WhisperServerManager:
         cmd = self._build_command()
         logger.info(f"🚀 Starting whisper-server: {' '.join(str(c) for c in cmd)}")
 
-        env = os.environ.copy()
-        env["PYTHONIOENCODING"] = "utf-8"
-        env["PYTHONUTF8"] = "1"
+        extra_env: Dict[str, str] = {}
         if sys.platform == "win32":
             # Let the binary find sibling CUDA DLLs.
-            env["PATH"] = str(self.config.binary_path.parent) + os.pathsep + env.get("PATH", "")
+            extra_env["PATH"] = (
+                str(self.config.binary_path.parent)
+                + os.pathsep
+                + os.environ.get("PATH", "")
+            )
 
         try:
             # Output goes to a file the child owns outright, so it outlives
@@ -444,23 +447,17 @@ class WhisperServerManager:
             ) from e
 
         try:
-            popen_kwargs: Dict[str, Any] = dict(
-                cwd=str(self.config.project_root),
+            self._proc = spawn_managed(
+                cmd,
+                name="whisper-server",
+                cwd=self.config.project_root,
                 stdout=log_handle,
                 stderr=subprocess.STDOUT,
-                env=env,
+                extra_env=extra_env,
+                not_found_message=lambda _exc: (
+                    f"❌ whisper-server binary not found: {self.config.binary_path}"
+                ),
             )
-            if sys.platform == "win32":
-                popen_kwargs["creationflags"] = (
-                    subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW
-                )
-            self._proc = subprocess.Popen(cmd, **popen_kwargs)
-        except FileNotFoundError as e:
-            raise RuntimeError(
-                f"❌ whisper-server binary not found: {self.config.binary_path}"
-            ) from e
-        except Exception as e:
-            raise RuntimeError(f"❌ failed to launch whisper-server: {e}") from e
         finally:
             log_handle.close()  # the child holds its own inherited handle
 

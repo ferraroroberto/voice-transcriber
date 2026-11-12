@@ -38,7 +38,7 @@ voice-transcriber/
 │   ├── mic_glyph.py               # runtime state-tinted tray renderer
 │   ├── tunnel.py                  # cloudflared spawn/persist/stop
 │   ├── probe_cache.py             # background-refreshed cache for slow reachability probes (/api/status)
-│   ├── process_supervisor.py      # shared adopt-or-spawn primitives (whisper + webapp managers)
+│   ├── process_supervisor.py      # shared adopt-or-spawn primitives: ownership ladder, spawn recipe, stop, readiness (whisper + webapp managers)
 │   └── whisper_server/
 │       └── manager.py             # spawn / kill / health / PID / describe
 ├── app/                           # ── UI surfaces ──
