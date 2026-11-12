@@ -59,6 +59,10 @@ const usage = initUsageLog({
   },
 });
 
+// The vendored nav's handle, set once bindNav has run; declared before init()
+// runs so bindNav can assign it.
+let navTabs = null;
+
 init().catch(err => {
   console.error(err);
   showToast('Init failed: ' + err.message + ' — pull down to retry', 'error');
@@ -74,12 +78,7 @@ function openSettings() {
   document.querySelectorAll('main.app > section.pane').forEach((pane) => {
     pane.hidden = pane.id !== 'paneSettings';
   });
-  const nav = document.querySelector('nav.tabs');
-  nav.querySelectorAll('.tab').forEach((tab) => {
-    tab.classList.remove('active');
-    tab.setAttribute('aria-selected', 'false');
-  });
-  nav.dataset.activeTab = 'settings';
+  if (navTabs) navTabs.setTab(null);
   const scroller = document.querySelector('.app');
   if (scroller) scroller.scrollTop = 0;
   window.scrollTo(0, 0);
@@ -195,7 +194,7 @@ function bindNav() {
   // Fleet bottom-tab nav (vendored component — _vendored/nav/). Settings is
   // no tab (fleet NAV-03): every pane's header gear opens it (openSettings),
   // and choosing any tab leaves it, so onChange hides the pane.
-  initNavTabs({
+  navTabs = initNavTabs({
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',
     onChange: (tab) => {
