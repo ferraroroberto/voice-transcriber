@@ -175,7 +175,7 @@
 /* The one trailing accessory: a 44px kebab (the vendored icon-button). */
 .history-more { --icon-btn-box: var(--hit-min); }
 
-/* Show older takes, then the quiet delete-all (Step 5 moves it to Settings). */
+/* The list foot: the centred "Show older takes" button. */
 .history-foot {
   display: flex;
   flex-direction: column;
@@ -184,7 +184,6 @@
   margin: var(--space-xs) 0 var(--gap);
 }
 .history-foot .button-ghost.compact { border-color: transparent; }
-.history-clean { color: var(--muted); }
 
 /* Select mode's bottom bar: sits above the floating nav on a phone. */
 .select-bar {
