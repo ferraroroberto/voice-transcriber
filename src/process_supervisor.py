@@ -5,7 +5,8 @@ whisper.cpp subprocess) and `app/webapp/manager.py` (`WebappManager`, owns
 the uvicorn subprocess) run the same adopt-or-spawn lifecycle: three-state
 ownership (none / ours / external), a low-level TCP probe before HTTP is
 listening, a CTRL_BREAK_EVENT -> terminate() -> kill() stop ladder, and a
-"poll until reachable or dead or timed out" readiness wait. This module is
+"poll until reachable or dead or timed out" readiness wait, and one spawn
+recipe (UTF-8 env, own process group, no console window). This module is
 the single owner of those primitives, so a fix to one lands in both
 managers instead of needing to be re-applied by hand.
 
@@ -18,18 +19,70 @@ live here.
 from __future__ import annotations
 
 import logging
+import os
 import signal
 import socket
 import subprocess
 import sys
 import time
-from typing import Callable
+from pathlib import Path
+from typing import IO, Any, Callable, Dict, List, Mapping, Optional, Union
+
+from src.no_window import NO_WINDOW
 
 logger = logging.getLogger(__name__)
 
 OWNERSHIP_NONE = "none"          # not running
 OWNERSHIP_OURS = "ours"          # we started it; we kill on exit
 OWNERSHIP_EXTERNAL = "external"  # someone else started it; hands off
+
+
+def ownership_of(proc: Optional[subprocess.Popen], *, reachable: bool) -> str:
+    """The three-state ownership ladder both managers report: `OURS` when
+    this process holds a live child and the service answers, `EXTERNAL`
+    when the service answers but we did not start it, `NONE` otherwise.
+    """
+    running_here = proc is not None and proc.poll() is None
+    if running_here and reachable:
+        return OWNERSHIP_OURS
+    if reachable:
+        return OWNERSHIP_EXTERNAL
+    return OWNERSHIP_NONE
+
+
+def spawn_managed(
+    cmd: List[str],
+    *,
+    name: str,
+    cwd: Union[str, Path],
+    stdout: Union[int, IO[Any]],
+    stderr: Union[int, IO[Any]],
+    not_found_message: Callable[[FileNotFoundError], str],
+    extra_env: Optional[Mapping[str, str]] = None,
+) -> subprocess.Popen:
+    """Popen a managed child with the shared recipe: UTF-8 stdio env, its
+    own process group (so CTRL_BREAK_EVENT reaches only it) and no console
+    window on Windows. `extra_env` overlays the inherited environment. A
+    missing executable raises `RuntimeError(not_found_message(exc))`; any
+    other launch failure raises a `RuntimeError` naming `name`.
+    """
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
+    env["PYTHONUTF8"] = "1"
+    if extra_env:
+        env.update(extra_env)
+
+    popen_kwargs: Dict[str, Any] = dict(
+        cwd=str(cwd), stdout=stdout, stderr=stderr, env=env,
+    )
+    if sys.platform == "win32":
+        popen_kwargs["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | NO_WINDOW
+    try:
+        return subprocess.Popen(cmd, **popen_kwargs)
+    except FileNotFoundError as exc:
+        raise RuntimeError(not_found_message(exc)) from exc
+    except Exception as exc:
+        raise RuntimeError(f"❌ failed to launch {name}: {exc}") from exc
 
 
 def is_port_in_use(host: str, port: int, timeout: float = 0.2) -> bool:
