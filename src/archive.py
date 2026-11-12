@@ -37,11 +37,26 @@ from pathlib import Path
 from typing import Iterator, List, Optional
 
 from src import runtime_files
+from src.runtime_data import app_dir_env_var
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_ARCHIVE_DIR = Path(__file__).resolve().parent.parent / "archive"
 META_FILENAME = "meta.json"
+
+
+def default_archive_dir() -> Path:
+    """Where the app's takes live when no ``root`` is given.
+
+    A harness that points the app's data directory (``VOICE_TRANSCRIBER_DATA_DIR``)
+    at a temp folder must also move the archive, or a disposable instance
+    launched from the primary checkout lists the owner's real takes. Unset (the
+    live tray) keeps the in-checkout ``archive/`` folder.
+    """
+    override = os.environ.get(app_dir_env_var("voice-transcriber"), "").strip()
+    if override:
+        return Path(override) / "archive"
+    return DEFAULT_ARCHIVE_DIR
 
 
 def parse_created_at(value: str) -> Optional[datetime]:
@@ -226,7 +241,7 @@ class SessionArchive:
     """Top-level archive — creates sessions, lists them, prunes old ones."""
 
     def __init__(self, root: Optional[Path] = None) -> None:
-        self.root = Path(root) if root is not None else DEFAULT_ARCHIVE_DIR
+        self.root = Path(root) if root is not None else default_archive_dir()
         runtime_files.make_dirs(self.root)
 
     # ------------------------------------------------------ create / lookup

@@ -4,7 +4,7 @@
 
 Every recording lands in `archive/YYYY/MM/DD/HH-MM-SS-<id>/` with
 `raw.webm`, transcoded `audio.wav`, `transcript.txt`, `polished.txt`,
-and `meta.json`. The directory is gitignored. Retention has two windows,
+and `meta.json`. The directory is gitignored. When `VOICE_TRANSCRIBER_DATA_DIR` is set (the e2e harness and the design-review synthetic instance set it to a temp folder) the archive lives at `<that dir>/archive` instead, so a disposable instance never lists the checkout's real takes. Retention has two windows,
 both swept on app start and set in `webapp_config.json`:
 
 - **Audio** (`raw.webm`, `audio.wav`) is deleted once a take is older
