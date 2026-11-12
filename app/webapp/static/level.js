@@ -1,6 +1,6 @@
-/* Live mic level — VU meter bar plus VAD (voice-activity-detection)
- * auto-stop. Both read the same AnalyserNode tap on the recording
- * stream, so they share one setup/teardown pair.
+/* Live mic level — the AnalyserNode tap on the recording stream that
+ * drives VAD (voice-activity-detection) auto-stop. The on-screen meter
+ * belongs to the vendored mic-notice, so this module only listens.
  *
  * Auto-stop doesn't call back into the recording state machine
  * directly — the caller passes an `onAutoStop` callback (recorder.js
@@ -45,8 +45,6 @@ export function setupLevelMeter(stream, onAutoStop) {
         const v = Math.abs(data[i] - 128);
         if (v > max) max = v;
       }
-      const pct = Math.min(100, (max / 128) * 200);
-      els.levelFill.style.width = pct + '%';
       maybeFireAutoStop(max, VAD_LOUDNESS_THRESHOLD, onAutoStop);
     }, 80);
   } catch (err) {

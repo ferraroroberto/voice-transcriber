@@ -115,8 +115,10 @@ export async function onSaveTranscript() {
     refreshHistory();
   } catch (err) {
     showToast('Save failed: ' + truncate(err.message || String(err), 80), 'error');
-    els.saveTranscript.disabled = false;
   } finally {
+    // Re-enable on success too: Clear then a new paste unhides this same
+    // button, and a stuck `disabled` would block every later save.
+    els.saveTranscript.disabled = false;
     els.saveTranscript.innerHTML = original;
   }
 }
