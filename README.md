@@ -39,12 +39,12 @@ server it started.
 Or use the Python entry point directly:
 
 ```bash
-python launcher.py                  # defaults to tray
-python launcher.py tray
-python launcher.py record [--language MODE] [--start-server]
-python launcher.py transcribe <file> [--language MODE]
-python launcher.py gui
-python launcher.py server start|stop|status|logs
+.venv/Scripts/python.exe launcher.py  # defaults to tray
+.venv/Scripts/python.exe launcher.py tray
+.venv/Scripts/python.exe launcher.py record [--language MODE] [--start-server]
+.venv/Scripts/python.exe launcher.py transcribe <file> [--language MODE]
+.venv/Scripts/python.exe launcher.py gui
+.venv/Scripts/python.exe launcher.py server start|stop|status|logs
 ```
 
 All subcommands accept `--debug` and `--config path/to/config.json`.
