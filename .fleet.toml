@@ -24,6 +24,14 @@ detail = "solid accent fill outside the primary: .record-btn"
 reason = "the record circle is the Record tab's one primary action"
 record = "https://github.com/ferraroroberto/voice-transcriber/issues/262"
 
+# cert-drift triage verdict (schema: fleet-config's architecture/README.md,
+# "[cert]"). The self-signed cert exists for the loopback secure context
+# (getUserMedia); remote access is Cloudflare-only, so tailscale cert is out of scope.
+[cert]
+not_applicable = true
+reason         = "the self-signed cert serves loopback SANs for getUserMedia, which a tailscale cert leaf cannot; remote access is Cloudflare-only"
+disproof       = "https://github.com/ferraroroberto/voice-transcriber/issues/151"
+
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "tests/e2e/_e2e_live_guard.py" }
 surface_capture = { src = "tests/e2e/_surface.py", sha = "5c4d3a7947dae8b3b4a028bf636c0f052ea3b1f7", dest = "tests/e2e/_surface.py" }
