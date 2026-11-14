@@ -45,6 +45,7 @@ import {
   refreshHistory,
 } from './history.js';
 import { onPolish, onReset, onSaveTranscript } from './polish.js';
+import { initBuildWatch } from './_vendored/build-watch/build-watch.js';
 
 captureTokenFromURL();
 
@@ -63,6 +64,16 @@ const usage = initUsageLog({
 // runs so bindNav can assign it.
 let navTabs = null;
 
+// build-watch's reader: the version route through the token-aware fetch,
+// rejecting on a non-2xx answer so an unauthorized read stays unknown.
+function readVersion(url) {
+  return authFetch(url, { cache: 'no-store' }).then((r) => {
+    if (!r.ok) throw new Error(String(r.status));
+    return r.json();
+  });
+}
+
+initBuildWatch({ fetchJson: readVersion });
 init().catch(err => {
   console.error(err);
   showToast('Init failed: ' + err.message + ' — pull down to retry', 'error');
