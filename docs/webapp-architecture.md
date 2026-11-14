@@ -215,10 +215,12 @@ tokenised URL:
 - **Guessing alerts the owner.** Three wrong passwords in a row from one
   client send one message (app name, client address, count; never the
   password or token) to the coding-alerts Telegram chat through the
-  vendored `src/notify`, from a thread so the login never waits on it. At
-  most one alert goes out per five minutes across all clients. It is off
-  until `notifier` is `telegram` in the ignored `webapp_config.json`, with
-  `telegram_bot_token` and `telegram_alert_chat_id` set there.
+  vendored `src/notify`, from a thread so the login never waits on it; the
+  vendored `src/login_alert.py` sends it, the same in every fleet app. At
+  most one alert goes out per five minutes across all clients. Until
+  `notifier` is `telegram` in the ignored `webapp_config.json`, with
+  `telegram_bot_token` and `telegram_alert_chat_id` set there, the alert
+  is logged as `unconfigured` at warning level instead of sent.
 - **Failed and throttled attempts are logged** with the requesting
   client IP to `webapp/auth.log`, in addition to the normal server log,
   so suspicious access is visible without scrolling full server logs.

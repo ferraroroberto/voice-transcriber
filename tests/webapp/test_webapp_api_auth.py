@@ -8,6 +8,7 @@ to exercise the gate we override `request.client.host` via the ASGI
 from __future__ import annotations
 
 # Standard library imports
+import logging
 import threading
 
 # Third-party imports
@@ -222,6 +223,19 @@ class _FakeNotifier:
         self.delivered.set()
 
 
+class _AlertOutcome(logging.Handler):
+    """Sets ``seen`` when the alert thread logs its outcome."""
+
+    def __init__(self) -> None:
+        super().__init__(logging.WARNING)
+        self.seen = threading.Event()
+        self.messages: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.messages.append(record.getMessage())
+        self.seen.set()
+
+
 @pytest.fixture
 def lockout_rig(webapp_client):
     """The app with a lock-out on a fake clock and a fake alert notifier."""
@@ -286,9 +300,17 @@ class TestLoginLockoutRoute:
         app.state.login_lockout = LoginLockout(
             on_alert=make_login_alert(lambda: app.state.webapp_config)
         )
-        for i in range(4):
-            assert client.post("/api/login", json={"password": f"g{i}"}).status_code == 401
+        outcome = _AlertOutcome()
+        alert_log = logging.getLogger("src.login_alert")
+        alert_log.addHandler(outcome)
+        try:
+            for i in range(4):
+                assert client.post("/api/login", json={"password": f"g{i}"}).status_code == 401
+            assert outcome.seen.wait(5)
+        finally:
+            alert_log.removeHandler(outcome)
         assert notifier.sent == []
+        assert "unconfigured" in outcome.messages[0]
 
     def test_the_pc_itself_is_never_locked_out(self, lockout_rig, loopback_client):
         _, _, _, notifier, builds = lockout_rig
