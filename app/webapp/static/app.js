@@ -116,10 +116,8 @@ async function init() {
 }
 
 // Surface the loaded build (Settings › About and the page footer) so "is the
-// phone running the current code?" is answerable. The stale-shell reload
-// guard mirrors home-automation's main.js.
-const ASSET_HASH_KEY = 'voice-transcriber.assetHash';
-const ASSET_RELOAD_KEY = 'voice-transcriber.assetReloadedFor';
+// phone running the current code?" is answerable. Nothing here reloads the
+// page; the build-watch prompt offers a reload on a tap.
 
 async function loadVersion() {
   if (!els.buildInfo) return;
@@ -129,24 +127,9 @@ async function loadVersion() {
     const v = await r.json();
     const sha = v.git_sha || '?';
     const assetHash = v.asset_hash || '';
-    const previousHash = localStorage.getItem(ASSET_HASH_KEY) || '';
-    if (
-      assetHash && previousHash && previousHash !== assetHash &&
-      sessionStorage.getItem(ASSET_RELOAD_KEY) !== assetHash
-    ) {
-      // iOS standalone PWAs can cling to an old shell even with stamped
-      // asset URLs — the cached index.html keeps loading pre-deploy
-      // modules while this live /api/version fetch shows the new SHA.
-      // One automatic reload per deploy picks the fresh shell up.
-      localStorage.setItem(ASSET_HASH_KEY, assetHash);
-      sessionStorage.setItem(ASSET_RELOAD_KEY, assetHash);
-      window.location.reload();
-      return;
-    }
-    if (assetHash) localStorage.setItem(ASSET_HASH_KEY, assetHash);
     // This module was loaded as app.js?v=<its asset hash>; a different hash
-    // from the server means the shell is stale even after the one automatic
-    // reload, so Settings' header line asks for a reload.
+    // from the server means the shell is stale (iOS standalone PWAs can cling
+    // to an old one), so Settings' header line asks for a reload.
     const loaded = new URL(import.meta.url).searchParams.get('v');
     state.staleShell = !!(assetHash && loaded && loaded !== assetHash);
     renderSettingsHeadLine();

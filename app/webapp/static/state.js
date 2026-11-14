@@ -107,7 +107,7 @@ export const state = {
   config:      null,
   services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
   servicesFailed: false,      // the last /api/status poll failed (said as such, never as "up")
-  staleShell:  false,         // the loaded shell is older than the server's, after the one auto-reload
+  staleShell:  false,         // the loaded shell is older than the server's
   historyTotal: null,         // the History list's `total`, which its header line counts
   historyTakes: [],           // every loaded History row, newest first
   historySelecting: false,    // History is in Select mode
