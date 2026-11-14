@@ -120,7 +120,7 @@ still covers the same logic via the parity port in
 | `tests\webapp\test_webapp_status_responsiveness.py` | A stuck `/api/status` probe never holds up `/api/version`, `/api/analytics/summary`, `/api/config` or `/healthz` on the shared event loop, and reports the unanswered probe as `null` within its bounded wait |
 | `tests\webapp\test_design_review_synthetic_isolation.py` | The design-review synthetic instance's spawn environment keeps the archive and the activity database inside its temp state dir, checked in a fresh interpreter |
 | `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths); `/api/login` lock-out on a fake clock (401s, then 429 with `Retry-After`, success after the wait, the PC never locked) and the guessing alert on a fake notifier (once per streak, no secrets in the text) |
-| `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty; `set_password.py`'s password-length floor |
+| `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty |
 | `tests\webapp\test_webapp_api_activity.py` | `GET /api/activity` — persistent activity log API |
 | `tests\webapp\test_webapp_api_analytics.py` | `GET /api/analytics/summary` — usage analytics API |
 | `tests\webapp\test_webapp_api_polish.py` | `/api/polish-text`, `/api/save-text`, `_resolve_model`, `_preview` |

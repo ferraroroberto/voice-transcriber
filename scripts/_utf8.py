@@ -3,7 +3,7 @@
 Piped/redirected stdout makes Python fall back to cp1252, so emoji log
 lines raise ``UnicodeEncodeError`` when a script is run captured (e.g. from
 ``setup.bat``) or under a cp1252 console (global CLAUDE.md, "Windows
-Python: UTF-8 stdout under capture"). ``set_password.py``, ``gen_ssl_cert.py``,
+Python: UTF-8 stdout under capture"). ``gen_ssl_cert.py``,
 ``gen_token.py`` and ``run_named_tunnel.py`` share this one definition instead
 of re-inlining it.
 

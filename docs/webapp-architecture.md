@@ -192,9 +192,10 @@ dormant-by-default token gate covers both.
 
 A long tokenised URL is awkward to paste on every fresh device, and on
 iOS PWAs whose `localStorage` is partitioned from Safari's main jar the
-token sometimes doesn't carry over. `scripts/set_password.py` sets or
-clears a short password (`config/webapp_config.json`'s `auth_password`)
-that lets a device trade it for the bearer token instead of needing the
+token sometimes doesn't carry over. `python -m src.password set` (the
+vendored `src/password.py`) stores a short password's salted hash in
+`config/app_password.json`; until it runs, `config/webapp_config.json`'s
+legacy `auth_password` is checked instead. It lets a device trade it for the bearer token instead of needing the
 tokenised URL:
 
 - **`POST /api/login` swaps a password for the bearer token.** It is

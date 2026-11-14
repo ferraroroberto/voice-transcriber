@@ -147,6 +147,17 @@ class TestNonLoopback:
 
 
 class TestLoginEndpoint:
+    def test_stored_hash_replaces_the_legacy_password(self, webapp_client, tmp_path, monkeypatch):
+        from src import password
+
+        monkeypatch.setenv(password.ENV_VAR, str(tmp_path / "app_password.json"))
+        client, app, _ = webapp_client
+        app.state.webapp_config.auth_token = "secret-token"
+        app.state.webapp_config.auth_password = "letmein"
+        password.set_password("4321")
+        assert client.post("/api/login", json={"password": "4321"}).json()["token"] == "secret-token"
+        assert client.post("/api/login", json={"password": "letmein"}).status_code == 401
+
     def test_503_when_no_password_configured(self, webapp_client):
         client, app, _ = webapp_client
         app.state.webapp_config.auth_password = ""
