@@ -415,8 +415,9 @@ html, body {
 
 /* ---------- cards ---------- */
 /* The card surface itself is the vendored component (_vendored/card/card.css);
-   only the stacking rhythm between cards is this app's. */
-.card { margin: var(--gap) 0; }
+   only the stacking rhythm between cards is this app's: the gap below each,
+   none above the first, so the first card starts where every fleet app's does. */
+.card { margin: 0 0 var(--gap); }
 .card-head { margin-bottom: var(--space-sm); }
 
 .text-out {
