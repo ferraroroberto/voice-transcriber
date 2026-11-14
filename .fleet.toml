@@ -58,6 +58,7 @@ box_lock_gate = { src = "scripts/box_lock_gate.ps1", sha = "de5b351ecbc58f0908bc
 base = { src = "app/webapp/static/_vendored/base", sha = "fe8cc1bdbd038ed65947186248df13072eceb25a", dest = "app/webapp/static/_vendored/base" }
 home-head = { src = "app/webapp/static/_vendored/home-head", sha = "fe8cc1bdbd038ed65947186248df13072eceb25a", dest = "app/webapp/static/_vendored/home-head" }
 toast = { src = "app/webapp/static/_vendored/toast", sha = "3b708fd3c54ab7b93b08d489406c405762c83c41", dest = "app/webapp/static/_vendored/toast" }
+build-watch = { src = "app/webapp/static/_vendored/build-watch", sha = "8c59c65b62896a7c0b9a1df4c45794c2c2320c42", dest = "app/webapp/static/_vendored/build-watch" }
 text-size = { src = "app/webapp/static/_vendored/text-size", sha = "5d460bd1d9d44eed955c5357d1c9f622f2550ad8", dest = "app/webapp/static/_vendored/text-size" }
 nav = { src = "app/webapp/static/_vendored/nav", sha = "cb9fff9130453c781146f2cdf5083d83fb43b0df", dest = "app/webapp/static/_vendored/nav" }
 select-native = { src = "app/webapp/static/_vendored/select-native", sha = "6c8ae06472edc4c7448a767656060cd2b79cefe9", dest = "app/webapp/static/_vendored/select-native" }
