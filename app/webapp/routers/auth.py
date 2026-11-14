@@ -17,7 +17,6 @@ from __future__ import annotations
 
 # Standard library imports
 import logging
-import threading
 from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
@@ -27,8 +26,9 @@ from fastapi import APIRouter, HTTPException, Request
 from app.webapp.middleware import is_pc_itself
 from app.webapp.routers._helpers import current_webapp_config, maybe_json
 from src import password
+from src.login_alert import build_login_alert
 from src.login_lockout import LockoutAlert, LoginLockout, retry_after_header
-from src.notify import Notifier, NotifierError, TelegramConfig, build_notifier
+from src.notify import Notifier, TelegramConfig, build_notifier
 from src.webapp_config import WebappConfig
 
 logger = logging.getLogger(__name__)
@@ -49,35 +49,19 @@ def make_login_alert(
 ) -> Callable[[LockoutAlert], None]:
     """Build the ``on_alert`` callback that tells the owner about guessing.
 
-    The send runs on a daemon thread so the login request never waits on
-    Telegram. The notifier is built per alert from the live config, so a
-    token or chat id changed on disk applies without a restart. The text
-    holds the app name, the client address and the failure count only.
+    The vendored login alert sends it on a daemon thread, so the login request
+    never waits on Telegram. The notifier is built per alert from the live
+    config, so a token or chat id changed on disk applies without a restart.
     """
 
-    def alert_owner(alert: LockoutAlert) -> None:
+    def notifier() -> Optional[Notifier]:
         cfg = get_config()
-        notifier = build(
+        return build(
             cfg.notifier,
             TelegramConfig(cfg.telegram_bot_token, cfg.telegram_alert_chat_id),
         )
-        if notifier is None:
-            return
-        held = f" (+{alert.suppressed} more held back)" if alert.suppressed else ""
-        text = (
-            f"🚨 {APP_NAME}: {alert.failures} wrong passwords in a row "
-            f"from {alert.key}{held}"
-        )
 
-        def send() -> None:
-            try:
-                notifier.send_text(text)
-            except NotifierError as exc:
-                logger.warning(f"⚠️  login alert not delivered: {type(exc).__name__}")
-
-        threading.Thread(target=send, name="login-alert", daemon=True).start()
-
-    return alert_owner
+    return build_login_alert(APP_NAME, notifier)
 
 
 def ensure_log_handler() -> None:
