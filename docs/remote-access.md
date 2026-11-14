@@ -45,10 +45,10 @@ iOS PWAs whose `localStorage` is partitioned from Safari's main jar
 the token sometimes doesn't carry over. A short password fixes both:
 
 ```powershell
-& .\.venv\Scripts\python.exe scripts\set_password.py PW
+& .\.venv\Scripts\python.exe -m src.password set
 ```
 
-(replace `PW` with whatever you want). When set, the webapp shows
+It prompts twice; any non-empty password works, a short PIN included. Only a salted hash is stored, in `config/app_password.json` (git-ignored), through the vendored `src/password.py` every fleet app shares. Until it has run, an older plaintext `auth_password` in `webapp_config.json` still signs in; after, that value is ignored and can be deleted. When set, the webapp shows
 the vendored sign-in sheet (`dialog.sign-in`) any time an API call returns 401:
 
 1. User opens `https://<your-host>` on a fresh device.
@@ -64,12 +64,7 @@ Failed attempts (wrong password, or a hit while no password is
 configured) are logged with the requesting IP to
 `webapp/auth.log` in addition to the normal server log.
 
-```powershell
-& .\.venv\Scripts\python.exe scripts\set_password.py --clear
-```
-
-clears the password (the sign-in sheet disappears; only the token gate
-remains). The bearer token must be set for the password to do
+The bearer token must be set for the password to do
 anything — the password is just a UX wrapper that hands the
 existing token back.
 

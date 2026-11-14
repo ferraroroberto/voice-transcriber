@@ -9,6 +9,8 @@ from __future__ import annotations
 
 # Standard library imports
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Iterator
 from unittest.mock import MagicMock
@@ -17,6 +19,12 @@ from unittest.mock import MagicMock
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# The login password hash (src/password.py) is read on every login, so a run
+# must never see the live config/app_password.json: point it at a file that
+# does not exist. Assigned, not defaulted, so no outer value reaches the live
+# file; servers the suite spawns inherit it.
+os.environ["APP_PASSWORD_FILE"] = str(Path(tempfile.mkdtemp(prefix="voice-transcriber-password-")) / "app_password.json")
 
 
 @pytest.fixture(autouse=True)

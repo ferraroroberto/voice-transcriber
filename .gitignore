@@ -50,3 +50,6 @@ webapp/activity.sqlite3-shm
 app/webapp/static/voice-transcriber-ca.mobileconfig
 app/webapp/static/ca.crt
 .proof/
+
+# The app password hash (src/password.py)
+config/app_password.json

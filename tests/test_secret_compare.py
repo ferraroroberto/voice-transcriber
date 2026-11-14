@@ -16,6 +16,8 @@ from src.secret_compare import secrets_equal
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 HELPER = REPO_ROOT / "src" / "secret_compare.py"
+# Vendored verbatim from project-scaffolding; it compares UTF-8 bytes itself.
+VENDORED_PASSWORD = REPO_ROOT / "src" / "password.py"
 SCANNED_ROOTS = ("app", "src", "scripts")
 
 
@@ -34,7 +36,7 @@ def test_only_the_helper_calls_compare_digest():
     offenders = []
     for root in SCANNED_ROOTS:
         for path in sorted((REPO_ROOT / root).rglob("*.py")):
-            if path == HELPER or ".venv" in path.parts:
+            if path in (HELPER, VENDORED_PASSWORD) or ".venv" in path.parts:
                 continue
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
             for node in ast.walk(tree):

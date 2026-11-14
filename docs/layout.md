@@ -114,7 +114,6 @@ voice-transcriber/
 │   ├── download_model.py          # fetch ggml model from HF
 │   ├── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
 │   ├── gen_token.py               # generate/rotate/clear the bearer auth token
-│   ├── set_password.py            # set/clear the login-overlay password
 │   ├── gen_app_icons.py           # regenerate PWA/favicon/Stream Deck icons from the fleet brand SVG
 │   ├── run_named_tunnel.py        # headless uvicorn + named cloudflared tunnel (no tray)
 │   ├── design_review_synthetic.py # throwaway webapp for `/design-review` (synthetic and `--e2e` runs)
