@@ -344,9 +344,10 @@ function renderHistoryItem(s) {
   if (state.historySelecting) {
     main.setAttribute('aria-pressed', String(picked));
     main.title = 'Select this take';
-  } else {
-    main.title = 'Copy this take';
   }
+  // Outside Select mode the row has no title: a tap-to-copy row is a whole-row
+  // action-row named by its own text, and a "Copy …" title would make it read
+  // as a second copy button.
 
   const preview = document.createElement('span');
   preview.className = 'preview';
