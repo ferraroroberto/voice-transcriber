@@ -320,6 +320,26 @@ class TestHistoryButtonEmphasis:
         assert "bindSettings()" in app_js
         assert "confirm(" not in app_js.replace("confirm()", "")
 
+    @pytest.mark.parametrize(
+        "selector",
+        [
+            r"\.settings-group \.setting-pick \.select-native",
+            r"\.settings-group \.setting-number \.input-native",
+        ],
+    )
+    def test_settings_fields_keep_their_control_border(
+        self, styles_css: str, selector: str
+    ):
+        """COLOR-03: a Settings picker or number field keeps the 3:1
+        control-border ring the base .select-native / .input-native rule
+        draws, so the row never loses its control boundary."""
+        rule = re.search(selector + r" \{([^}]*)\}", styles_css)
+        assert rule, selector
+        body = rule.group(1)
+        assert "box-shadow" not in body
+        assert not re.search(r"\bborder(-width)?:\s*0", body)
+        assert "neutral-soft" not in body
+
 
 # ---------------------------------------------------------------------------
 # Neutral toast (issue #226, fleet COLOR-05).
