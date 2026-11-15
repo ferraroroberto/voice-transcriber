@@ -188,6 +188,12 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     expect(sheet.locator("#takeSource")).to_have_text("api")  # verbatim in the sheet
     for control in ("#takeCopy", "#takeRedo", "#takeDelete"):
         expect(sheet.locator(control)).to_be_visible()
+    # The destructive control is never the largest one in its dialog.
+    heights = {
+        c: sheet.locator(c).evaluate("el => el.getBoundingClientRect().height")
+        for c in ("#takeCopy", "#takeDelete")
+    }
+    assert heights["#takeCopy"] >= heights["#takeDelete"] - 1
     surface(authed_page, "history.take-sheet")
 
     delete = sheet.locator("#takeDelete")
