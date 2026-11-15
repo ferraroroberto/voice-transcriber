@@ -30,8 +30,9 @@ const HISTORY_PAGE_SIZE = 10;
 const wideLayout = window.matchMedia('(min-width: 1100px) and (pointer: fine)');
 
 // The kebab's floating menu (vendored row-menu). Open take is the take sheet
-// (the detail pane on a wide window) that holds Copy, Redo, the facts and
-// Delete; Refresh reloads the list. The Latest card and the day rows have one
+// (the detail pane on a wide window) that holds Copy, Redo and the facts;
+// Share, Copy as Markdown and Delete act on the take without opening it;
+// Refresh reloads the list. The Latest card and the day rows have one
 // controller each: the Latest card's kebab is one element for the page's life,
 // the rows are rebuilt on every render.
 const rowMenu = createRowMenu();
@@ -41,8 +42,33 @@ let latestMenuBound = false;
 
 function takeMenuItems(getTake) {
   return [
-    { label: 'Open take', glyph: 'file-text', onTap: () => openTakeSheet(getTake()) },
-    { label: 'Refresh', glyph: 'refresh-cw', onTap: () => refreshHistory() },
+    {
+      label: 'Open take', glyph: 'file-text', dataset: { track: 'history.menu-open' },
+      onTap: () => openTakeSheet(getTake()),
+    },
+    {
+      // The share sheet is a phone feature; a browser without it hides the row.
+      label: 'Share', glyph: 'send-horizontal', dataset: { track: 'history.menu-share' },
+      hidden: () => typeof navigator.share !== 'function',
+      onTap: () => shareTake(getTake().session_id),
+    },
+    {
+      label: 'Copy as Markdown', glyph: 'copy', dataset: { track: 'history.menu-copy-md' },
+      onTap: () => copyTakeAsMarkdown(getTake().session_id),
+    },
+    {
+      label: 'Refresh', glyph: 'refresh-cw', dataset: { track: 'history.menu-refresh' },
+      onTap: () => refreshHistory(),
+    },
+    {
+      // A delete is never one stray tap: it opens the take with its Delete
+      // already armed, so the second tap there is the confirmation.
+      label: 'Delete', glyph: 'trash-2', danger: true, dataset: { track: 'history.menu-delete' },
+      onTap: () => {
+        openTakeSheet(getTake());
+        armDelete();
+      },
+    },
   ];
 }
 
@@ -391,6 +417,51 @@ async function fetchTakeText(id) {
   return data.polished || data.transcript || '';
 }
 
+// One take as a Markdown list item: continuation lines are indented so a
+// multi-line take stays inside its bullet when pasted into notes or a task.
+function asMarkdownBullet(text) {
+  const lines = text.trim().split(/\r?\n/);
+  return '- ' + lines.map((l, i) => (i && l ? '  ' + l : l)).join('\n');
+}
+
+async function copyTakeAsMarkdown(id) {
+  try {
+    const full = await fetchTakeText(id);
+    if (!full.trim()) {
+      showToast('This take has no text', 'error');
+      return;
+    }
+    await copyText(asMarkdownBullet(full));
+    showToast('Copied as Markdown');
+  } catch (err) {
+    showToast('Copy failed: ' + (err.message || err), 'error');
+  }
+}
+
+// The OS share sheet, with the full text rather than the preview. Closing the
+// sheet is a choice, not an error; a browser that refuses the share (the tap's
+// activation can lapse during the fetch) gets the text on the clipboard.
+async function shareTake(id) {
+  let full;
+  try {
+    full = (await fetchTakeText(id)).trim();
+  } catch (err) {
+    showToast('Share failed: ' + (err.message || err), 'error');
+    return;
+  }
+  if (!full) {
+    showToast('This take has no text', 'error');
+    return;
+  }
+  try {
+    await navigator.share({ text: full });
+  } catch (err) {
+    if (err && err.name === 'AbortError') return;
+    await copyText(full);
+    showToast('Share unavailable — copied instead');
+  }
+}
+
 async function copyTake(id, flag) {
   try {
     const full = await fetchTakeText(id);
@@ -474,6 +545,13 @@ function lengthLabel(s, text) {
 function servedByLabel(s) {
   if (!s.served_model) return NOT_RECORDED;
   return s.served_host ? `${s.served_model} · ${s.served_host}` : s.served_model;
+}
+
+function armDelete() {
+  clearTimeout(deleteArmTimer);
+  els.takeDelete.dataset.armed = '1';
+  els.takeDelete.querySelector('.take-delete-label').textContent = 'Tap again to delete';
+  deleteArmTimer = setTimeout(disarmDelete, DELETE_ARM_MS);
 }
 
 function disarmDelete() {
@@ -581,9 +659,7 @@ export function initTakeSheet() {
     const id = sheetTake && sheetTake.session_id;
     if (!id) return;
     if (!els.takeDelete.dataset.armed) {
-      els.takeDelete.dataset.armed = '1';
-      els.takeDelete.querySelector('.take-delete-label').textContent = 'Tap again to delete';
-      deleteArmTimer = setTimeout(disarmDelete, DELETE_ARM_MS);
+      armDelete();
       return;
     }
     closeTakeSheet();

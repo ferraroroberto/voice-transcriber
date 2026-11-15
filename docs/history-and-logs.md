@@ -65,7 +65,12 @@ the take in the middle, one overflow button on the right:
 
 - **Tap the row** — copies the full text from disk (not the 200-char
   preview the list payload carries) and flashes *Copied* on the row.
-- **⋮ menu** — *Refresh* reloads the list in place, and *Open take* shows the
+- **⋮ menu** — acts on the take without opening it. *Share* hands the full
+  text to the OS share sheet (shown only where the browser has one; if the
+  browser refuses it, the text is copied instead), *Copy as Markdown* copies
+  the take as a bullet (`- text`, later lines indented), *Refresh* reloads the
+  list in place, and *Delete* (last, in red) opens the take with its Delete
+  already armed so the second tap there confirms. *Open take* shows the
   take: on a phone a sheet, on a wide window the pane beside the list. It holds
   the take's full text with one **Copy**; *Redo
   transcription* re-runs whisper on the saved raw audio (useful when a

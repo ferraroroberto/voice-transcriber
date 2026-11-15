@@ -211,6 +211,97 @@ def test_row_taps_copy_and_kebab_opens_the_take_sheet(
     assert native_dialogs == []
 
 
+# Stands in for the OS share sheet and the clipboard so a test reads what the
+# menu handed them; ClipboardItem is dropped so the writeText path is the one
+# taken.
+_SHARE_AND_CLIPBOARD = """
+window.__shared = [];
+window.__copied = [];
+navigator.share = async (data) => { window.__shared.push(data); };
+window.ClipboardItem = undefined;
+Object.defineProperty(navigator, 'clipboard', {
+  value: { writeText: async (t) => { window.__copied.push(t); } },
+});
+"""
+
+
+def test_take_menu_shares_copies_markdown_and_arms_delete(
+    authed_page: Page, base_url: str
+) -> None:
+    """The kebab menu acts on the take without opening it: Share hands the
+    full text to the OS share sheet, Copy as Markdown writes it as a bullet
+    with continuation lines indented, and Delete opens the take with its own
+    Delete already armed, so nothing is removed until the second tap. Every
+    row carries a usage-track id."""
+    _phone(authed_page)
+    _mock_sessions(authed_page)
+    authed_page.add_init_script(_SHARE_AND_CLIPBOARD)
+    authed_page.route(
+        "**/api/sessions/sess-00/text",
+        lambda route: route.fulfill(json={"transcript": "first line\nsecond line"}),
+    )
+    _texts(authed_page, ["sess-01"])
+    deletes: list[str] = []
+    authed_page.on("request", lambda r: deletes.append(r.url) if r.method == "DELETE" else None)
+    authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    authed_page.click("#tabHistory")
+
+    menu = authed_page.get_by_role("menu")
+    items = menu.get_by_role("menuitem")
+    authed_page.locator("#latestMore").click()
+    expect(items).to_have_text(["Open take", "Share", "Copy as Markdown", "Refresh", "Delete"])
+    tracks = items.evaluate_all("els => els.map(e => e.dataset.track)")
+    assert tracks == [
+        "history.menu-open", "history.menu-share", "history.menu-copy-md",
+        "history.menu-refresh", "history.menu-delete",
+    ]
+    # Every row's glyph exists in the page's inline sprite: a name the sprite
+    # lacks draws nothing and leaves the row's label out of line.
+    unresolved = items.evaluate_all(
+        """els => els.filter(e => {
+          const use = e.querySelector('svg use');
+          return !use || !document.querySelector(use.getAttribute('href'));
+        }).map(e => e.textContent)"""
+    )
+    assert unresolved == [], unresolved
+    surface(authed_page, "history.take-menu-phone")
+
+    items.filter(has_text="Share").click()
+    expect(menu).to_have_count(0)
+    authed_page.wait_for_function("window.__shared.length === 1")
+    assert authed_page.evaluate("window.__shared") == [{"text": "first line\nsecond line"}]
+
+    authed_page.locator("#latestMore").click()
+    items.filter(has_text="Copy as Markdown").click()
+    authed_page.wait_for_function("window.__copied.length === 1")
+    assert authed_page.evaluate("window.__copied") == ["- first line\n  second line"]
+
+    authed_page.locator("#latestMore").click()
+    items.filter(has_text="Delete").click()
+    sheet = authed_page.locator("#takeSheet")
+    expect(sheet).to_be_visible()
+    expect(sheet.locator("#takeDelete")).to_have_text("Tap again to delete")
+    assert deletes == []
+    with authed_page.expect_request(
+        lambda r: r.method == "DELETE" and r.url.endswith("/api/sessions/sess-00")
+    ):
+        sheet.locator("#takeDelete").click()
+    expect(sheet).to_be_hidden()
+
+
+def test_take_menu_hides_share_without_a_share_sheet(authed_page: Page, base_url: str) -> None:
+    """A browser with no navigator.share (most desktops) gets no dead Share row."""
+    _phone(authed_page)
+    _mock_sessions(authed_page)
+    authed_page.add_init_script("delete Navigator.prototype.share; delete navigator.share;")
+    authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    authed_page.click("#tabHistory")
+    authed_page.locator("#latestMore").click()
+    expect(authed_page.get_by_role("menu").get_by_role("menuitem")).to_have_text(
+        ["Open take", "Copy as Markdown", "Refresh", "Delete"]
+    )
+
+
 def test_empty_history_shows_the_empty_state(authed_page: Page, base_url: str) -> None:
     """No takes yet: the Latest card stays hidden and the vendored empty state
     says so, instead of a blank pane."""

@@ -82,7 +82,9 @@ def _wide_layout(page: Page, base_url: str) -> None:
     menu = page.get_by_role("menu")
     page.locator("#latestMore").click()
     expect(menu).to_be_visible()
-    expect(menu.get_by_role("menuitem")).to_have_text(["Open take", "Refresh"])
+    # Share only exists where the browser has a share sheet; the rest is fixed.
+    texts = menu.get_by_role("menuitem").all_inner_texts()
+    assert [t for t in texts if t != "Share"] == ["Open take", "Copy as Markdown", "Refresh", "Delete"], texts
     surface(page, "history.take-menu")
     page.keyboard.press("Escape")
     expect(menu).to_have_count(0)
