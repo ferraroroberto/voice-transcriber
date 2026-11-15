@@ -293,10 +293,10 @@
    and value: the button takes the row's full width. */
 .setting-action > .button-tint { flex: 1; }
 /* A picker reads as the settings-group value row: the current value in
-   muted text and a chevron, no bordered pill. The native select stays the
-   control (it opens the OS picker on a phone); only its outline (an inset
-   shadow in styles.css) is dropped and the chevron sits over its right
-   padding. */
+   muted text and a chevron, on the card with no fill. The native select stays
+   the control (it opens the OS picker on a phone) and keeps the control-border
+   ring from styles.css, the 3:1 boundary design.md gives every select; the
+   chevron sits over its right padding, inside that ring. */
 .setting-pick {
   position: relative;
   display: flex;
@@ -309,9 +309,8 @@
   appearance: none;
   min-width: 0;
   max-width: 100%;
-  padding: 0 calc(var(--icon-inline) + var(--space-sm)) 0 var(--space-xs);
+  padding: 0 calc(var(--icon-inline) + var(--space-sm) + 10px) 0 10px;
   background: transparent;
-  box-shadow: none;
   color: var(--muted);
   text-align: right;
   text-align-last: right;
@@ -319,17 +318,17 @@
 }
 .setting-pick .setting-chevron {
   position: absolute;
-  right: 0;
+  right: 10px;
   pointer-events: none;
 }
 /* A small number keeps its own width with the unit beside it ("+12 dB"),
-   rather than the 55% value column (design.md compact numeric field). All
-   three share one soft-filled field, so none reads as a heavier row. */
+   rather than the 55% value column (design.md compact numeric field). It
+   shares the pickers' look, no fill inside the control-border ring, so no
+   field in the group reads as heavier than another. */
 .setting-number { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
 .settings-group .setting-number .input-native {
   width: 64px;
-  background: var(--neutral-soft) padding-box;
-  box-shadow: none;
+  background: transparent;
   color: var(--ink);
   text-align: right;
 }
