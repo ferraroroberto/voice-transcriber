@@ -60,6 +60,7 @@ HTML_STAMPED_ASSETS = (
     "_vendored/text-size/text-size.css",
     "_vendored/segmented/segmented.css",
     "_vendored/switch/switch.css",
+    "_vendored/settings-group/settings-group.css",
     "_vendored/select-native/select-native.css",
     "_vendored/modal/modal.css",
     "_vendored/empty-state/empty-state.css",

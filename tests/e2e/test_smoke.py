@@ -233,7 +233,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
     page.click("#paneRecord .home-settings")
     expect(page.locator("#saveSettings")).to_have_count(0)
-    expect(page.locator("#settingsPanel .settings-group-title")).to_have_count(7)
+    expect(page.locator("#settingsPanel .settings-overline")).to_have_count(7)
 
     page.click("#gainBoostToggle")
     page.wait_for_timeout(300)
@@ -249,8 +249,8 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     expect(retention).to_have_value(before)
 
     expect(page.locator("#svcFallbackValue")).to_have_text("Not running")
-    expect(page.locator("#svcFallback")).to_have_attribute("data-badge", "down")
-    expect(page.locator("#svcPolish")).to_have_attribute("data-badge", "alive")
+    expect(page.locator("#svcFallbackValue")).to_have_attribute("data-tone", "danger")
+    expect(page.locator("#svcPolishValue")).not_to_have_attribute("data-tone", "danger")
     expect(page.locator("#settingsHeadLine")).to_have_text("Local fallback down")
     expect(page.locator("#buildInfo")).not_to_have_text("…")
     expect(page.locator("#buildReadout")).to_contain_text("Build: ")

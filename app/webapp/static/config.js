@@ -248,16 +248,16 @@ function servicesUnknown(s) {
   return s.whisper.running === null || s.llm_hub.reachable === null || s.ffmpeg_present === null;
 }
 
-// One row's [alive, value]: true/false once the probe answered, null (no
-// badge, "Unknown") while it has not.
+// One row's [alive, value]: true/false once the probe answered, null
+// ("Unknown") while it has not.
 function serviceRow(alive, up, down) {
   if (alive === null) return [null, 'Unknown'];
   return [alive, alive ? up : down];
 }
 
-// Settings › Services: one avatar row per probe, its corner badge
-// alive (success) or down (danger), the value in plain words. Unknown
-// (the poll failed, or a probe has not answered yet) shows no badge and says so.
+// Settings › Services: one row per probe, the value in plain words and only a
+// down probe toned (danger). Unknown (the poll failed, or a probe has not
+// answered yet) says so.
 function renderServices(s) {
   let rows;
   if (s) {
@@ -276,9 +276,6 @@ function renderServices(s) {
     rows = ['svcTranscription', 'svcFallback', 'svcPolish', 'svcAudio'].map((id) => [id, null, 'Unknown']);
   }
   for (const [id, alive, value] of rows) {
-    const avatar = document.getElementById(id);
-    if (alive === null) delete avatar.dataset.badge;
-    else avatar.dataset.badge = alive ? 'alive' : 'down';
     const v = document.getElementById(id + 'Value');
     v.textContent = value;
     if (alive === false) v.dataset.tone = 'danger';

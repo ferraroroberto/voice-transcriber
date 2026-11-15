@@ -311,34 +311,29 @@ class TestHistoryButtonEmphasis:
     ):
         """Settings (#265): values read from the control's right edge, there
         is no Save button, and no browser confirm() remains anywhere."""
-        assert ".settings-group .setting-pick .select-native {" in styles_css
-        assert re.search(
-            r"\.settings-group \.setting-pick \.select-native \{[^}]*text-align: right;",
-            styles_css,
-        )
+        assert 'class="settings-row-select"' in index_html
+        assert "setting-pick" not in index_html
         assert 'id="saveSettings"' not in index_html
         assert "bindSettings()" in app_js
         assert "confirm(" not in app_js.replace("confirm()", "")
 
-    @pytest.mark.parametrize(
-        "selector",
-        [
-            r"\.settings-group \.setting-pick \.select-native",
-            r"\.settings-group \.setting-number \.input-native",
-        ],
-    )
-    def test_settings_fields_keep_their_control_border(
-        self, styles_css: str, selector: str
+    def test_settings_pane_is_the_vendored_settings_group(
+        self, styles_css: str, index_html: str
     ):
-        """COLOR-03: a Settings picker or number field keeps the 3:1
-        control-border ring the base .select-native / .input-native rule
-        draws, so the row never loses its control boundary."""
-        rule = re.search(selector + r" \{([^}]*)\}", styles_css)
-        assert rule, selector
-        body = rule.group(1)
-        assert "box-shadow" not in body
-        assert not re.search(r"\bborder(-width)?:\s*0", body)
-        assert "neutral-soft" not in body
+        """The groups, rows and trailing items come from the vendored
+        settings-group component: the app's own stylesheets declare none of
+        its rules, and the markup uses its classes."""
+        assert "_vendored/settings-group/settings-group.css" in index_html
+        assert not re.search(r"\.settings-group(-title)?\s*[{,]", styles_css)
+        assert not re.search(r"\.setting-(row|pick|number|glyph|value|label)", styles_css)
+        assert "settings-group-title" not in index_html
+        assert "avatar" not in index_html
+        assert not re.search(r"class=\"[^\"]*setting-(row|label|pick|number|glyph|value)", index_html)
+
+    def test_number_fields_have_no_prefix_sign(self, index_html: str):
+        """A number field is the field and its unit after it, never a sign before it."""
+        assert 'class="settings-row-unit">+<' not in index_html
+        assert index_html.count('class="settings-row-input"') == 3
 
 
 # ---------------------------------------------------------------------------

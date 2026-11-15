@@ -175,9 +175,7 @@
      danger    — the live mic, a failed transcription, both services down
      attention — the Translate route, "nothing heard", hub unreachable
      accent    — a pressed mode toggle
-     neutral   — the Incognito line, a non-default language chip
-     success   — the Services avatar badge only: never a chip, fill or text,
-                 so it has no data-tone. */
+     neutral   — the Incognito line, a non-default language chip */
 [data-tone="danger"]    { --tone: var(--danger-text);    --tone-base: var(--danger); }
 [data-tone="attention"] { --tone: var(--attention-text); --tone-base: var(--attention); }
 [data-tone="accent"]    { --tone: var(--accent-text);    --tone-base: var(--accent); }

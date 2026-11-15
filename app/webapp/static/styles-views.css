@@ -255,113 +255,13 @@
 }
 
 /* ---------- Settings ---------- */
-/* Inset groups under overline headers (design.md settings group): each
-   row a lead glyph, a plain label, and its value or inline control. */
-.settings-group-title { margin: var(--space-lg) var(--space-xs) var(--space-sm); }
-.settings > .settings-group-title:first-child { margin-top: var(--space-sm); }
-.settings-group { padding: 0 14px; }
-.setting-row {
-  display: flex;
-  align-items: center;
-  gap: var(--gap);
-  width: 100%;
-  min-height: var(--row-md);
-  padding: var(--space-xs) 0;
-  font: inherit;
-  color: var(--ink);
-  text-align: left;
-  background: transparent;
-  border: 0;
-}
-.setting-row + .setting-row { border-top: 1px solid var(--line-muted); }
-.setting-glyph { width: var(--icon-title); height: var(--icon-title); color: var(--muted); }
-.setting-label { flex: 1; min-width: 0; }
-.setting-sub {
-  display: block;
-  color: var(--muted);
-  font-size: var(--font-label);
-}
-.setting-value {
-  color: var(--muted);
-  font-size: var(--font-label);
-  text-align: right;
-}
-.setting-value[data-tone] { color: var(--tone); }
-.setting-chevron { width: var(--icon-inline); height: var(--icon-inline); color: var(--muted); }
-.setting-link { cursor: pointer; touch-action: manipulation; }
+/* The groups, rows and their trailing items are the vendored settings-group
+   component (_vendored/settings-group); only the one-off row below is the
+   app's own. */
 /* A row that holds one tier button (Delete all takes…) instead of a label
    and value: the button takes the row's full width. */
 .setting-action > .button-tint { flex: 1; }
-/* A picker reads as the settings-group value row: the current value in
-   muted text and a chevron, on the card with no fill. The native select stays
-   the control (it opens the OS picker on a phone) and keeps the control-border
-   ring from styles.css, the 3:1 boundary design.md gives every select; the
-   chevron sits over its right padding, inside that ring. */
-.setting-pick {
-  position: relative;
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  max-width: 55%;
-}
-.settings-group .setting-pick .select-native {
-  -webkit-appearance: none;
-  appearance: none;
-  min-width: 0;
-  max-width: 100%;
-  padding: 0 calc(var(--icon-inline) + var(--space-sm) + 10px) 0 10px;
-  background: transparent;
-  color: var(--muted);
-  text-align: right;
-  text-align-last: right;
-  text-overflow: ellipsis;
-}
-.setting-pick .setting-chevron {
-  position: absolute;
-  right: 10px;
-  pointer-events: none;
-}
-/* A small number keeps its own width with the unit beside it ("+12 dB"),
-   rather than the 55% value column (design.md compact numeric field). It
-   shares the pickers' look, no fill inside the control-border ring, so no
-   field in the group reads as heavier than another. */
-.setting-number { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
-.settings-group .setting-number .input-native {
-  width: 64px;
-  background: transparent;
-  color: var(--ink);
-  text-align: right;
-}
-.setting-unit { font-size: var(--font-label); }
 
-/* The avatar (design.md avatar): a neutral squircle with one glyph and a
-   corner badge that means alive (success) or down (danger), nothing else —
-   success appears nowhere else in the app (the tone map). */
-.avatar {
-  position: relative;
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-md);
-  background: var(--neutral-soft);
-  color: var(--ink);
-}
-.avatar .icon { width: var(--bottom-tabs-icon); height: var(--bottom-tabs-icon); }
-.avatar[data-badge]::after {
-  content: "";
-  position: absolute;
-  right: -3px;
-  bottom: -3px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid var(--card);
-  box-sizing: border-box;
-  background: var(--on);
-}
-.avatar[data-badge="down"]::after { background: var(--danger); }
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
 
