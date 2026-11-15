@@ -368,50 +368,26 @@ html, body {
   text-align: center;
 }
 
-/* Mode toggles (Append, Incognito) and Reset: labelled pills under the
-   button. A pressed toggle takes the accent (a mode, not an alarm — tone
-   map); at rest the edge is the control-border token (3:1). The pill is
-   drawn 36px tall; ::before grows its target to 44px vertically only, so
-   neighbours 8px apart never share a tappable pixel. */
+/* Mode switches (Append, Incognito) under the record button: a glyph and a
+   plain label beside the vendored switch, which brings its own 44px target. */
 .record-modes {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--space-sm);
+  gap: var(--space-sm) var(--gap);
   margin-top: var(--space-xs);
 }
-.mode-toggle {
-  position: relative;
+.mode-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: var(--control-h);
-  padding: 0 var(--gap);
-  border: 1px solid var(--control-border);
-  border-radius: var(--radius-pill);
-  background: transparent;
+  gap: 8px;
+  min-height: var(--hit-min);
   color: var(--muted);
-  font-family: var(--font);
   font-size: var(--font-label);
   font-weight: 600;
   white-space: nowrap;
-  cursor: pointer;
-  user-select: none;
-  touch-action: manipulation;
-  transition: color .15s, border-color .15s, background .15s;
 }
-.mode-toggle::before {
-  content: "";
-  position: absolute;
-  inset: calc((var(--control-h) - var(--hit-min)) / 2) 0;
-}
-.mode-toggle .icon { width: var(--icon-inline); height: var(--icon-inline); }
-.mode-toggle:active { background: var(--neutral-soft); }
-.mode-toggle[aria-checked="true"] {
-  background: var(--accent-soft);
-  border-color: var(--accent-border-soft);
-  color: var(--accent-text);
-}
+.mode-item .icon { width: var(--icon-inline); height: var(--icon-inline); }
 
 /* ---------- cards ---------- */
 /* The card surface itself is the vendored component (_vendored/card/card.css);
@@ -482,6 +458,9 @@ textarea.text-out.editable::placeholder {
   touch-action: manipulation;
 }
 .text-verb .icon { width: var(--icon-inline); height: var(--icon-inline); }
+/* The primary verb keeps the spec's 48px button-primary height; the 44px
+   box above would shrink it below the vendored tier's own minimum. */
+.text-verb.button-primary { height: 48px; min-height: 48px; }
 .text-clear { margin-left: auto; }
 
 /* ---------- buttons ---------- */

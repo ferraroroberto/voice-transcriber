@@ -293,10 +293,10 @@
           <div id="recordStatus" class="record-status">Tap to start</div>
           <div id="micNotice" hidden></div>
           <div class="record-modes">
-            <button id="appendToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
-                    title="Append the next take to the current text instead of replacing it" data-track="record.append"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg> Append</button>
-            <button id="incognitoToggle" type="button" class="mode-toggle" role="switch" aria-checked="false"
-                    title="Don't save the next take to History" data-track="record.incognito"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg> Incognito</button>
+            <div class="mode-item" title="Append the next take to the current text instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg><span>Append</span><button id="appendToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                    aria-label="Append" data-track="record.append"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+            <div class="mode-item" title="Don't save the next take to History"><svg class="icon" aria-hidden="true"><use href="#i-venetian-mask" /></svg><span>Incognito</span><button id="incognitoToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                    aria-label="Incognito" data-track="record.incognito"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
           </div>
         </div>
       </section>

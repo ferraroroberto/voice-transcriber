@@ -79,8 +79,9 @@ def test_record_pane_boots_and_renders_its_contracts(
     expect(recorder).to_have_class("card recorder-card")
     expect(recorder.locator(".card-title")).to_have_count(0)
     for control_id, text in (("appendToggle", "Append"), ("incognitoToggle", "Incognito")):
-        expect(recorder.locator(f".record-modes #{control_id}")).to_have_text(text)
+        expect(recorder.locator(f".record-modes .mode-item:has(#{control_id}) > span")).to_have_text(text)
         expect(recorder.locator(f"#{control_id}")).to_have_attribute("role", "switch")
+        expect(recorder.locator(f"#{control_id}")).to_have_class("toggle")
     expect(recorder.locator("#recordBtn")).to_be_visible()
     expect(recorder.locator("#recordLabel")).to_have_text("Record")
     fill, accent = page.evaluate("""() => {
@@ -110,7 +111,7 @@ def test_record_pane_boots_and_renders_its_contracts(
     for paint in toggles.evaluate_all(_PAINT_JS) + closes.evaluate_all(_PAINT_JS):
         assert paint == ["rgba(0, 0, 0, 0)", "0px"]
 
-    # WCAG 1.4.11: the icon-only incognito chip and the text areas draw their
+    # WCAG 1.4.11: the text areas draw their
     # edge in --control-border, whichever theme is up. Both themes must really
     # resolve to different tokens, or the second pass proves nothing.
     # Transitions are off so a colour still easing toward the new theme cannot
@@ -121,7 +122,7 @@ def test_record_pane_boots_and_renders_its_contracts(
         page.evaluate("t => { document.documentElement.dataset.theme = t; }", scheme)
         token = page.evaluate(_CONTROL_BORDER_JS)
         tokens.add(token)
-        for selector in ("#incognitoToggle", "#transcript", "#polished", "#polishPromptPreview"):
+        for selector in ("#transcript", "#polished", "#polishPromptPreview"):
             border = page.evaluate(_BORDER_JS, selector)
             assert border == token, (
                 f"{selector} ({scheme}) borders in {border!r}, control-border is {token!r}"
@@ -160,6 +161,8 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     expect(page.locator("#textVerbs")).to_be_visible()
     expect(page.locator("#saveTranscript")).to_be_visible()
     expect(page.locator("#textMeta")).to_have_text("5 words")
+    # The primary verb is button-primary's 48px, not the 44px the other verbs use.
+    assert page.locator("#copyText").evaluate("el => el.getBoundingClientRect().height") >= 48
     surface(page, "record.text")
 
     page.click("#polishBtn")
