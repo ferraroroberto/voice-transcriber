@@ -77,6 +77,7 @@ async def patch_config(request: Request) -> Dict[str, Any]:
         "auto_stop_silence_ms",
         "gain_boost_enabled",
         "gain_boost_db",
+        "task_os_enabled",
     }
     patch = {k: v for k, v in body.items() if k in allowed}
     try:

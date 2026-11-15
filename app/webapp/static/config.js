@@ -57,6 +57,7 @@ export function applyConfigDefaults() {
     auto_stop_silence_ms: 1500,
     gain_boost_enabled: false,
     gain_boost_db: 12,
+    task_os_enabled: false,
   };
   // Running on guessed defaults — a later visit re-fetches the real config
   // so the server's actual flags (and any disabled rolling) take over.
@@ -133,6 +134,8 @@ const SETTINGS = [
       const sec = asNumber(els.autoStopSilence, parseFloat);
       return sec === undefined ? undefined : Math.round(sec * 1000);
     } },
+  { key: 'task_os_enabled', el: () => els.taskOsToggle, event: 'click',
+    show: (v) => setSwitch(els.taskOsToggle, !!v), read: () => isOn(els.taskOsToggle) },
   { key: 'history_retention_days', el: () => els.retentionDays, event: 'change',
     show: (v) => { els.retentionDays.value = v ?? 30; },
     read: () => asNumber(els.retentionDays, (x) => parseInt(x, 10)) },

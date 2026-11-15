@@ -39,6 +39,7 @@ from src import (
 )
 from src.gain import MAX_GAIN_BOOST_DB, MIN_GAIN_BOOST_DB
 from src.recording_pipeline import finalize_transcript, handle_take
+from src.task_os import TaskOsError, send_to_task_os, text_external_id
 from src.webapp_config import load_webapp_config, update_webapp_config
 from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
 
@@ -104,6 +105,8 @@ class TranscriberApp:
         # immediately on change (shared with the webapp's Settings toggle).
         self.gain_boost_var = tk.BooleanVar(value=self.webapp_config.gain_boost_enabled)
         self.gain_boost_db_var = tk.StringVar(value=str(self.webapp_config.gain_boost_db))
+        # Send to task-os — the same shared setting as the webapp's toggle.
+        self.task_os_var = tk.BooleanVar(value=self.webapp_config.task_os_enabled)
 
         # Mirror selections into the shared config so tray-initiated recordings
         # (hotkey or tray menu) use whatever the user picked in the window.
@@ -168,6 +171,7 @@ class TranscriberApp:
         self.force_builtin_var.trace_add("write", self._apply_mic_selection)
         self.gain_boost_var.trace_add("write", self._save_gain_boost_settings)
         self.gain_boost_db_var.trace_add("write", self._save_gain_boost_settings)
+        self.task_os_var.trace_add("write", self._save_task_os_setting)
 
     # ------------------------------------------------------------ layout
 
@@ -212,6 +216,31 @@ class TranscriberApp:
             )
         except (ValueError, OSError) as exc:
             logger.warning(f"⚠️  Could not save gain boost settings: {exc}")
+
+    def _save_task_os_setting(self, *_: object) -> None:
+        enabled = bool(self.task_os_var.get())
+        try:
+            self.webapp_config = update_webapp_config(task_os_enabled=enabled)
+        except (ValueError, OSError) as exc:
+            logger.warning(f"⚠️  Could not save the task-os setting: {exc}")
+        self.transcript_panel.set_task_os_visible(enabled)
+
+    def _send_to_task_os(self, text: str) -> None:
+        """Send the transcript box's text to task-os off the Tk thread."""
+        base_url = load_webapp_config().task_os_url
+
+        def work() -> None:
+            try:
+                result = send_to_task_os(base_url, text, text_external_id(text))
+            except TaskOsError as exc:
+                self.root.after(
+                    0, lambda m=str(exc): messagebox.showerror("Send to task-os failed", m),
+                )
+                return
+            label = "✓ Sent" if result.outcome == "created" else "✓ Already"
+            self.root.after(0, lambda: self.transcript_panel.show_task_os_result(label))
+
+        threading.Thread(target=work, name="task-os-send", daemon=True).start()
 
     def _build_widgets(self) -> None:
         pad = {"padx": 16, "pady": 6}
@@ -288,6 +317,11 @@ class TranscriberApp:
             text="🔊 Quiet-environment gain boost",
             variable=self.gain_boost_var,
         ).pack(side=tk.LEFT)
+        ttk.Checkbutton(
+            gain_boost_frame,
+            text="✅ Send to task-os",
+            variable=self.task_os_var,
+        ).pack(side=tk.RIGHT)
         ttk.Spinbox(
             gain_boost_frame,
             from_=MIN_GAIN_BOOST_DB, to=MAX_GAIN_BOOST_DB, increment=1,
@@ -307,7 +341,9 @@ class TranscriberApp:
             on_text_changed=self._on_transcript_text_changed,
             on_reset_requested=self._reset_session,
             on_append_toggle=self._on_append_toggle,
+            on_send_to_task_os=self._send_to_task_os,
         )
+        self.transcript_panel.set_task_os_visible(self.webapp_config.task_os_enabled)
         self.transcript_panel.pack(fill=tk.BOTH, expand=True, padx=16, pady=(10, 6))
         # When tray-owned, mirror tray.append_mode → checkbox.
         if self.tray is not None:

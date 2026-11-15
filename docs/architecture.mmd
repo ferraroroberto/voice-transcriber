@@ -54,7 +54,7 @@ flowchart TB
   subgraph webapp["app/webapp/ — FastAPI mobile PWA"]
     WEBSERVER["server.py\nwiring: create_app(), lifespan (archive cleanup on boot), static mount"]
     WEBAPPMGR["manager.py\nadopt-or-spawn uvicorn on :8443"]
-    ROUTERS["routers/\nsessions · auth · config · misc · activity · analytics"]
+    ROUTERS["routers/\nsessions · auth · config · misc · activity · analytics · task_os"]
     MIDDLEWARE["middleware.py\nbearer-token auth, loopback bypass"]
     AUDIOPY["audio.py\nffmpeg webm->wav transcode"]
     PARTIALW["partial_worker.py\nrolling ~2s partial transcription"]
@@ -77,6 +77,7 @@ flowchart TB
     DIAGNOSTICS["diagnostics.py\nlog ring + port-owner introspection"]
     POLISH["polish.py\nlocal-llm-hub client"]
     POLISHPROMPTS["polish_prompts.py\nstyle-library loader"]
+    TASKOSCLIENT["task_os.py\nsend a take to task-os as a task"]
     ARCHIVE["archive.py\ndated session folders + 30-day cleanup"]
     ACTIVITYLOG["activity_log.py\nSQLite events log, 365-day retention —\nsurvives the archive's 30-day prune"]
     ANALYTICS["analytics.py\ntoday's take count / wpm / time-saved,\nread from activity_log"]
@@ -154,7 +155,9 @@ flowchart TB
     LLMHUB["local-llm-hub :8000 — polish models,\ntranscribe role (parakeet + whisper failover),\ntranslate whisper :8091"]
     CLOUDFLAREACCESS["Cloudflare Access + named tunnel"]
     TELEGRAM["Telegram coding-alerts chat (optional)"]
+    TASKOS["task-os :8448 (optional) — Inbox tasks"]
   end
+  TASKOSCLIENT -->|POST /api/tasks, loopback = owner| TASKOS
   POLISH -->|POST /v1/messages| LLMHUB
   TRANSCLIENT -->|POST /v1/audio/transcriptions :8000, role| LLMHUB
   TRANSCLIENT -->|translate_base_url, task=translate :8091| LLMHUB

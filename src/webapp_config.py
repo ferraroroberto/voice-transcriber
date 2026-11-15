@@ -60,6 +60,9 @@ DEFAULT_PARTIAL_INTERVAL_SECONDS = 2.0
 # the page lets the user keep talking to cancel.
 DEFAULT_VAD_AUTO_STOP_ENABLED = False
 DEFAULT_AUTO_STOP_SILENCE_MS = 1500
+# task-os on this PC serves HTTPS on :8448 and treats a loopback caller as its
+# owner, so the default needs no token (see src/task_os.py).
+DEFAULT_TASK_OS_URL = "https://127.0.0.1:8448"
 
 
 def _sample_polish_defaults() -> tuple[str, List[str]]:
@@ -125,6 +128,10 @@ class WebappConfig:
     partial_interval_seconds: float = DEFAULT_PARTIAL_INTERVAL_SECONDS
     vad_auto_stop_enabled: bool = DEFAULT_VAD_AUTO_STOP_ENABLED
     auto_stop_silence_ms: int = DEFAULT_AUTO_STOP_SILENCE_MS
+    # "Send to task-os" on a take: off until the owner turns it on, since it
+    # needs task-os running. The URL is server-internal.
+    task_os_enabled: bool = False
+    task_os_url: str = DEFAULT_TASK_OS_URL
 
 
 # Fields whose raw JSON value is treated as "absent" when falsy (empty
@@ -260,13 +267,14 @@ def append_auth_token(url: str, token: Optional[str]) -> str:
 
 
 # Fields never sent to the client: secrets (auth_token/auth_password and the
-# Telegram alert credentials), and llm_hub_url/silence_dbfs_threshold which
+# Telegram alert credentials), and llm_hub_url/task_os_url/silence_dbfs_threshold which
 # are server-internal (see the field comments above on WebappConfig).
 CLIENT_HIDDEN_FIELDS = frozenset(
     {
         "auth_token",
         "auth_password",
         "llm_hub_url",
+        "task_os_url",
         "silence_dbfs_threshold",
         "notifier",
         "telegram_bot_token",

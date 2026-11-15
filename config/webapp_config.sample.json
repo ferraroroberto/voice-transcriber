@@ -32,5 +32,8 @@
   "_comment_latency": "Rolling transcription: re-run whisper on the accumulated take every N seconds while still recording so the transcript box is already filled by the time you tap Stop. Set partial_interval_seconds to 0 to disable. VAD-driven auto-stop (off by default): when on, the client auto-stops after auto_stop_silence_ms of continuous near-silence (with a 500 ms 'keep talking to cancel' grace banner).",
   "partial_interval_seconds": 2.0,
   "vad_auto_stop_enabled": false,
-  "auto_stop_silence_ms": 1500
+  "auto_stop_silence_ms": 1500,
+  "_comment_task_os": "task_os_enabled shows 'Send to task-os' in a take's menu and the tk window (toggle it in Settings). task_os_url is task-os's address; on this PC it treats the caller as its owner, so no token is needed.",
+  "task_os_enabled": false,
+  "task_os_url": "https://127.0.0.1:8448"
 }

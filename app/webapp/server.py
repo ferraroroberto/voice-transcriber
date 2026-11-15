@@ -47,7 +47,15 @@ from fastapi.staticfiles import StaticFiles
 from app.webapp.audio import find_ffmpeg
 from app.webapp.middleware import BearerTokenMiddleware
 from app.webapp.partial_worker import PartialWorker
-from app.webapp.routers import activity, analytics, auth, config, misc, sessions
+from app.webapp.routers import (
+    activity,
+    analytics,
+    auth,
+    config,
+    misc,
+    sessions,
+    task_os,
+)
 from app.webapp.routers._helpers import (
     PROJECT_ROOT,
     STATIC_DIR,
@@ -244,6 +252,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions.router)
     app.include_router(activity.router)
     app.include_router(analytics.router)
+    app.include_router(task_os.router)
     # Local-only view/tap log: the vendored usage_router stores
     # events in this app's runtime-data SQLite file and sits behind the
     # same bearer-token middleware as every other /api route. The env var
