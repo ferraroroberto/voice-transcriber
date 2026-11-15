@@ -217,6 +217,7 @@ function bindSwitches() {
   flipOnTap(els.translateToggle, renderRecordHeadLine);
   flipOnTap(els.gainBoostToggle);
   flipOnTap(els.vadAutoStopToggle);
+  flipOnTap(els.taskOsToggle);
   flipOnTap(els.forceBuiltinMic, releaseCachedStream);
   // Persisted settings save as they change; registered after the
   // flips above so a switch saves its new state.

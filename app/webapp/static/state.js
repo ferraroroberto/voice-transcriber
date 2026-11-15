@@ -74,6 +74,7 @@ export const els = {
   forceBuiltinMic:  document.getElementById('forceBuiltinMic'),
   gainBoostToggle:  document.getElementById('gainBoostToggle'),
   gainBoostDb:      document.getElementById('gainBoostDb'),
+  taskOsToggle:            document.getElementById('taskOsToggle'),
   vadAutoStopToggle:       document.getElementById('vadAutoStopToggle'),
   autoStopSilence:  document.getElementById('autoStopSilence'),
   retentionDays:    document.getElementById('retentionDays'),

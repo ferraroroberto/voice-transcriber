@@ -68,7 +68,9 @@ the take in the middle, one overflow button on the right:
 - **⋮ menu** — acts on the take without opening it. *Share* hands the full
   text to the OS share sheet (shown only where the browser has one; if the
   browser refuses it, the text is copied instead), *Copy as Markdown* copies
-  the take as a bullet (`- text`, later lines indented), *Refresh* reloads the
+  the take as a bullet (`- text`, later lines indented), *Send to task-os*
+  (shown once **Settings → History → Send to task-os** is on) makes the take
+  an Inbox task in task-os, *Refresh* reloads the
   list in place, and *Delete* (last, in red) opens the take with its Delete
   already armed so the second tap there confirms. *Open take* shows the
   take: on a phone a sheet, on a wide window the pane beside the list. It holds

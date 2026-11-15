@@ -1,6 +1,6 @@
 /* History — the Latest take card, the day-grouped take list (paged),
- * Select mode for a multi-take copy, the take sheet (full text, Copy, Redo,
- * facts, Delete) and Settings' delete-all action.
+ * Select mode for a multi-take copy, Send to task-os, the take sheet (full
+ * text, Copy, Redo, facts, Delete) and Settings' delete-all action.
  *
  * One in-memory list (state.historyTakes, newest first) is the source of
  * truth: every page load, select toggle or refresh re-renders the card and
@@ -55,6 +55,12 @@ function takeMenuItems(getTake) {
     {
       label: 'Copy as Markdown', glyph: 'copy', dataset: { track: 'history.menu-copy-md' },
       onTap: () => copyTakeAsMarkdown(getTake().session_id),
+    },
+    {
+      // Off until Settings turns it on: it needs task-os running on the PC.
+      label: 'Send to task-os', glyph: 'circle-check', dataset: { track: 'history.menu-task-os' },
+      hidden: () => !(state.config && state.config.task_os_enabled),
+      onTap: () => sendTakeToTaskOs(getTake().session_id),
     },
     {
       label: 'Refresh', glyph: 'refresh-cw', dataset: { track: 'history.menu-refresh' },
@@ -435,6 +441,20 @@ async function copyTakeAsMarkdown(id) {
     showToast('Copied as Markdown');
   } catch (err) {
     showToast('Copy failed: ' + (err.message || err), 'error');
+  }
+}
+
+// One tap makes the take an Inbox task. The server does the call (task-os
+// trusts the PC, not the phone) and sends the same take only once, so a
+// second tap says so instead of making a duplicate.
+async function sendTakeToTaskOs(id) {
+  try {
+    const r = await authFetch(`/api/sessions/${id}/task-os`, { method: 'POST' });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || `HTTP ${r.status}`);
+    showToast(data.outcome === 'created' ? 'Sent to task-os' : 'Already in task-os');
+  } catch (err) {
+    showToast("Couldn't send to task-os: " + (err.message || err), 'error');
   }
 }
 

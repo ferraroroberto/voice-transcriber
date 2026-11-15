@@ -302,6 +302,44 @@ def test_take_menu_hides_share_without_a_share_sheet(authed_page: Page, base_url
     )
 
 
+def test_take_menu_sends_to_task_os_when_turned_on(authed_page: Page, base_url: str) -> None:
+    """With Send to task-os on, the menu gains the row: it carries its
+    usage-track id and a sprite glyph, and a tap posts the take to the
+    server's task-os route and confirms with a toast."""
+    _phone(authed_page)
+    _mock_sessions(authed_page)
+
+    def _config_on(route: Route) -> None:
+        if route.request.method != "GET":
+            route.continue_()
+            return
+        body = route.fetch().json()
+        body["task_os_enabled"] = True
+        route.fulfill(json=body)
+
+    authed_page.route("**/api/config", _config_on)
+    sent: list[str] = []
+
+    def _task_os(route: Route) -> None:
+        sent.append(route.request.method)
+        route.fulfill(json={"ok": True, "outcome": "created", "task_id": 1, "title": "x"})
+
+    authed_page.route("**/api/sessions/sess-00/task-os", _task_os)
+    authed_page.goto(f"{base_url}/", wait_until="domcontentloaded")
+    authed_page.click("#tabHistory")
+    authed_page.locator("#latestMore").click()
+
+    row = authed_page.get_by_role("menu").get_by_role("menuitem", name="Send to task-os")
+    expect(row).to_have_count(1)
+    assert row.evaluate("e => e.dataset.track") == "history.menu-task-os"
+    assert row.evaluate(
+        "e => !!document.querySelector(e.querySelector('svg use').getAttribute('href'))"
+    )
+    row.click()
+    expect(authed_page.locator("#toast")).to_contain_text("Sent to task-os")
+    assert sent == ["POST"]
+
+
 def test_empty_history_shows_the_empty_state(authed_page: Page, base_url: str) -> None:
     """No takes yet: the Latest card stays hidden and the vendored empty state
     says so, instead of a blank pane."""

@@ -1,4 +1,4 @@
-"""Last-transcription panel — text box plus Copy / Reset / Append.
+"""Last-transcription panel — text box plus Copy / Task / Reset / Append.
 
 Kept apart from ``TranscriberApp`` so this panel owns its own
 widgets and the view-logic that follows directly from them (buttons
@@ -31,11 +31,13 @@ class TranscriptPanel(ttk.Frame):
         on_text_changed: Callable[[str], None],
         on_reset_requested: Callable[[], None],
         on_append_toggle: Callable[[bool], None],
+        on_send_to_task_os: Callable[[str], None],
     ) -> None:
         super().__init__(parent)
         self._on_text_changed = on_text_changed
         self._on_reset_requested = on_reset_requested
         self._on_append_toggle = on_append_toggle
+        self._on_send_to_task_os = on_send_to_task_os
         self.append_var = tk.BooleanVar(value=initial_append)
         self._suppress_append_trace = False
         self._build_widgets()
@@ -45,11 +47,14 @@ class TranscriptPanel(ttk.Frame):
         header.pack(fill=tk.X)
         ttk.Label(header, text="Last transcription:", font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT)
         # Order on the right (rightmost first because pack(side=RIGHT) stacks
-        # toward the centre): Append | Reset | Copy — mirrors the webapp
+        # toward the centre): Append | Reset | Task | Copy — mirrors the webapp
         # header's Append | Reset | Incognito grouping.
         self.copy_last_btn = ttk.Button(header, text="📋 Copy", command=self._copy_last, width=10)
         self.copy_last_btn.pack(side=tk.RIGHT)
         self.copy_last_btn.state(["disabled"])
+        # Shown only while the shared "Send to task-os" setting is on.
+        self.task_os_btn = ttk.Button(header, text="✅ Task", command=self._send_to_task_os, width=10)
+        self.task_os_btn.state(["disabled"])
         self.reset_btn = ttk.Button(
             header, text="🧽 Reset", command=self._on_reset_requested, width=10,
         )
@@ -95,7 +100,20 @@ class TranscriptPanel(ttk.Frame):
     def set_enabled(self, enabled: bool) -> None:
         state = ["!disabled"] if enabled else ["disabled"]
         self.copy_last_btn.state(state)
+        self.task_os_btn.state(state)
         self.reset_btn.state(state)
+
+    def set_task_os_visible(self, visible: bool) -> None:
+        """Show the Task button only while Send to task-os is turned on."""
+        if visible and not self.task_os_btn.winfo_manager():
+            self.task_os_btn.pack(side=tk.RIGHT, padx=(0, 6), after=self.copy_last_btn)
+        elif not visible:
+            self.task_os_btn.pack_forget()
+
+    def show_task_os_result(self, label: str) -> None:
+        """Flash a sent/already-there confirmation on the Task button."""
+        self.task_os_btn.config(text=label)
+        self.after(1500, lambda: self.task_os_btn.config(text="✅ Task"))
 
     def set_append_checked(self, enabled: bool) -> None:
         """Mirror an external append-mode change (tray menu / hotkey)
@@ -117,6 +135,11 @@ class TranscriptPanel(ttk.Frame):
         if self._suppress_append_trace:
             return
         self._on_append_toggle(bool(self.append_var.get()))
+
+    def _send_to_task_os(self) -> None:
+        text = self.get_text()
+        if text.strip():
+            self._on_send_to_task_os(text)
 
     def _copy_last(self) -> None:
         text = self.get_text()
