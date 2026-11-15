@@ -74,6 +74,13 @@ def _wide_layout(page: Page, base_url: str) -> None:
     expect(page.locator("#takeSheet")).to_be_hidden()  # in place, not a modal
     lst = _box(page, ".history-list-pane")
     assert _box(page, "#takeDetail")["x"] > lst["x"] + lst["width"] - 1
+    # Both columns start on one line: the detail pane has no top margin the
+    # Latest take card lacks, in either theme.
+    for scheme in ("light", "dark"):
+        page.evaluate("t => { document.documentElement.dataset.theme = t; }", scheme)
+        latest_top = _box(page, "#latestCard")["y"]
+        assert _box(page, "#takeDetail")["y"] == pytest.approx(latest_top, abs=0.6), scheme
+    page.evaluate("() => { delete document.documentElement.dataset.theme; }")
 
     # Both kebabs (the Latest take card and every day row) once did nothing
     # visible here, because the detail pane is always open and a click only
