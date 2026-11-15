@@ -81,7 +81,6 @@ still covers the same logic via the parity port in
 |------|--------------|
 | `tests\webapp\test_webapp_config.py` | First-run defaults come from `webapp_config.sample.json` (not Python); regression guard that no model-name literal sneaks back into `src\webapp_config.py`; `reload_if_changed` serves a file another process rewrote |
 | `tests\test_polish.py` | Hub client request shape, `<think>` stripping, error wrapping |
-| `tests\test_task_os.py` | The task-os payload (one-line title, full take in the description), the idempotency keys, loopback-only certificate skip, and a distinct status and message for each failure |
 | `tests\test_polish_prompts.py` | Library load, dedupe, built-in fallback |
 | `tests\test_app_config.py` | 100-language Whisper map, ISO normalisation, validation |
 | `tests\test_silence.py` | RMS dBFS gate (int16, float, 8-bit, stereo WAV) |
@@ -127,7 +126,7 @@ still covers the same logic via the parity port in
 | `tests\webapp\test_webapp_api_analytics.py` | `GET /api/analytics/summary` — usage analytics API |
 | `tests\webapp\test_webapp_api_polish.py` | `/api/polish-text`, `/api/save-text`, `_resolve_model`, `_preview` |
 | `tests\webapp\test_webapp_api_sessions.py` | Session CRUD, polish-on-session, 404/400/424 paths |
-| `tests\webapp\test_webapp_api_task_os.py` | Send to task-os: refused while the setting is off, the task-os URL never reaches the client, the polished text is sent once per take (a replay reports it as already there), 404 for an unknown take, 503 when task-os is down |
+| `tests\webapp\test_task_os.py` | Send to task-os: the payload (one-line title, full take in the description), the idempotency keys, loopback-only certificate skip and a distinct status and message for each failure; the route is refused while the setting is off, never hands the task-os URL to the client, sends the polished text once per take (a replay reports it as already there), 404s an unknown take and 503s when task-os is down |
 | `tests\webapp\test_webapp_api_usage.py` | The vendored usage log mounted in the webapp — events land in the app's own usage SQLite file behind the bearer-token gate |
 | `tests\webapp\test_webapp_compression.py` | The stream-safe gzip middleware wiring — it's the outermost layer, and the session SSE feed still delivers its first chunk at once |
 | `tests\webapp\test_webapp_finish_partial.py` | `POST /api/sessions/{id}/finish`'s rolling-partial shortcut — serves the worker's last partial instead of a final whisper pass, plus the served-by stamp it leaves; a translate or different-language request falls through to the real transcription path |
