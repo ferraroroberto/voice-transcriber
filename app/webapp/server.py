@@ -47,7 +47,15 @@ from fastapi.staticfiles import StaticFiles
 from app.webapp.audio import find_ffmpeg
 from app.webapp.middleware import BearerTokenMiddleware
 from app.webapp.partial_worker import PartialWorker
-from app.webapp.routers import activity, analytics, auth, config, misc, sessions, task_os
+from app.webapp.routers import (
+    activity,
+    analytics,
+    auth,
+    config,
+    misc,
+    sessions,
+    task_os,
+)
 from app.webapp.routers._helpers import (
     PROJECT_ROOT,
     STATIC_DIR,
