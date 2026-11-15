@@ -254,7 +254,8 @@
 /* ---------- Settings ---------- */
 /* Inset groups under overline headers (design.md settings group): each
    row a lead glyph, a plain label, and its value or inline control. */
-.settings-group-title { margin: var(--space-md) var(--space-xs) calc(-1 * var(--space-xs)); }
+.settings-group-title { margin: var(--space-lg) var(--space-xs) var(--space-sm); }
+.settings > .settings-group-title:first-child { margin-top: var(--space-sm); }
 .settings-group { padding: 0 14px; }
 .setting-row {
   display: flex;
@@ -287,17 +288,47 @@
 .setting-link { cursor: pointer; touch-action: manipulation; }
 .setting-danger .setting-label,
 .setting-danger .setting-glyph { color: var(--danger-text); }
-/* Every control is right-anchored in its row, so its value reads from that
-   edge. The select's chevron clearance (.select-native padding-right)
-   reserves 32px for a chevron this app never draws, so drop it back to the
-   inputs' 10px inset. */
-.settings-group .input-native,
-.settings-group .select-native { text-align: right; }
-.settings-group .select-native { padding-right: 10px; max-width: 55%; }
+/* A picker reads as the settings-group value row: the current value in
+   muted text and a chevron, no bordered pill. The native select stays the
+   control (it opens the OS picker on a phone); only its outline (an inset
+   shadow in styles.css) is dropped and the chevron sits over its right
+   padding. */
+.setting-pick {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 55%;
+}
+.settings-group .setting-pick .select-native {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 calc(var(--icon-inline) + var(--space-sm)) 0 var(--space-xs);
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+  text-align: right;
+  text-align-last: right;
+  text-overflow: ellipsis;
+}
+.setting-pick .setting-chevron {
+  position: absolute;
+  right: 0;
+  pointer-events: none;
+}
 /* A small number keeps its own width with the unit beside it ("+12 dB"),
-   rather than the 55% value column (design.md compact numeric field). */
+   rather than the 55% value column (design.md compact numeric field). All
+   three share one soft-filled field, so none reads as a heavier row. */
 .setting-number { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); }
-.setting-number .input-native { width: 72px; }
+.settings-group .setting-number .input-native {
+  width: 64px;
+  background: var(--neutral-soft) padding-box;
+  box-shadow: none;
+  color: var(--ink);
+  text-align: right;
+}
 .setting-unit { font-size: var(--font-label); }
 
 /* The avatar (design.md avatar): a neutral squircle with one glyph and a
