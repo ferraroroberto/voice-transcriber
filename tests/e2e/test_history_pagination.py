@@ -255,6 +255,15 @@ def test_take_menu_shares_copies_markdown_and_arms_delete(
         "history.menu-open", "history.menu-share", "history.menu-copy-md",
         "history.menu-refresh", "history.menu-delete",
     ]
+    # Every row's glyph exists in the page's inline sprite: a name the sprite
+    # lacks draws nothing and leaves the row's label out of line.
+    unresolved = items.evaluate_all(
+        """els => els.filter(e => {
+          const use = e.querySelector('svg use');
+          return !use || !document.querySelector(use.getAttribute('href'));
+        }).map(e => e.textContent)"""
+    )
+    assert unresolved == [], unresolved
     surface(authed_page, "history.take-menu-phone")
 
     items.filter(has_text="Share").click()
