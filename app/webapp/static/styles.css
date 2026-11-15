@@ -433,9 +433,9 @@ textarea.text-out.editable::placeholder {
   color: var(--muted);
   font-size: var(--font-label);
 }
-/* One verb row: Copy (primary), Polish and Save (surface), Clear (ghost)
-   pushed to the far end. Real 44px geometry, as an adjacent cluster; the
-   inset is tight enough that all four fit one row on a 390px phone. */
+/* One verb row: Copy, Polish and Save (surface), Clear (ghost) pushed to the
+   far end. Real 44px geometry, as an adjacent cluster; the inset is tight
+   enough that all four fit one row on a 390px phone. */
 .text-verbs {
   display: flex;
   flex-wrap: wrap;
@@ -458,9 +458,6 @@ textarea.text-out.editable::placeholder {
   touch-action: manipulation;
 }
 .text-verb .icon { width: var(--icon-inline); height: var(--icon-inline); }
-/* The primary verb keeps the spec's 48px button-primary height; the 44px
-   box above would shrink it below the vendored tier's own minimum. */
-.text-verb.button-primary { height: 48px; min-height: 48px; }
 .text-clear { margin-left: auto; }
 
 /* ---------- buttons ---------- */

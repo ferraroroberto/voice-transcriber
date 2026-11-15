@@ -286,8 +286,9 @@
 .setting-value[data-tone] { color: var(--tone); }
 .setting-chevron { width: var(--icon-inline); height: var(--icon-inline); color: var(--muted); }
 .setting-link { cursor: pointer; touch-action: manipulation; }
-.setting-danger .setting-label,
-.setting-danger .setting-glyph { color: var(--danger-text); }
+/* A row that holds one tier button (Delete all takes…) instead of a label
+   and value: the button takes the row's full width. */
+.setting-action > .button-tint { flex: 1; }
 /* A picker reads as the settings-group value row: the current value in
    muted text and a chevron, no bordered pill. The native select stays the
    control (it opens the OS picker on a phone); only its outline (an inset

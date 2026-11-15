@@ -9,6 +9,7 @@ test of its own.
 from __future__ import annotations
 
 import json
+import re
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -161,8 +162,14 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     expect(page.locator("#textVerbs")).to_be_visible()
     expect(page.locator("#saveTranscript")).to_be_visible()
     expect(page.locator("#textMeta")).to_have_text("5 words")
-    # The primary verb is button-primary's 48px, not the 44px the other verbs use.
-    assert page.locator("#copyText").evaluate("el => el.getBoundingClientRect().height") >= 48
+    # Copy is the scaffold's one tier for the copy action: the surface button
+    # (14px/600), at the same 44px verb height as Polish and Save.
+    copy_text = page.locator("#copyText")
+    expect(copy_text).to_have_class(re.compile(r"\bbutton-surface\b"))
+    assert copy_text.evaluate("el => getComputedStyle(el).fontWeight") == "600"
+    assert copy_text.evaluate("el => el.getBoundingClientRect().height") == page.locator(
+        "#polishBtn"
+    ).evaluate("el => el.getBoundingClientRect().height")
     surface(page, "record.text")
 
     page.click("#polishBtn")

@@ -258,40 +258,42 @@ def index_html() -> str:
 
 
 class TestHistoryButtonEmphasis:
-    """History's one primary is Copy (the Latest take card's, or the Select
-    bar's); the list foot is a quiet ghost and delete-all is never a peer of
+    """History's Copy (the Latest take card's, or the Select
+    bar's) is the scaffold's surface tier; the list foot is a quiet ghost and delete-all is never a peer of
     Copy (issues #190, #264, #265). The tiers are markup-level, so a rename or a
     stray tier regresses it silently."""
 
-    def test_copy_is_the_primary_and_the_foot_is_quiet(self, index_html: str):
-        assert 'id="latestCopy" type="button" class="button-primary' in index_html
-        assert 'id="copySelection" type="button" class="button-primary' in index_html
+    def test_copy_is_the_surface_tier_and_the_foot_is_quiet(self, index_html: str):
+        assert 'id="latestCopy" type="button" class="button-surface' in index_html
+        assert 'id="copySelection" type="button" class="button-surface' in index_html
         foot = re.search(r'<div class="history-foot">(.*?)</div>', index_html, re.S)
         assert foot, "history-foot block not found"
         assert 'id="loadMoreHistory" type="button" class="button-ghost compact' in foot.group(1)
         assert 'id="refreshHistory"' not in index_html
-        # Delete-all lives in Settings › History since #265, as danger text.
+        # Delete-all lives in Settings › History as the destructive tier.
         assert 'id="cleanAll"' not in foot.group(1)
-        assert 'id="cleanAll" type="button" class="setting-row setting-link setting-danger"' in index_html
+        assert 'id="cleanAll" type="button" class="button-tint danger" aria-haspopup="dialog"' in index_html
 
     def test_history_row_is_tap_to_copy_with_one_overflow(
         self, app_js: str, index_html: str
     ):
         """A take is an action-row (design.md): tapping the body copies it and
         one overflow button opens the take sheet. The row builds no per-row
-        button strip; in the sheet Copy is the one primary and Delete comes
+        button strip; in the sheet Copy is the surface tier and Delete comes
         last as the outlined destructive button (unfilled at rest), confirmed
         by a second tap rather than the browser's confirm() (#213, #261, #281)."""
         assert "main.className = 'history-main';" in app_js
         assert "more.className = 'icon-button history-more';" in app_js
         assert "button-ghost compact history-copy" not in app_js
+        assert "main.title = 'Copy" not in app_js
         assert "button-tint" not in app_js
         sheet = re.search(r'<dialog id="takeSheet".*?</dialog>', index_html, re.S)
         assert sheet, "takeSheet dialog not found"
         body = sheet.group(0)
         order = ['id="takeSheetText"', 'id="takeCopy"', 'id="takeRedo"', 'id="takeServedBy"', 'id="takeDelete"']
         assert [body.index(i) for i in order] == sorted(body.index(i) for i in order)
-        assert body.count("button-primary") == 1
+        assert re.search(r'id="takeCopy"[^>]*class="button-surface ', body)
+        assert "button-primary" not in body
         assert re.search(r'id="takeDelete"[^>]*class="button-tint danger detail-save-btn"', body)
         assert "take-sheet-delete" not in body
         assert "confirm('Delete this take?')" not in app_js

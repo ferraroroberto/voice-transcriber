@@ -304,7 +304,7 @@
       <!-- The Text card (#263): one text in two versions. The Transcript ·
            Polished switch appears once a polish exists; one textarea shows
            at a time and both keep their edits. Under it, the take's meta line
-           and one verb row: Copy (the primary, copies the version shown),
+           and one verb row: Copy (copies the version shown),
            Polish (tucked away on the surface tier), Save (only for text
            History does not hold yet) and Clear. -->
       <section class="card text-card">
@@ -319,7 +319,7 @@
         <textarea id="polished" class="text-out editable" aria-label="Polished text" rows="4" hidden></textarea>
         <p id="textMeta" class="text-meta" hidden></p>
         <div id="textVerbs" class="text-verbs" hidden>
-          <button id="copyText" type="button" class="button-primary text-verb" data-track="text.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          <button id="copyText" type="button" class="button-surface text-verb" data-track="text.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
           <button id="polishBtn" type="button" class="button-surface text-verb" data-track="text.polish"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg> <span class="polish-label">Polish</span></button>
           <button id="saveTranscript" type="button" class="button-surface text-verb" title="Save this text to History without polishing" hidden data-track="text.save"><svg class="icon" aria-hidden="true"><use href="#i-save" /></svg> Save</button>
           <button id="resetBtn" type="button" class="button-ghost text-verb text-clear" title="Clear the text and start a fresh session" data-track="text.clear"><svg class="icon" aria-hidden="true"><use href="#i-eraser" /></svg> Clear</button>
@@ -353,7 +353,7 @@
         <p id="latestText" class="latest-text"></p>
         <p id="latestMeta" class="text-meta latest-meta"></p>
         <div class="latest-verbs">
-          <button id="latestCopy" type="button" class="button-primary text-verb latest-copy" data-track="history.latest-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+          <button id="latestCopy" type="button" class="button-surface text-verb latest-copy" data-track="history.latest-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
           <button id="latestMore" type="button" class="icon-button history-more" aria-label="More actions" data-track="history.latest-more"><svg class="icon" aria-hidden="true"><use href="#i-ellipsis-vertical" /></svg></button>
         </div>
         <p id="analyticsSummary" class="latest-foot"></p>
@@ -368,7 +368,7 @@
       <div id="selectBar" class="select-bar" role="toolbar" aria-label="Selected takes" hidden>
         <b id="selectCount">0 takes · oldest first</b>
         <button id="selectCancel" type="button" class="button-ghost text-verb" data-track="history.select-cancel">Cancel</button>
-        <button id="copySelection" type="button" class="button-primary text-verb" data-track="history.select-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+        <button id="copySelection" type="button" class="button-surface text-verb" data-track="history.select-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
       </div>
       </div>
       <aside id="takeDetail" class="card take-detail" aria-label="Picked take" hidden></aside>
@@ -422,7 +422,7 @@
         <h2 class="overline settings-group-title">History</h2>
         <section class="card settings-group">
           <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-clock" /></svg><span class="setting-label">Keep audio for</span><span class="setting-number"><input id="retentionDays" type="number" min="1" max="365" step="1" class="input-native" aria-label="Keep audio for, in days"><span class="setting-unit">days</span></span></label>
-          <button id="cleanAll" type="button" class="setting-row setting-link setting-danger" data-track="settings.delete-all"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-trash-2" /></svg><span class="setting-label">Delete all takes…</span></button>
+          <div class="setting-row setting-action"><button id="cleanAll" type="button" class="button-tint danger" aria-haspopup="dialog" aria-controls="deleteAllSheet" data-track="settings.delete-all"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes…</button></div>
           <div class="setting-row" title="Adds Send to task-os to a take's menu: one tap makes the take an Inbox task. Needs task-os running on this PC."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-circle-check" /></svg><span class="setting-label">Send to task-os<span class="setting-sub">Adds a take as a task</span></span><button id="taskOsToggle" type="button" class="toggle" role="switch" aria-checked="false"
                   aria-label="Send to task-os" data-track="settings.task-os"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
         </section>
@@ -492,7 +492,7 @@
         <button type="button" class="icon-button detail-close" aria-label="Close" data-track="take.close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
       </div>
       <div id="takeSheetText" class="take-sheet-text" tabindex="0" aria-label="Full text"></div>
-      <button id="takeCopy" type="button" class="button-primary detail-save-btn take-sheet-copy" data-track="take.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
+      <button id="takeCopy" type="button" class="button-surface detail-save-btn take-sheet-copy" data-track="take.copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
       <button id="takeRedo" type="button" class="take-sheet-action" data-track="take.redo"><svg class="icon" aria-hidden="true"><use href="#i-rotate-cw" /></svg> Redo transcription</button>
       <div class="take-sheet-facts">
         <div class="row"><span>Length</span><span id="takeLength" class="take-sheet-value"></span></div>
