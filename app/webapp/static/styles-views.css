@@ -222,6 +222,9 @@
   overflow-wrap: anywhere;
 }
 .take-sheet-copy .icon { width: var(--icon-inline); height: var(--icon-inline); }
+/* Delete take below it is a 48px tint; a shorter Copy would leave the
+   destructive control the largest one in the sheet. */
+.take-sheet-copy { height: 48px; min-height: 48px; }
 .take-sheet-action {
   display: flex;
   align-items: center;
