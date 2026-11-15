@@ -50,18 +50,24 @@ def _set_theme(page: Page, theme: str) -> None:
 
 
 def _assert_settings_layout(page: Page) -> None:
-    """Each Settings group header clears the card under it, and no row's label
-    runs under its control (a wrapped or overlapped row)."""
+    """Each Settings group header clears the card under it, no row's label
+    runs under its control (a wrapped or overlapped row), every number field is
+    80px at 16px, every row leads with an 18px glyph and no select is a bordered
+    pill."""
     problems = page.evaluate(
         """() => {
           const out = [];
-          for (const h of document.querySelectorAll('#settingsPanel .settings-group-title')) {
+          for (const h of document.querySelectorAll('#settingsPanel .settings-overline')) {
             const card = h.nextElementSibling;
             const gap = card.getBoundingClientRect().top - h.getBoundingClientRect().bottom;
             if (gap < 4) out.push(`header "${h.textContent}" is ${gap}px above its card`);
           }
-          for (const row of document.querySelectorAll('#settingsPanel .setting-row')) {
-            const label = row.querySelector('.setting-label');
+          for (const row of document.querySelectorAll('#settingsPanel .settings-row')) {
+            const icon = row.querySelector('.settings-row-icon');
+            if (icon && Math.round(icon.getBoundingClientRect().width) !== 18) {
+              out.push(`row "${row.textContent.trim().slice(0, 20)}" leads with a ${icon.getBoundingClientRect().width}px glyph`);
+            }
+            const label = row.querySelector('.settings-row-label');
             if (!label) continue;
             const lr = label.getBoundingClientRect();
             for (let c = label.nextElementSibling; c; c = c.nextElementSibling) {
@@ -70,6 +76,15 @@ def _assert_settings_layout(page: Page) -> None:
                 out.push(`label "${label.textContent.trim()}" overlaps its control`);
               }
             }
+          }
+          for (const f of document.querySelectorAll('#settingsPanel .settings-row-input')) {
+            const w = f.getBoundingClientRect().width;
+            const fs = parseFloat(getComputedStyle(f).fontSize);
+            if (Math.round(w) !== 80 || fs !== 16) out.push(`number field #${f.id} is ${w}px at ${fs}px text`);
+          }
+          for (const sel of document.querySelectorAll('#settingsPanel .settings-row-select')) {
+            const cs = getComputedStyle(sel);
+            if (parseFloat(cs.borderTopWidth) > 0 && cs.borderTopStyle !== 'none') out.push(`select #${sel.id} is a bordered pill`);
           }
           return out;
         }"""

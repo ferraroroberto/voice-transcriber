@@ -51,6 +51,7 @@
   <link rel="stylesheet" href="/static/_vendored/rec-wave/rec-wave.css?v=__VENDORED_REC_WAVE_REC_WAVE_CSS__">
   <link rel="stylesheet" href="/static/_vendored/mic-notice/mic-notice.css?v=__VENDORED_MIC_NOTICE_MIC_NOTICE_CSS__">
   <link rel="stylesheet" href="/static/styles.css?v=__STYLES_CSS__">
+  <link rel="stylesheet" href="/static/_vendored/settings-group/settings-group.css?v=__VENDORED_SETTINGS_GROUP_SETTINGS_GROUP_CSS__">
   <link rel="stylesheet" href="/static/styles-views.css?v=__STYLES_VIEWS_CSS__">
   <title>Whisper</title>
 </head>
@@ -233,6 +234,9 @@
     <symbol id="i-chevron-right" viewBox="0 0 24 24" fill="none">
       <path d="m9 18 6-6-6-6" />
     </symbol>
+    <symbol id="i-chevron-down" viewBox="0 0 24 24" fill="none">
+      <path d="m6 9 6 6 6-6" />
+    </symbol>
     <symbol id="i-audio-lines" viewBox="0 0 24 24" fill="none">
       <path d="M2 10v3" />
       <path d="M6 6v11" />
@@ -392,44 +396,44 @@
            and small numbers sit inline and save as they change (no Save
            button). Language and Translate stay per-session choices. -->
       <div id="settingsPanel" class="settings">
-        <h2 class="overline settings-group-title">Dictation</h2>
-        <section class="card settings-group">
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Language</span><span class="setting-pick"><select id="languageSelect" class="select-native" data-track="settings.language"></select><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></span></label>
-          <div class="setting-row" title="Speak in the language above; the text comes out in English. The first take after a pause can take a few seconds longer."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-globe" /></svg><span class="setting-label">Translate to English</span><button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Translate to English" data-track="settings.translate"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-mic" /></svg><span class="setting-label">Microphone</span><span class="setting-pick"><select id="micSelect" class="select-native" data-track="settings.microphone"></select><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></span></label>
-          <div class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-smartphone" /></svg><span class="setting-label">Prefer the built-in mic<span class="setting-sub">Skips Bluetooth headsets</span></span><button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Prefer the built-in mic" data-track="settings.builtin-mic"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+        <h3 class="settings-overline" id="settingsGroupDictation">Dictation</h3>
+        <section class="card settings-group" aria-labelledby="settingsGroupDictation">
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-globe" /></svg><span class="settings-row-label">Language</span><select id="languageSelect" class="settings-row-select" data-track="settings.language"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
+          <label class="settings-row" title="Speak in the language above; the text comes out in English. The first take after a pause can take a few seconds longer."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-globe" /></svg><span class="settings-row-label">Translate to English</span><button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Translate to English" data-track="settings.translate"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-mic" /></svg><span class="settings-row-label">Microphone</span><select id="micSelect" class="settings-row-select" data-track="settings.microphone"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-smartphone" /></svg><span class="settings-row-text"><span class="settings-row-label">Prefer the built-in mic</span><span class="settings-row-hint">Skips Bluetooth headsets</span></span><button id="forceBuiltinMic" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Prefer the built-in mic" data-track="settings.builtin-mic"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
         </section>
 
-        <h2 class="overline settings-group-title">Sound</h2>
-        <section class="card settings-group">
-          <div class="setting-row" title="Makes a quiet recording louder before it is transcribed, for a quiet mic or room."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="setting-label">Boost quiet audio</span><button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Boost quiet audio" data-track="settings.gain-boost"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="setting-label">Boost amount</span><span class="setting-number"><span class="setting-unit">+</span><input id="gainBoostDb" type="number" min="0" max="24" step="1" class="input-native" aria-label="Boost amount in decibels"><span class="setting-unit">dB</span></span></label>
-          <div class="setting-row" title="Stops recording after a stretch of silence. A short notice shows first, so you can keep talking to cancel."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-timer" /></svg><span class="setting-label">Stop after silence</span><button id="vadAutoStopToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Stop after silence" data-track="settings.silence-stop"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-timer" /></svg><span class="setting-label">Silence length</span><span class="setting-number"><input id="autoStopSilence" type="number" min="0.2" max="10" step="0.1" class="input-native" aria-label="Silence length in seconds"><span class="setting-unit">s</span></span></label>
+        <h3 class="settings-overline" id="settingsGroupSound">Sound</h3>
+        <section class="card settings-group" aria-labelledby="settingsGroupSound">
+          <label class="settings-row" title="Makes a quiet recording louder before it is transcribed, for a quiet mic or room."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="settings-row-label">Boost quiet audio</span><button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Boost quiet audio" data-track="settings.gain-boost"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="settings-row-label">Boost amount</span><span class="settings-row-number"><input id="gainBoostDb" type="number" min="0" max="24" step="1" class="settings-row-input" inputmode="numeric" aria-label="Boost amount in decibels"><span class="settings-row-unit">dB</span></span></label>
+          <label class="settings-row" title="Stops recording after a stretch of silence. A short notice shows first, so you can keep talking to cancel."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-timer" /></svg><span class="settings-row-label">Stop after silence</span><button id="vadAutoStopToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Stop after silence" data-track="settings.silence-stop"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-timer" /></svg><span class="settings-row-label">Silence length</span><span class="settings-row-number"><input id="autoStopSilence" type="number" min="0.2" max="10" step="0.1" class="settings-row-input" inputmode="decimal" aria-label="Silence length in seconds"><span class="settings-row-unit">s</span></span></label>
         </section>
 
-        <h2 class="overline settings-group-title">Polish</h2>
-        <section class="card settings-group">
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Model</span><span class="setting-pick"><select id="polishModel" class="select-native" data-track="settings.polish-model"></select><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></span></label>
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="setting-label">Style</span><span class="setting-pick"><select id="polishStyle" class="select-native" data-track="settings.polish-style"></select><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></span></label>
-          <button id="openPromptSheet" type="button" class="setting-row setting-link" data-track="settings.polish-prompt"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-file-text" /></svg><span class="setting-label">Instructions</span><span class="setting-value">View</span><svg class="icon setting-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></button>
+        <h3 class="settings-overline" id="settingsGroupPolish">Polish</h3>
+        <section class="card settings-group" aria-labelledby="settingsGroupPolish">
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="settings-row-label">Model</span><select id="polishModel" class="settings-row-select" data-track="settings.polish-model"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="settings-row-label">Style</span><select id="polishStyle" class="settings-row-select" data-track="settings.polish-style"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
+          <button id="openPromptSheet" type="button" class="settings-row" aria-haspopup="dialog" data-track="settings.polish-prompt"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-file-text" /></svg><span class="settings-row-label">Instructions</span><span class="settings-row-value">View</span><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></button>
         </section>
 
-        <h2 class="overline settings-group-title">History</h2>
-        <section class="card settings-group">
-          <label class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-clock" /></svg><span class="setting-label">Keep audio for</span><span class="setting-number"><input id="retentionDays" type="number" min="1" max="365" step="1" class="input-native" aria-label="Keep audio for, in days"><span class="setting-unit">days</span></span></label>
-          <div class="setting-row setting-action"><button id="cleanAll" type="button" class="button-tint danger" aria-haspopup="dialog" aria-controls="deleteAllSheet" data-track="settings.delete-all"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes…</button></div>
-          <div class="setting-row" title="Adds Send to task-os to a take's menu: one tap makes the take an Inbox task. Needs task-os running on this PC."><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-circle-check" /></svg><span class="setting-label">Send to task-os<span class="setting-sub">Adds a take as a task</span></span><button id="taskOsToggle" type="button" class="toggle" role="switch" aria-checked="false"
-                  aria-label="Send to task-os" data-track="settings.task-os"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
+        <h3 class="settings-overline" id="settingsGroupHistory">History</h3>
+        <section class="card settings-group" aria-labelledby="settingsGroupHistory">
+          <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-clock" /></svg><span class="settings-row-label">Keep audio for</span><span class="settings-row-number"><input id="retentionDays" type="number" min="1" max="365" step="1" class="settings-row-input" inputmode="numeric" aria-label="Keep audio for, in days"><span class="settings-row-unit">days</span></span></label>
+          <div class="settings-row setting-action"><button id="cleanAll" type="button" class="button-tint danger" aria-haspopup="dialog" aria-controls="deleteAllSheet" data-track="settings.delete-all"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes…</button></div>
+          <label class="settings-row" title="Adds Send to task-os to a take's menu: one tap makes the take an Inbox task. Needs task-os running on this PC."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-circle-check" /></svg><span class="settings-row-text"><span class="settings-row-label">Send to task-os</span><span class="settings-row-hint">Adds a take as a task</span></span><button id="taskOsToggle" type="button" class="toggle" role="switch" aria-checked="false"
+                  aria-label="Send to task-os" data-track="settings.task-os"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
         </section>
 
-        <h2 class="overline settings-group-title">Display</h2>
-        <section class="card settings-group">
-          <div class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-type" /></svg><span class="setting-label">Text size</span>
+        <h3 class="settings-overline" id="settingsGroupDisplay">Display</h3>
+        <section class="card settings-group" aria-labelledby="settingsGroupDisplay">
+          <div class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-type" /></svg><span class="settings-row-label">Text size</span>
             <div class="segmented" id="textSizeControl" role="group" aria-label="Text size">
               <button type="button" class="segmented-item" aria-pressed="false" data-textsize="small" data-track="settings.textsize-small">Small</button>
               <button type="button" class="segmented-item" aria-pressed="true" data-textsize="default" data-track="settings.textsize-default">Default</button>
@@ -438,33 +442,33 @@
           </div>
         </section>
 
-        <h2 class="overline settings-group-title">Services</h2>
-        <section id="servicesGroup" class="card settings-group">
-        <div class="setting-row">
-          <span id="svcTranscription" class="avatar" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg></span>
-          <span class="setting-label">Transcription</span>
-          <span id="svcTranscriptionValue" class="setting-value">…</span>
+        <h3 class="settings-overline" id="settingsGroupServices">Services</h3>
+        <section id="servicesGroup" class="card settings-group" aria-labelledby="settingsGroupServices">
+        <div class="settings-row">
+          <svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-mic" /></svg>
+          <span class="settings-row-label">Transcription</span>
+          <span id="svcTranscriptionValue" class="settings-row-value">…</span>
         </div>
-        <div class="setting-row">
-          <span id="svcFallback" class="avatar" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-server" /></svg></span>
-          <span class="setting-label">Local fallback</span>
-          <span id="svcFallbackValue" class="setting-value">…</span>
+        <div class="settings-row">
+          <svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-server" /></svg>
+          <span class="settings-row-label">Local fallback</span>
+          <span id="svcFallbackValue" class="settings-row-value">…</span>
         </div>
-        <div class="setting-row">
-          <span id="svcPolish" class="avatar" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-sparkle" /></svg></span>
-          <span class="setting-label">Polish</span>
-          <span id="svcPolishValue" class="setting-value">…</span>
+        <div class="settings-row">
+          <svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-sparkle" /></svg>
+          <span class="settings-row-label">Polish</span>
+          <span id="svcPolishValue" class="settings-row-value">…</span>
         </div>
-        <div class="setting-row">
-          <span id="svcAudio" class="avatar" aria-hidden="true"><svg class="icon" aria-hidden="true"><use href="#i-audio-lines" /></svg></span>
-          <span class="setting-label">Audio conversion</span>
-          <span id="svcAudioValue" class="setting-value">…</span>
+        <div class="settings-row">
+          <svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-audio-lines" /></svg>
+          <span class="settings-row-label">Audio conversion</span>
+          <span id="svcAudioValue" class="settings-row-value">…</span>
         </div>
         </section>
 
-        <h2 class="overline settings-group-title">About</h2>
-        <section class="card settings-group">
-          <div class="setting-row"><svg class="icon setting-glyph" aria-hidden="true"><use href="#i-info" /></svg><span class="setting-label">Build</span><span id="buildInfo" class="setting-value" title="Which build of the webapp this device loaded (issue #13)">…</span></div>
+        <h3 class="settings-overline" id="settingsGroupAbout">About</h3>
+        <section class="card settings-group" aria-labelledby="settingsGroupAbout">
+          <div class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-info" /></svg><span class="settings-row-label">Build</span><span id="buildInfo" class="settings-row-value" title="Which build of the webapp this device loaded (issue #13)">…</span></div>
         </section>
       </div>
     </section>
