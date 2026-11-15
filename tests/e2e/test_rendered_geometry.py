@@ -70,7 +70,10 @@ def _assert_settings_layout(page: Page) -> None:
             const label = row.querySelector('.settings-row-label');
             if (!label) continue;
             const lr = label.getBoundingClientRect();
-            for (let c = label.nextElementSibling; c; c = c.nextElementSibling) {
+            // A label with a hint line sits in .settings-row-text: the trailing
+            // item follows that column, not the hint stacked under the label.
+            const lead = label.closest('.settings-row-text') || label;
+            for (let c = lead.nextElementSibling; c; c = c.nextElementSibling) {
               const cr = c.getBoundingClientRect();
               if (cr.width && lr.right > cr.left + 0.5) {
                 out.push(`label "${label.textContent.trim()}" overlaps its control`);
