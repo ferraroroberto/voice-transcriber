@@ -49,6 +49,34 @@ def _set_theme(page: Page, theme: str) -> None:
     assert resolved == theme, f"theme {theme!r} did not apply (got {resolved!r})"
 
 
+def _assert_settings_layout(page: Page) -> None:
+    """Each Settings group header clears the card under it, and no row's label
+    runs under its control (a wrapped or overlapped row)."""
+    problems = page.evaluate(
+        """() => {
+          const out = [];
+          for (const h of document.querySelectorAll('#settingsPanel .settings-group-title')) {
+            const card = h.nextElementSibling;
+            const gap = card.getBoundingClientRect().top - h.getBoundingClientRect().bottom;
+            if (gap < 4) out.push(`header "${h.textContent}" is ${gap}px above its card`);
+          }
+          for (const row of document.querySelectorAll('#settingsPanel .setting-row')) {
+            const label = row.querySelector('.setting-label');
+            if (!label) continue;
+            const lr = label.getBoundingClientRect();
+            for (let c = label.nextElementSibling; c; c = c.nextElementSibling) {
+              const cr = c.getBoundingClientRect();
+              if (cr.width && lr.right > cr.left + 0.5) {
+                out.push(`label "${label.textContent.trim()}" overlaps its control`);
+              }
+            }
+          }
+          return out;
+        }"""
+    )
+    assert not problems, "; ".join(problems)
+
+
 def test_panes_fit_and_controls_are_tappable(
     authed_page: Page, base_url: str, browser_name: str
 ) -> None:
@@ -71,6 +99,8 @@ def test_panes_fit_and_controls_are_tappable(
             page.wait_for_selector(pane, state="visible", timeout=5_000)
             try:
                 assert_no_horizontal_overflow(page)
+                if name == "settings":
+                    _assert_settings_layout(page)
                 if not coarse:
                     continue
                 # The tab bar floats over the scrolling pane by design, so it is

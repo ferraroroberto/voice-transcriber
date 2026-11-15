@@ -309,7 +309,11 @@ class TestHistoryButtonEmphasis:
     ):
         """Settings (#265): values read from the control's right edge, there
         is no Save button, and no browser confirm() remains anywhere."""
-        assert ".settings-group .select-native { text-align: right; }" in styles_css
+        assert ".settings-group .setting-pick .select-native {" in styles_css
+        assert re.search(
+            r"\.settings-group \.setting-pick \.select-native \{[^}]*text-align: right;",
+            styles_css,
+        )
         assert 'id="saveSettings"' not in index_html
         assert "bindSettings()" in app_js
         assert "confirm(" not in app_js.replace("confirm()", "")
