@@ -223,16 +223,10 @@ function bindSwitches() {
   // flips above so a switch saves its new state.
   bindSettings();
 
-  // The recorder's mode toggles (append / incognito) are labelled
-  // role="switch" pills — same aria-checked state contract, own look (not
-  // the track switch), so they flip aria-checked directly rather than
-  // through setSwitch().
-  for (const chip of [els.appendToggle, els.incognitoToggle]) {
-    chip.addEventListener('click', () => {
-      chip.setAttribute('aria-checked', isOn(chip) ? 'false' : 'true');
-      renderRecordHeadLine();
-    });
-  }
+  // The recorder's mode switches (append / incognito) are the same vendored
+  // switch; a flip refreshes the record header line.
+  flipOnTap(els.appendToggle, renderRecordHeadLine);
+  flipOnTap(els.incognitoToggle, renderRecordHeadLine);
 }
 
 function bindAppearance() {

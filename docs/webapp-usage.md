@@ -90,20 +90,20 @@ current session so the next record starts fresh.
 
 ### Append mode
 
-An **Append** toggle pill sits under the record button. With it on, every new
+An **Append** switch sits under the record button. With it on, every new
 take is glued onto the existing transcript with a blank-line
 separator instead of replacing it — useful when you're moving
 between locations or apps and want to build up one big transcript
 across multiple records before polishing. The toggle is ephemeral
 (off on every fresh page load) and exists on every surface: the
-toggle pill in the webapp, **➕ Append mode** menu item in the tray,
+switch in the webapp, **➕ Append mode** menu item in the tray,
 **➕ Append** checkbox on the *Last transcription* row in the tk
 window. The tray menu and tk checkbox share one flag so toggling
 either keeps both in sync; the webapp toggle is independent.
 
 ### Incognito mode
 
-An **Incognito** toggle pill under the record button. While it is on (blue),
+An **Incognito** switch under the record button. While it is on (blue),
 the **next recording** is flagged `incognito=true` server-side and
 never appears in the History list — useful for taking a private
 note that shouldn't sit on disk for the retention window.
