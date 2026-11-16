@@ -88,7 +88,7 @@ webapp_serve = { src = "app/webapp/serve.py", sha = "6d779b94b028a898aa87200174a
 instruction_frontmatter = { src = "scripts/instruction_frontmatter.py", sha = "c5535ac326c398df8f44486f386ff0e0b6d4c61c", dest = "scripts/instruction_frontmatter.py" }
 instruction_repeats = { src = "scripts/instruction_repeats.py", sha = "c5535ac326c398df8f44486f386ff0e0b6d4c61c", dest = "scripts/instruction_repeats.py" }
 card = { src = "app/webapp/static/_vendored/card", sha = "8f15c49560adbc076d24a8a63dd671868ffa7a4e", dest = "app/webapp/static/_vendored/card" }
-settings-group = { src = "app/webapp/static/_vendored/settings-group", sha = "f2464e89c902bd302291bb7af7b44c3ffa594323", dest = "app/webapp/static/_vendored/settings-group" }
+settings-group = { src = "app/webapp/static/_vendored/settings-group", sha = "469125db668f54c04ca494d682455e114e3d8c62", dest = "app/webapp/static/_vendored/settings-group" }
 
 # [static_ratchet] -- the scaffold's baseline-and-ratchet static analysis. The gate
 # (scripts/verify-before-ship.ps1) runs scripts/static_ratchet.py through
