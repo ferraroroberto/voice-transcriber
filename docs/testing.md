@@ -50,6 +50,16 @@ $env:VT_E2E_LIVE = "1"
 
 Without a tray, a bare run already boots its own disposable webapp on a free port (the live-tray port being free means nothing to adopt). `--e2e-autoboot` (or `VT_E2E_AUTOBOOT=1`) forces that same disposable path unconditionally, regardless of whether a tray is running — this is what the pre-ship gate uses, so it never touches a live tray.
 
+### Keeping the e2e run off the loopback port pool
+
+Every TCP connection a browser closes leaves its (ephemeral port, server port) pair in TIME_WAIT for minutes, and on Windows a `connect()` that lands on such a pair fails as `net::ERR_ADDRESS_IN_USE`, on whichever page loads next and unrelated to the diff. Three things keep the suite from adding to that, and none touches the machine's port range or `TcpTimedWaitDelay`:
+
+- **One browser context per engine.** The `authed_page` fixture opens its pages in a session-scoped `_shared_context` instead of a fresh context per test; a fresh context starts with an empty HTTP cache and closes its connection to the app on teardown. Isolation is kept by `_reset_context`, which clears the page's storage and routes and the context's cookies and permissions after every test. A test that needs its own context (different `browser_context_args`, say) builds one with `browser.new_context(...)` and closes it.
+- **Keep-alive health polling.** `_wait_healthz` polls through one `requests.Session`, so the readiness check reuses a connection.
+- **A named failure.** A failure whose text carries `ERR_ADDRESS_IN_USE` leads with `PORT POOL EXHAUSTED` and the run ends with a section of that name listing the affected tests (`tests/e2e/_port_pool.py`), so the gate output reads as a host-capacity problem, not a page defect: wait a few minutes and re-run.
+
+To measure, sample `netstat -ano -p tcp` every 200 ms during the run and count the distinct new loopback TIME_WAIT pairs whose server port is the disposable app's. A full run now leaves about 4 such pairs, down from about 20 with a fresh context per test; the host's other apps add their own ~3 pairs a second, so count only the app's port.
+
 ## Verifying changes before ship
 
 For any change touching the webapp, run the pre-ship gate before declaring it done:
@@ -97,6 +107,7 @@ still covers the same logic via the parity port in
 | `tests\build_watch\test_no_self_reload.py` | No page script outside `_vendored/` calls `location.reload()`: a newer build is offered by the build-watch prompt, never reloaded by itself |
 | `tests\test_e2e_live_guard.py` | Live-tray adoption guard — free-port autoboot vs. refuse-without-opt-in |
 | `tests\test_gate_result.py` | The gate's last stdout line is `GATE-RESULT: PASS` or `GATE-RESULT: FAIL` on a pass, a failed stage, a missing `.venv` and an early terminating error (the verdict helper runs for real over captured stdout); exit codes stay 0 and 1 and every `exit` goes through the verdict |
+| `tests\e2e_harness\test_port_pool.py` | The e2e harness names a drained loopback port pool: a failure carrying `ERR_ADDRESS_IN_USE` is relabelled `PORT POOL EXHAUSTED` and listed in its own terminal-summary section, an ordinary failure is not |
 | `tests\test_e2e_route.py` | The gate's e2e-routing stage never narrows on a verdict it can't read — a failing or unreadable classifier runs the full suite with the reason spelled out; a readable `skip` or `full` verdict is honoured |
 | `tests\test_e2e_spawn_isolation.py` | The e2e harness's spawned app writes activity/usage data only under the harness's own temp data root, never the real runtime-data folder |
 | `tests\test_classify_e2e.py` | Anti-drift guard for this repo's `.fleet.toml` `[e2e]` table — representative paths land in the tier their rule intends |
