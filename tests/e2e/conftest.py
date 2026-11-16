@@ -66,11 +66,15 @@ from typing import IO, Iterator, Optional
 import pytest
 import requests
 import urllib3
-from playwright.sync_api import BrowserContext, Page
+from playwright.sync_api import Browser, BrowserContext, Page
 
 from app.webapp.event_loop import LOOP_FACTORY
 from src.runtime_data import app_dir_env_var
 from tests.e2e._e2e_live_guard import require_disposable_instance
+from tests.e2e._port_pool import (  # noqa: F401 — port-pool report hooks
+    pytest_runtest_makereport,
+    pytest_terminal_summary,
+)
 from tests.e2e._surface import pytest_collection_modifyitems  # noqa: F401
 
 logger = logging.getLogger(__name__)
@@ -208,14 +212,17 @@ def _terminate(proc: Optional[subprocess.Popen]) -> None:
 
 def _wait_healthz(base: str, timeout: float) -> bool:
     deadline = time.time() + timeout
-    while time.time() < deadline:
-        try:
-            res = requests.get(f"{base}/healthz", timeout=2, verify=False)
-            if res.status_code == 200:
-                return True
-        except requests.RequestException:
-            pass
-        time.sleep(0.4)
+    # One session so the polls reuse a connection instead of opening (and
+    # leaving in TIME_WAIT) a socket per attempt.
+    with requests.Session() as session:
+        while time.time() < deadline:
+            try:
+                res = session.get(f"{base}/healthz", timeout=2, verify=False)
+                if res.status_code == 200:
+                    return True
+            except requests.RequestException:
+                pass
+            time.sleep(0.4)
     return False
 
 
@@ -265,17 +272,24 @@ def _autoboot_server() -> Iterator[str]:
             pass
 
 
-@pytest.fixture(autouse=True)
-def _bound_default_timeouts(context: BrowserContext) -> None:
-    """Cap the default action + navigation timeout (issue #69).
-
-    Sets the bounded default on the context so pages created via
-    context.new_page() (e.g. authed_page) inherit the cap automatically.
-    Explicit per-call timeout= overrides still take precedence; expect()
-    web-first assertions keep their own 5 s default.
-    """
+def _bound_timeouts(context: BrowserContext) -> None:
     context.set_default_timeout(_DEFAULT_TIMEOUT_MS)
     context.set_default_navigation_timeout(_DEFAULT_TIMEOUT_MS)
+
+
+@pytest.fixture(autouse=True)
+def _bound_default_timeouts(request: pytest.FixtureRequest) -> None:
+    """Cap the default action + navigation timeout (issue #69).
+
+    Applies to a test's own ``context`` / ``page`` (pytest-playwright's
+    fixtures) only when it asks for one — an autouse dependency on ``context``
+    would build a fresh browser context for every test, which is the
+    connection churn ``_shared_context`` exists to avoid. Explicit per-call
+    timeout= overrides still take precedence; expect() web-first assertions
+    keep their own 5 s default.
+    """
+    if {"context", "page"} & set(request.fixturenames):
+        _bound_timeouts(request.getfixturevalue("context"))
 
 
 @pytest.fixture(autouse=True)
@@ -370,14 +384,56 @@ def _seed_token_init_script(token: str) -> str:
     return f"window.localStorage.setItem({safe_key}, {safe});"
 
 
-@pytest.fixture
-def authed_page(
-    context: BrowserContext, base_url: str, auth_token: str
-) -> Iterator[Page]:
+@pytest.fixture(scope="session")
+def _shared_context(
+    browser: Browser, browser_context_args: dict, auth_token: str
+) -> Iterator[BrowserContext]:
+    """One browser context per engine for every ``authed_page`` test.
+
+    A fresh context starts with an empty HTTP cache and closes its connections
+    to the app on teardown; each closed connection parks a loopback ephemeral
+    port in TIME_WAIT, and a drained pool fails the next page load with
+    ``net::ERR_ADDRESS_IN_USE`` (see ``_port_pool.py``). Isolation between
+    tests is kept by ``_reset_context``, not by a new context.
+    """
+    context = browser.new_context(**browser_context_args)
+    _bound_timeouts(context)
     if auth_token:
         context.add_init_script(_seed_token_init_script(auth_token))
-    page = context.new_page()
+    try:
+        yield context
+    finally:
+        context.close()
+
+
+def _reset_context(context: BrowserContext, page: Page) -> None:
+    """Return the shared context to a first-visit state for the next test.
+
+    Everything a test can leave behind that the next one could read: the
+    page's own storage and routes, and the context's cookies and permissions.
+    A step that fails is logged and skipped, never raised, so one broken page
+    cannot mask the test's own result.
+    """
+    steps = (
+        lambda: page.evaluate(
+            "() => { try { localStorage.clear(); sessionStorage.clear(); } catch (e) {} }"
+        ),
+        lambda: page.unroute_all(behavior="ignore_errors"),
+        context.clear_cookies,
+        context.clear_permissions,
+    )
+    for step in steps:
+        try:
+            step()
+        except Exception as exc:
+            logger.warning("⚠️  shared context reset step failed: %s", exc)
+
+
+@pytest.fixture
+def authed_page(_shared_context: BrowserContext, base_url: str) -> Iterator[Page]:
+    page = _shared_context.new_page()
     try:
         yield page
     finally:
+        _reset_context(_shared_context, page)
         page.close()
