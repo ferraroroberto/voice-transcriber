@@ -262,6 +262,24 @@
    and value: the button takes the row's full width. */
 .setting-action > .button-tint { flex: 1; }
 
+/* A fine pointer gets the vendored 36px number field, which is under the
+   44px hit-target floor and an input can't grow with a ::before. Same recipe
+   as .input-native: the box is --hit-min tall, the 36px control is its padding
+   box inside a transparent --control-inset band, the boundary an inset shadow.
+   The extra class beats the vendored rule, which loads after styles.css. */
+.settings-row-number .settings-row-input {
+  height: var(--hit-min);
+  border-style: solid;
+  border-color: transparent;
+  border-width: var(--control-inset) 0;
+  border-radius: var(--radius-md) / calc(var(--radius-md) + var(--control-inset));
+  background: var(--input-bg) padding-box;
+  box-shadow: inset 0 0 0 1px var(--control-border);
+}
+.settings-row-number .settings-row-input:focus-visible {
+  outline-offset: calc(2px - var(--control-inset));
+}
+
 .muted { color: var(--muted); }
 .small { font-size: var(--font-caption); }
 

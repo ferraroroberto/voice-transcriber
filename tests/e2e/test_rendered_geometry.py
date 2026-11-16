@@ -81,9 +81,11 @@ def _assert_settings_layout(page: Page) -> None:
             }
           }
           for (const f of document.querySelectorAll('#settingsPanel .settings-row-input')) {
-            const w = f.getBoundingClientRect().width;
+            const r = f.getBoundingClientRect();
             const fs = parseFloat(getComputedStyle(f).fontSize);
-            if (Math.round(w) !== 80 || fs !== 16) out.push(`number field #${f.id} is ${w}px at ${fs}px text`);
+            if (Math.round(r.width) !== 80 || fs !== 16) out.push(`number field #${f.id} is ${r.width}px at ${fs}px text`);
+            // A fine pointer has no ::before to grow an input, so the box itself holds the floor.
+            if (r.height < 44) out.push(`number field #${f.id} is ${r.height}px tall, under the 44px floor`);
           }
           for (const sel of document.querySelectorAll('#settingsPanel .settings-row-select')) {
             const cs = getComputedStyle(sel);
