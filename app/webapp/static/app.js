@@ -25,7 +25,6 @@ import {
   refreshPromptPreview,
   refreshStatus,
   renderRecordHeadLine,
-  renderSettingsHeadLine,
 } from './config.js';
 import {
   finalizeForBackground,
@@ -79,20 +78,14 @@ init().catch(err => {
   showToast('Init failed: ' + err.message + ' — pull down to retry', 'error');
 });
 
-// Show the Settings pane over the current tab. The vendored nav only manages
-// its own tabs' panes, so hide them here and leave no tab selected; the nav's
-// next setTab (any tab tap) shows that tab's pane again and onChange hides
-// this one. The stored tab is untouched, so a reload from Settings reopens
-// the last real tab (same shape as app-launcher's openSettings).
+// Settings is the vendored full page: a modal <dialog> over the current tab,
+// so the tab and its nav state are untouched and closing it returns there.
+// Its data-track-view records the visit.
+function settingsPage() { return document.getElementById('paneSettings'); }
+
 function openSettings() {
-  usage.trackView('settings');
-  document.querySelectorAll('main.app > section.pane').forEach((pane) => {
-    pane.hidden = pane.id !== 'paneSettings';
-  });
-  if (navTabs) navTabs.setTab(null);
-  const scroller = document.querySelector('.app');
-  if (scroller) scroller.scrollTop = 0;
-  window.scrollTo(0, 0);
+  const page = settingsPage();
+  if (!page.open) page.showModal();
   refreshStatus();
 }
 
@@ -126,13 +119,6 @@ async function loadVersion() {
     if (!r.ok) throw new Error(String(r.status));
     const v = await r.json();
     const sha = v.git_sha || '?';
-    const assetHash = v.asset_hash || '';
-    // This module was loaded as app.js?v=<its asset hash>; a different hash
-    // from the server means the shell is stale (iOS standalone PWAs can cling
-    // to an old one), so Settings' header line asks for a reload.
-    const loaded = new URL(import.meta.url).searchParams.get('v');
-    state.staleShell = !!(assetHash && loaded && loaded !== assetHash);
-    renderSettingsHeadLine();
     const ts = fmtBuildTime(v.built_at || '');
     els.buildInfo.textContent = ts ? `${sha} · ${ts}` : sha;
     if (els.buildReadout) els.buildReadout.textContent = buildReadoutText(sha, v.built_at || '');
@@ -186,15 +172,13 @@ function bindEvents() {
 
 function bindNav() {
   // Fleet bottom-tab nav (vendored component — _vendored/nav/). Settings is
-  // no tab (fleet NAV-03): every pane's header gear opens it (openSettings),
-  // and choosing any tab leaves it, so onChange hides the pane.
+  // no tab (fleet NAV-03): every pane's header gear opens it (openSettings).
   navTabs = initNavTabs({
     storageKey: 'voice-transcriber.tab',
     scrollResetSelector: '.app',
     onChange: (tab) => {
       // dynamic-id-exempt: `tab` is one of the nav's constant data-tab values.
       usage.trackView(tab);
-      document.getElementById('paneSettings').hidden = true;
       // History refreshes itself on open — no Refresh button.
       if (tab === 'history') refreshHistory();
     },
@@ -202,6 +186,7 @@ function bindNav() {
   for (const gear of document.querySelectorAll('.home-settings')) {
     gear.addEventListener('click', openSettings);
   }
+  settingsPage().querySelector('.settings-page-close').addEventListener('click', () => settingsPage().close());
 }
 
 function bindSwitches() {

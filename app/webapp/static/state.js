@@ -78,7 +78,6 @@ export const els = {
   vadAutoStopToggle:       document.getElementById('vadAutoStopToggle'),
   autoStopSilence:  document.getElementById('autoStopSilence'),
   retentionDays:    document.getElementById('retentionDays'),
-  settingsHeadLine: document.getElementById('settingsHeadLine'),
   buildInfo:        document.getElementById('buildInfo'),
   buildReadout:     document.getElementById('buildReadout'),
 
@@ -108,7 +107,6 @@ export const state = {
   config:      null,
   services:    null,          // last /api/status reply; null until one lands (or after a failed poll)
   servicesFailed: false,      // the last /api/status poll failed (said as such, never as "up")
-  staleShell:  false,         // the loaded shell is older than the server's
   historyTotal: null,         // the History list's `total`, which its header line counts
   historyTakes: [],           // every loaded History row, newest first
   historySelecting: false,    // History is in Select mode

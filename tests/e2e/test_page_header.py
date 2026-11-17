@@ -15,7 +15,7 @@ from tests.e2e._surface import surface
 
 pytestmark = pytest.mark.smoke
 
-_PANES = (("#paneRecord", "Record"), ("#paneHistory", "History"), ("#paneSettings", "Settings"))
+_PANES = (("#paneRecord", "Record"), ("#paneHistory", "History"))
 _PHONE_PILL = "window.matchMedia('(pointer: coarse) and (max-width: 520px)').matches"
 # Mirrors the nav's --nav-fade-tail fallback: how far the bottom fade reaches above the pill.
 _FADE_TAIL_PX = 24
@@ -58,17 +58,17 @@ def test_every_pane_has_the_header_and_footer_and_settings_is_the_gear(
         expect(head.locator(".theme-toggle")).to_have_count(1)
         expect(head.locator(".home-settings")).to_have_count(1)
 
-    # Record -> Settings: the gear reveals the panel and the Record pane yields.
+    # Record -> Settings: the gear opens the full Settings page over the tab,
+    # with its own title and close; closing it returns to Record.
     panel = page.locator("#settingsPanel")
     expect(panel).to_be_attached()
     expect(panel).to_be_hidden()
     _assert_footer_clear_of_the_fade(page, "record")
     page.click("#paneRecord .home-settings")
     expect(panel).to_be_visible()
-    expect(page.locator("#paneRecord")).to_be_hidden()
-    _assert_footer_clear_of_the_fade(page, "settings")
+    expect(page.locator("#paneSettings .settings-page-title")).to_have_text("Settings")
     surface(page, "settings.pane")
-    page.click("#tabRecord")
+    page.locator("#paneSettings .settings-page-close").click()
     expect(panel).to_be_hidden()
     expect(page.locator("#paneRecord")).to_be_visible()
 
@@ -83,8 +83,7 @@ def test_every_pane_has_the_header_and_footer_and_settings_is_the_gear(
     assert {first, second} == {"light", "dark"}, (first, second)
     page.click("#paneHistory .home-settings")
     expect(page.locator("#paneSettings")).to_be_visible()
-    expect(page.locator("#paneHistory")).to_be_hidden()
-    page.click("#tabHistory")
+    page.locator("#paneSettings .settings-page-close").click()
     expect(page.locator("#paneSettings")).to_be_hidden()
     expect(page.locator("#paneHistory")).to_be_visible()
 
@@ -125,9 +124,9 @@ def test_header_line_names_only_exceptions_and_never_wraps(
     expect(line).to_have_text(language)
 
     authed_page.click("#paneRecord .home-settings")
-    expect(authed_page.locator("#settingsHeadLine")).to_have_text("All services up")
+    expect(authed_page.locator("#svcTranscriptionValue")).to_have_text("Ready")
     authed_page.click("#translateToggle")
-    authed_page.click("#tabRecord")
+    authed_page.locator("#paneSettings .settings-page-close").click()
     expect(line).to_have_text(f"{language} to English")
     expect(line).to_have_attribute("data-tone", "attention")
     _assert_one_row(authed_page, "#paneRecord")
@@ -135,10 +134,9 @@ def test_header_line_names_only_exceptions_and_never_wraps(
 
     status["reply"] = _DOWN
     authed_page.click("#paneRecord .home-settings")
-    settings_line = authed_page.locator("#settingsHeadLine")
-    expect(settings_line).to_have_text("Transcription offline")
-    expect(settings_line).to_have_attribute("data-tone", "danger")
-    _assert_one_row(authed_page, "#paneSettings")
-    authed_page.click("#tabRecord")
+    service = authed_page.locator("#svcTranscriptionValue")
+    expect(service).to_have_text("Down")
+    expect(service).to_have_attribute("data-tone", "danger")
+    authed_page.locator("#paneSettings .settings-page-close").click()
     expect(line).to_have_text("Transcription offline")
     expect(line).to_have_attribute("data-tone", "danger")
