@@ -201,7 +201,7 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
 _TEXT_STEPS = {"small": 15.0, "default": 16.0, "large": 18.0}
 _ROOT_PX = "parseFloat(getComputedStyle(document.documentElement).fontSize)"
 _BODY_PX = "parseFloat(getComputedStyle(document.body).fontSize)"
-_TITLE_PX = "parseFloat(getComputedStyle(document.querySelector('#paneSettings .home-title')).fontSize)"
+_TITLE_PX = "parseFloat(getComputedStyle(document.querySelector('#paneSettings .settings-page-title')).fontSize)"
 
 
 def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
@@ -233,7 +233,7 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     page.wait_for_selector("#polishStyle option", state="attached", timeout=5_000)
     page.click("#paneRecord .home-settings")
     expect(page.locator("#saveSettings")).to_have_count(0)
-    expect(page.locator("#settingsPanel .settings-overline")).to_have_count(7)
+    expect(page.locator("#settingsPanel .settings-group-label")).to_have_count(7)
 
     page.click("#gainBoostToggle")
     page.wait_for_timeout(300)
@@ -251,7 +251,6 @@ def test_settings_save_as_they_change(authed_page: Page, base_url: str) -> None:
     expect(page.locator("#svcFallbackValue")).to_have_text("Not running")
     expect(page.locator("#svcFallbackValue")).to_have_attribute("data-tone", "danger")
     expect(page.locator("#svcPolishValue")).not_to_have_attribute("data-tone", "danger")
-    expect(page.locator("#settingsHeadLine")).to_have_text("Local fallback down")
     expect(page.locator("#buildInfo")).not_to_have_text("…")
     expect(page.locator("#buildReadout")).to_contain_text("Build: ")
 

@@ -256,8 +256,11 @@
 
 /* ---------- Settings ---------- */
 /* The groups, rows and their trailing items are the vendored settings-group
-   component (_vendored/settings-group); only the one-off row below is the
-   app's own. */
+   component (_vendored/settings-group); only the rows below are the app's
+   own. */
+/* Text size: the segmented control is the row's one trailing item, on the
+   card's inner edge like every other. */
+.settings-row > .segmented { flex: none; margin-left: auto; }
 /* A row that holds one tier button (Delete all takes…) instead of a label
    and value: the button takes the row's full width. */
 .setting-action > .button-tint { flex: 1; }
@@ -317,5 +320,4 @@
   .history-list .take-row.open .take-lead,
   .history-list .take-row.open .meta { color: var(--accent-text); }
 
-  #paneSettings { max-width: 772px; margin: 0 auto; }
 }

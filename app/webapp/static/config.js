@@ -193,6 +193,7 @@ export function initPromptSheet() {
     dlg.showModal();
   });
   dlg.querySelector('.detail-close').addEventListener('click', () => dlg.close());
+  dlg.querySelector('[data-sheet-done]').addEventListener('click', () => dlg.close());
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
@@ -224,23 +225,6 @@ export function renderRecordHeadLine() {
   } else {
     setHeadLine(els.recordHeadLine, language);
   }
-}
-
-// Settings' header line: "All services up", or the first failing
-// service by name. A status poll that fails is said as such, never as "up".
-// A stale loaded shell is said after any outage.
-export function renderSettingsHeadLine() {
-  const s = state.services;
-  const line = els.settingsHeadLine;
-  if (state.servicesFailed) setHeadLine(line, "Couldn't check services", 'attention');
-  else if (!s) return;
-  else if (s.whisper.running === false && s.llm_hub.reachable === false) setHeadLine(line, 'Transcription offline', 'danger');
-  else if (s.ffmpeg_present === false) setHeadLine(line, 'Audio conversion missing', 'danger');
-  else if (s.llm_hub.reachable === false) setHeadLine(line, 'Polish unavailable: hub not reachable', 'attention');
-  else if (s.whisper.running === false) setHeadLine(line, 'Local fallback down', 'attention');
-  else if (servicesUnknown(s)) setHeadLine(line, 'Checking services', 'neutral');
-  else if (state.staleShell) setHeadLine(line, 'New build, reload', 'attention');
-  else setHeadLine(line, 'All services up');
 }
 
 // True when any probe in a status reply has not answered yet (null).
@@ -310,7 +294,6 @@ export async function refreshStatus() {
     state.servicesFailed = true;
   }
   renderServices(state.services);
-  renderSettingsHeadLine();
   renderRecordHeadLine();
   renderTextCard();
 }

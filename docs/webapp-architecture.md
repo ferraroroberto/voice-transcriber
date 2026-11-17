@@ -62,7 +62,7 @@ provisions a self-signed CA + leaf cert used *only* for that loopback
 endpoint; the webapp also serves a `voice-transcriber-ca.mobileconfig`
 profile at `/install-ca` for anyone trusting that cert manually.
 
-The Settings pane does not surface the `/install-ca` link — phones
+The Settings page does not surface the `/install-ca` link — phones
 reach the app over Cloudflare, which terminates real TLS at the edge,
 so they never need the local-CA trust dance at all. The endpoint
 itself still serves, for legacy direct-`:8443` setups.

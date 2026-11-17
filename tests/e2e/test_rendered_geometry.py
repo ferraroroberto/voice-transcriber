@@ -57,7 +57,7 @@ def _assert_settings_layout(page: Page) -> None:
     problems = page.evaluate(
         """() => {
           const out = [];
-          for (const h of document.querySelectorAll('#settingsPanel .settings-overline')) {
+          for (const h of document.querySelectorAll('#settingsPanel .settings-group-label')) {
             const card = h.nextElementSibling;
             const gap = card.getBoundingClientRect().top - h.getBoundingClientRect().bottom;
             if (gap < 4) out.push(`header "${h.textContent}" is ${gap}px above its card`);
@@ -134,3 +134,6 @@ def test_panes_fit_and_controls_are_tappable(
                 assert_min_target(page.locator("nav.tabs button"))
             except AssertionError as exc:
                 raise AssertionError(f"{where}: {exc}") from exc
+            finally:
+                if name == "settings":  # the full page sits over the tabs: close it before the next tap
+                    page.locator("#paneSettings .settings-page-close").click()
