@@ -255,7 +255,7 @@
   <!-- Fleet nav contract: direct <body> child, sibling to <main class="app"> —
        never nested inside the content scroller (iOS PWA fixed-position capture;
        see _vendored/nav/README.md). -->
-  <nav class="tabs" role="tablist" aria-label="Sections" data-active-tab="record">
+  <nav class="tabs" data-surface="app.nav" role="tablist" aria-label="Sections" data-active-tab="record">
     <button id="tabRecord" type="button" class="tab active" data-tab="record"
             role="tab" aria-selected="true" aria-controls="paneRecord">
       <svg class="tab-icon" aria-hidden="true" viewBox="0 0 24 24" focusable="false"><use href="#i-mic" /></svg>
@@ -269,8 +269,8 @@
   </nav>
 
   <main class="app">
-    <section id="paneRecord" class="pane" role="tabpanel" aria-labelledby="tabRecord" aria-label="Record">
-      <div class="card home-head">
+    <section id="paneRecord" data-surface="record.pane" class="pane" role="tabpanel" aria-labelledby="tabRecord" aria-label="Record">
+      <div class="card home-head" data-surface="record.header">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-mic" /></svg> Record</span>
         <span id="recordHeadLine" class="status" role="status"></span>
         <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode" data-track="theme.toggle">
@@ -285,7 +285,7 @@
            live danger "Stop", finishing disabled, and back from another app
            a smaller Record beside "Continue this text"), the status line, the
            level meter, then the labelled mode toggles. -->
-      <section class="card recorder-card">
+      <section class="card recorder-card" data-surface="record.recorder">
         <div id="recordZone" class="record-zone">
           <div class="record-buttons">
             <button id="recordBtn" type="button" class="record-btn" aria-pressed="false" data-track="record.toggle">
@@ -295,7 +295,7 @@
           </div>
           <span id="recordTimer" class="record-timer" hidden>00:00</span>
           <div id="recordStatus" class="record-status">Tap to start</div>
-          <div id="micNotice" hidden></div>
+          <div id="micNotice" data-surface="record.mic-notice" hidden></div>
           <div class="record-modes">
             <div class="mode-item" title="Append the next take to the current text instead of replacing it"><svg class="icon" aria-hidden="true"><use href="#i-plus" /></svg><span>Append</span><button id="appendToggle" type="button" class="toggle" role="switch" aria-checked="false"
                     aria-label="Append" data-track="record.append"><span class="knob"></span><span class="toggle-label">OFF</span></button></div>
@@ -311,7 +311,7 @@
            and one verb row: Copy (copies the version shown),
            Polish (tucked away on the surface tier), Save (only for text
            History does not hold yet) and Clear. -->
-      <section class="card text-card">
+      <section class="card text-card" data-surface="record.text-card">
         <div class="card-head text-head">
           <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-file-text" /></svg> Text</h2>
           <div id="textView" class="segmented" role="group" aria-label="Version shown" hidden>
@@ -331,8 +331,8 @@
       </section>
     </section>
 
-    <section id="paneHistory" class="pane" role="tabpanel" aria-labelledby="tabHistory" aria-label="History" hidden>
-      <div class="card home-head">
+    <section id="paneHistory" data-surface="history.pane" class="pane" role="tabpanel" aria-labelledby="tabHistory" aria-label="History" hidden>
+      <div class="card home-head" data-surface="history.header">
         <span class="home-title"><svg class="icon" aria-hidden="true"><use href="#i-history" /></svg> History</span>
         <span id="historyHeadLine" class="status" role="status"></span>
         <button type="button" class="icon-button home-toggle theme-toggle" title="Toggle theme" aria-label="Toggle dark mode" data-track="theme.toggle">
@@ -349,7 +349,7 @@
       <div class="history-list-pane">
       <!-- The Latest take card (#264): the newest take with one-tap Copy, its
            kebab to the take sheet, and today's numbers as its foot. -->
-      <section id="latestCard" class="card latest-card" hidden>
+      <section id="latestCard" class="card latest-card" data-surface="history.latest-card" hidden>
         <div class="card-head">
           <h2 class="card-title"><svg class="icon" aria-hidden="true"><use href="#i-clock" /></svg> Latest take</h2>
           <span id="latestWhen" class="card-head-meta"></span>
@@ -364,18 +364,18 @@
       </section>
       <!-- Day groups (history.js renders them): an overline per day, then a
            card of one-line take rows. -->
-      <div id="historyGroups" class="history-groups"></div>
+      <div id="historyGroups" class="history-groups" data-surface="history.take-list"></div>
       <div class="history-foot">
         <button id="loadMoreHistory" type="button" class="button-ghost compact load-more-btn" hidden data-track="history.load-more"><svg class="icon" aria-hidden="true"><use href="#i-download" /></svg> Show older takes</button>
       </div>
       <!-- Select mode's bottom bar: the count, Cancel, and Copy (oldest first). -->
-      <div id="selectBar" class="select-bar" role="toolbar" aria-label="Selected takes" hidden>
+      <div id="selectBar" class="select-bar" data-surface="history.select-bar" role="toolbar" aria-label="Selected takes" hidden>
         <b id="selectCount">0 takes · oldest first</b>
         <button id="selectCancel" type="button" class="button-ghost text-verb" data-track="history.select-cancel">Cancel</button>
         <button id="copySelection" type="button" class="button-surface text-verb" data-track="history.select-copy"><svg class="icon" aria-hidden="true"><use href="#i-clipboard" /></svg> Copy</button>
       </div>
       </div>
-      <aside id="takeDetail" class="card take-detail" aria-label="Picked take" hidden></aside>
+      <aside id="takeDetail" class="card take-detail" data-surface="history.take-detail" aria-label="Picked take" hidden></aside>
       </div>
     </section>
 
@@ -383,27 +383,27 @@
     <!-- Build identity: outside every pane, last child of <main> so it ends at
          the end of every tab (vendored page-foot). Text set from
          GET /api/version by app.js. -->
-    <footer class="page-foot">
+    <footer class="page-foot" data-surface="app.footer">
       <p id="buildReadout"></p>
     </footer>
 
   </main>
 
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <div id="toast" class="toast" data-surface="app.toast" role="status" aria-live="polite" hidden></div>
 
   <!-- Settings: the vendored full page (settings-group), opened by every
        pane's header gear over the current tab. Each row is a lead glyph, a
        plain label and its current value; switches, selects and small numbers
        sit inline and save as they change (no Save button). Language and
        Translate stay per-session choices. -->
-  <dialog id="paneSettings" class="settings-page" aria-labelledby="settingsTitle" data-track-view="settings">
+  <dialog id="paneSettings" class="settings-page" data-surface="settings.page" aria-labelledby="settingsTitle" data-track-view="settings">
     <header class="settings-page-head">
       <h2 class="settings-page-title" id="settingsTitle">Settings</h2>
       <button type="button" class="icon-button settings-page-close" aria-label="Close settings" data-track="settings.close"><svg class="icon" aria-hidden="true"><use href="#i-x" /></svg></button>
     </header>
     <div id="settingsPanel" class="settings-page-body">
       <h3 class="settings-group-label" id="settingsGroupDictation">Dictation</h3>
-      <section class="card settings-group" aria-labelledby="settingsGroupDictation">
+      <section class="card settings-group" data-surface="settings.dictation" aria-labelledby="settingsGroupDictation">
         <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-globe" /></svg><span class="settings-row-label">Language</span><select id="languageSelect" class="settings-row-select" data-track="settings.language"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
         <label class="settings-row" title="Speak in the language above; the text comes out in English. The first take after a pause can take a few seconds longer."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-globe" /></svg><span class="settings-row-label">Translate to English</span><button id="translateToggle" type="button" class="toggle" role="switch" aria-checked="false"
                 aria-label="Translate to English" data-track="settings.translate"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
@@ -413,7 +413,7 @@
       </section>
 
       <h3 class="settings-group-label" id="settingsGroupSound">Sound</h3>
-      <section class="card settings-group" aria-labelledby="settingsGroupSound">
+      <section class="card settings-group" data-surface="settings.sound" aria-labelledby="settingsGroupSound">
         <label class="settings-row" title="Makes a quiet recording louder before it is transcribed, for a quiet mic or room."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="settings-row-label">Boost quiet audio</span><button id="gainBoostToggle" type="button" class="toggle" role="switch" aria-checked="false"
                 aria-label="Boost quiet audio" data-track="settings.gain-boost"><span class="knob"></span><span class="toggle-label">OFF</span></button></label>
         <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-volume-2" /></svg><span class="settings-row-label">Boost amount</span><span class="settings-row-number"><input id="gainBoostDb" type="number" min="0" max="24" step="1" class="settings-row-input" inputmode="numeric" aria-label="Boost amount in decibels"><span class="settings-row-unit">dB</span></span></label>
@@ -423,14 +423,14 @@
       </section>
 
       <h3 class="settings-group-label" id="settingsGroupPolish">Polish</h3>
-      <section class="card settings-group" aria-labelledby="settingsGroupPolish">
+      <section class="card settings-group" data-surface="settings.polish" aria-labelledby="settingsGroupPolish">
         <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="settings-row-label">Model</span><select id="polishModel" class="settings-row-select" data-track="settings.polish-model"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
         <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-sparkle" /></svg><span class="settings-row-label">Style</span><select id="polishStyle" class="settings-row-select" data-track="settings.polish-style"></select><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-down" /></svg></label>
         <button id="openPromptSheet" type="button" class="settings-row" aria-haspopup="dialog" data-track="settings.polish-prompt"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-file-text" /></svg><span class="settings-row-label">Instructions</span><span class="settings-row-value">View</span><svg class="icon settings-row-chevron" aria-hidden="true"><use href="#i-chevron-right" /></svg></button>
       </section>
 
       <h3 class="settings-group-label" id="settingsGroupHistory">History</h3>
-      <section class="card settings-group" aria-labelledby="settingsGroupHistory">
+      <section class="card settings-group" data-surface="settings.history" aria-labelledby="settingsGroupHistory">
         <label class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-clock" /></svg><span class="settings-row-label">Keep audio for</span><span class="settings-row-number"><input id="retentionDays" type="number" min="1" max="365" step="1" class="settings-row-input" inputmode="numeric" aria-label="Keep audio for, in days"><span class="settings-row-unit">days</span></span></label>
         <div class="settings-row setting-action"><button id="cleanAll" type="button" class="button-tint danger" aria-haspopup="dialog" aria-controls="deleteAllSheet" data-track="settings.delete-all"><svg class="icon" aria-hidden="true"><use href="#i-trash-2" /></svg> Delete all takes…</button></div>
         <label class="settings-row" title="Adds Send to task-os to a take's menu: one tap makes the take an Inbox task. Needs task-os running on this PC."><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-circle-check" /></svg><span class="settings-row-text"><span class="settings-row-label">Send to task-os</span><span class="settings-row-hint">Adds a take as a task</span></span><button id="taskOsToggle" type="button" class="toggle" role="switch" aria-checked="false"
@@ -438,7 +438,7 @@
       </section>
 
       <h3 class="settings-group-label" id="settingsGroupDisplay">Display</h3>
-      <section class="card settings-group" aria-labelledby="settingsGroupDisplay">
+      <section class="card settings-group" data-surface="settings.display" aria-labelledby="settingsGroupDisplay">
         <div class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-type" /></svg><span class="settings-row-label">Text size</span>
           <div class="segmented" id="textSizeControl" role="group" aria-label="Text size">
             <button type="button" class="segmented-item" aria-pressed="false" data-textsize="small" data-track="settings.textsize-small">Small</button>
@@ -449,7 +449,7 @@
       </section>
 
       <h3 class="settings-group-label" id="settingsGroupServices">Services</h3>
-      <section id="servicesGroup" class="card settings-group" aria-labelledby="settingsGroupServices">
+      <section id="servicesGroup" class="card settings-group" data-surface="settings.services" aria-labelledby="settingsGroupServices">
       <div class="settings-row">
         <svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-mic" /></svg>
         <span class="settings-row-label">Transcription</span>
@@ -473,7 +473,7 @@
       </section>
 
       <h3 class="settings-group-label" id="settingsGroupAbout">About</h3>
-      <section class="card settings-group" aria-labelledby="settingsGroupAbout">
+      <section class="card settings-group" data-surface="settings.about" aria-labelledby="settingsGroupAbout">
         <div class="settings-row"><svg class="icon settings-row-icon" aria-hidden="true"><use href="#i-info" /></svg><span class="settings-row-label">Build</span><span id="buildInfo" class="settings-row-value" title="Which build of the webapp this device loaded (issue #13)">…</span></div>
       </section>
     </div>
@@ -483,7 +483,7 @@
        and its one primary (Copy), Redo as a plain row, the take's facts, and
        Delete last as danger text that a second tap confirms. Opened from the
        row's kebab; the row's own tap still copies. -->
-  <dialog id="takeSheet" class="detail-dialog take-sheet" aria-labelledby="takeSheetTitle" data-track-view="take">
+  <dialog id="takeSheet" class="detail-dialog take-sheet" data-surface="history.take-sheet" aria-labelledby="takeSheetTitle" data-track-view="take">
     <div id="takeCard" class="detail-card take-card">
       <div class="detail-header">
         <h2 id="takeSheetTitle" tabindex="-1" autofocus>Take</h2>
@@ -504,7 +504,7 @@
 
   <!-- Settings › Polish › Instructions (#265): the prompt sent with the text
        when you tap Polish, in a sheet instead of a permanent box. -->
-  <dialog id="promptSheet" class="detail-dialog settings-sheet prompt-sheet" aria-labelledby="promptSheetTitle" data-track-view="polish-prompt">
+  <dialog id="promptSheet" class="detail-dialog settings-sheet prompt-sheet" data-surface="settings.prompt-sheet" aria-labelledby="promptSheetTitle" data-track-view="polish-prompt">
     <div class="detail-card">
       <div class="detail-header">
         <h2 id="promptSheetTitle" tabindex="-1" autofocus>Polish instructions</h2>
@@ -520,7 +520,7 @@
 
   <!-- Settings › History › Delete all takes (#265): the confirmation is this
        sheet, never the browser's confirm(). -->
-  <dialog id="deleteAllSheet" class="detail-dialog settings-sheet" aria-labelledby="deleteAllTitle" data-track-view="delete-all">
+  <dialog id="deleteAllSheet" class="detail-dialog settings-sheet" data-surface="settings.delete-all-sheet" aria-labelledby="deleteAllTitle" data-track-view="delete-all">
     <div class="detail-card">
       <div class="detail-header">
         <h2 id="deleteAllTitle" tabindex="-1" autofocus>Delete all takes?</h2>

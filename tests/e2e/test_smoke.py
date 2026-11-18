@@ -130,7 +130,7 @@ def test_record_pane_boots_and_renders_its_contracts(
             )
     assert len(tokens) == 2, f"the themes resolved one control-border token: {tokens}"
     page.evaluate("() => { delete document.documentElement.dataset.theme; }")
-    surface(page, "record.idle")
+    surface(page, "record.pane")
 
 
 def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None:
@@ -170,7 +170,7 @@ def test_text_card_holds_both_versions(authed_page: Page, base_url: str) -> None
     assert copy_text.evaluate("el => el.getBoundingClientRect().height") == page.locator(
         "#polishBtn"
     ).evaluate("el => el.getBoundingClientRect().height")
-    surface(page, "record.text")
+    surface(page, "record.text-card")
 
     page.click("#polishBtn")
     expect(page.locator("#toast")).to_contain_text("Polish done")
@@ -338,7 +338,7 @@ def test_sign_in_sheet_wrong_then_correct_password(
     assert authed_page.evaluate("localStorage.getItem('vt_auth_token')") != good_token
 
     pw.fill("right")
-    surface(authed_page, "login.dialog")
+    surface(authed_page, "shared.login")
     sheet.locator("button[type=submit]").click()
     expect(sheet).to_be_hidden()
     assert authed_page.evaluate("localStorage.getItem('vt_auth_token')") == good_token
