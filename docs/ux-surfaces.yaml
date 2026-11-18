@@ -1,0 +1,562 @@
+# UX surface map: the single source for docs/ux-surface-map.md.
+#
+# Every screen, tab, menu, sheet, dialog, state and gesture a person can reach in voice-transcriber, one
+# entry per surface. The convention is project-scaffolding's docs/ux-surface-map.md. Edit this file,
+# never the generated page; then run `python scripts/ux_surface_map.py`.
+#
+# A change that adds, removes, renames or reshapes a user-visible surface updates its entry here in the
+# same change, adds or removes the matching `data-surface` attribute in the code, and regenerates the page.
+
+app: voice-transcriber
+
+notes: |
+  The checklist of everything a person can see and do in the voice-transcriber web app (the PWA served on :8443): every tab, sheet, dialog, menu, state and gesture, with how it is reached, what is on it, what each control does and the decision behind it where one exists. [Web app usage](webapp-usage.md) tells the story of the screens in prose; this page is the exhaustive index, so a layout change can check every surface and not only the ones a reviewer happens to open.
+
+  **Keeping it true.** A change that adds, removes, renames or reshapes a user-visible surface updates its entry in `docs/ux-surfaces.yaml` in the same change and regenerates this page with `python scripts/ux_surface_map.py`; this page is never edited by hand. The rule is in `CLAUDE.md`.
+
+  **Ids.** `<area>.<surface>`, lowercase words joined by `.` or `-`, the same form the e2e `surface(page, "<id>")` hook takes. The surface's root element carries the same id as `data-surface`; the vendored row menu builds its own element, so its call site stamps the id on what `attach` returns. `scripts/ux_surface_ratchet.py` fails a surface root without an id, an id without an entry, an entry no element carries, an id on two roots, a link to an id with no entry and a page that is not what the map generates. It reads markup and JS, so the entries marked `none` are held by this map and the e2e walk alone.
+
+  ## Ground rules
+
+  **Two destinations, one gear.** The nav is Record and History. Settings is the header gear on both panes, one tap from every tab, and is not a tab. Every sheet and the Settings page are native `<dialog>` elements over the current tab, so closing one returns to where the person was.
+
+  **Layout bands** (the same markup, two placements):
+
+  | Band | Condition | Nav | History take |
+  | --- | --- | --- | --- |
+  | Phone and narrow window | any touch screen, or a mouse below 1100px | floating bottom pill (an inline tab bar on a mouse below 1100px) | a modal sheet over the list |
+  | Wide | 1100px and up with a mouse | left rail | a detail pane beside the list that always shows a take |
+
+  **Where state lives.** Theme and text size are per-device (`localStorage`). Language, Translate and the two recorder switches (Append, Incognito) are per-session choices that are not saved. Every other Settings choice saves to the server as it changes; there is no Save button.
+
+  **Gating.** Send to task-os (a menu row and its Settings switch) is off until Settings turns it on. Share shows only in a browser that has a share sheet. Redo shows only for a take whose audio is still kept. Polish is disabled with its reason when the LLM hub is down.
+
+  **Who the viewer is.** On the PC itself (loopback) the app opens with no credential. Any other device signs in through the vendored sign-in sheet.
+
+walk:
+  date: 2026-11-18
+  build: 781ad17
+  widths: [390, 1280]
+  themes: [light, dark]
+
+areas:
+  - id: app
+    title: App chrome
+    notes: What every tab shares, and the two surfaces the vendored components build.
+  - id: record
+    title: Record
+    notes: The default tab. One circle, the mode switches and one Text card.
+  - id: history
+    title: History
+    notes: The list of saved takes, each reachable in one tap; the take sheet (phone) or detail pane (wide) holds everything else about one take.
+  - id: settings
+    title: Settings
+    notes: A full page opened by the header gear. Rows hold a choice inline and save as they change.
+  - id: gestures
+    title: Gestures and keys
+    notes: Inputs that are not elements of their own.
+
+surfaces:
+  - id: app.nav
+    area: app
+    title: Navigation
+    root: data-surface
+    reach:
+      - always on screen
+    holds:
+      - "Record and History tabs (the vendored fleet nav)"
+    does:
+      - "a tap switches the tab and remembers it for the next visit"
+      - "opening History refreshes the list"
+    why: Settings is never a tab, so the nav stays two destinations.
+    phone: a floating pill at the bottom, hidden under a modal
+    desktop: a left rail from 1100px with a mouse, an inline tab bar below that
+    links:
+      - to: record.pane
+        via: Record
+      - to: history.pane
+        via: History
+  - id: app.footer
+    area: app
+    title: Build readout
+    root: data-surface
+    reach:
+      - the end of every tab
+    holds:
+      - "the build sha and build time of the code this device loaded"
+    states:
+      - "empty when the version call fails"
+  - id: app.toast
+    area: app
+    title: Toast
+    root: data-surface
+    reach:
+      - "after a copy, a save, a redo, a polish, a send to task-os, a delete or any failed call"
+    holds:
+      - "one short line, neutral or tinted for an error"
+    does:
+      - "dismisses itself; never takes focus"
+    why: a user-initiated result is a toast, a passive status is a line beside the surface it describes.
+  - id: app.update-banner
+    area: app
+    title: New-version notice
+    root: data-surface
+    holds:
+      - "(stamped by the vendored build-watch component itself)"
+      - "a banner offering Reload when the server moved to a newer build while the page stayed open"
+    does:
+      - "Reload reloads the page, only ever on the person's tap"
+      - "dismiss keeps it down until the server moves to yet another build"
+  - id: shared.login
+    area: app
+    title: Sign-in sheet
+    root: data-surface
+    reach:
+      - "any call the server answers with 401 from a device that is not the PC"
+    holds:
+      - "(stamped by the vendored sign-in component itself)"
+      - "a password field and its submit"
+    states:
+      - "Escape does not dismiss it: a closed gate is not an unlocked app"
+      - "wrong password: the sheet says so and stays open"
+      - "locked out after repeated wrong passwords: it says to wait"
+  - id: record.pane
+    area: record
+    title: Record tab
+    root: data-surface
+    reach:
+      - "the Record tab"
+      - "the page's first screen"
+    holds:
+      - "the header, the recorder card, the Text card"
+    links:
+      - to: record.header
+      - to: record.recorder
+      - to: record.text-card
+  - id: record.header
+    area: record
+    title: Record header
+    root: data-surface
+    holds:
+      - "Record title, one live context line, the theme toggle, the Settings gear"
+    does:
+      - "the theme toggle flips light and dark and remembers it"
+      - "the gear opens Settings"
+    states:
+      - "the language, as a plain fact"
+      - "'Spanish to English' when Translate is on"
+      - "Incognito: not saved, while Incognito is on"
+      - "Polish unavailable, when the hub is down"
+      - "Transcription offline, when neither route can transcribe"
+    links:
+      - to: settings.page
+        via: the gear
+  - id: record.recorder
+    area: record
+    title: Recorder
+    root: data-surface
+    holds:
+      - "the record circle"
+      - "Continue this text beside it, only after a take was finalised in the background"
+      - "the take timer"
+      - "the status line"
+      - "the mic notice slot"
+      - "the Append and Incognito switches"
+    does:
+      - "Record starts a take, Stop finishes it"
+      - "Continue this text starts a new take that adds to the text on screen"
+      - "Append makes the next take add to the text instead of replacing it"
+      - "Incognito keeps the next take out of History"
+    states:
+      - "idle: 'Tap to start'"
+      - "starting: 'Requesting mic' or 'Reusing mic'"
+      - "recording: the circle is Stop and the timer runs, the screen wake lock is held"
+      - "silence auto-stop pending: 'Auto-stop on silence, keep talking to cancel'"
+      - "finishing: the circle is a spinner and the status says Uploading or Finalising upload"
+      - "paused while away: the page was hidden mid-take and the take is being finalised"
+      - "failed: 'Failed, recording is still on the PC, see History' with a toast"
+      - "mic refused or unavailable: a toast names the reason"
+    why: one circle in four states keeps the tab's single primary action in one place.
+    links:
+      - to: record.mic-notice
+        via: while a take is live
+      - to: record.text-card
+        via: the transcript lands there
+      - to: history.take-list
+        via: a saved take appears in History
+  - id: record.mic-notice
+    area: record
+    title: Mic notice
+    root: data-surface
+    reach:
+      - "starts with a take and ends with it"
+    holds:
+      - "(built by the vendored mic-notice component)"
+      - "the input's name, a level strip and a warning when the input is silent"
+    states:
+      - "hidden when no take is live"
+      - "silent mic: the warning shows after the first seconds"
+  - id: record.text-card
+    area: record
+    title: Text card
+    root: data-surface
+    holds:
+      - "the Transcript and Polished switch, shown once a polish exists"
+      - "one editable text box at a time; both versions keep their edits"
+      - "a meta line: when, words and length for a take, the polish style for the Polished version"
+      - "the verb row: Copy, Polish, Save, Clear"
+    does:
+      - "Copy copies the version shown"
+      - "Polish sends the text to the LLM hub with the chosen model and style, then shows the Polished version"
+      - "Save puts text History does not hold yet (a paste) into History"
+      - "Clear empties the text and starts a fresh session"
+      - "pasting or typing fills the card; Polish then works on the paste"
+    states:
+      - "empty: the placeholder, and no verb row"
+      - "live text while recording: 'Live text, refined when you stop'"
+      - "polishing: the button says Polishing and is disabled"
+      - "hub down: the button says Polish unavailable and is disabled"
+      - "Save is hidden once History holds the text"
+    why: the card is one text in two versions, so Copy never has to ask which one.
+  - id: history.pane
+    area: history
+    title: History tab
+    root: data-surface
+    reach:
+      - "the History tab"
+    holds:
+      - "the header, the Latest take card, the day-grouped list, Show older takes, the take detail pane on a wide window"
+    links:
+      - to: history.header
+      - to: history.latest-card
+      - to: history.take-list
+      - to: history.take-detail
+        via: a wide window
+  - id: history.header
+    area: history
+    title: History header
+    root: data-surface
+    holds:
+      - "History title, one live context line, the theme toggle, the Settings gear"
+    states:
+      - "'15 takes, audio kept 30 days'"
+      - "'N selected' while Select mode is on"
+      - "Couldn't load history, when the list call fails"
+    links:
+      - to: settings.page
+        via: the gear
+  - id: history.latest-card
+    area: history
+    title: Latest take card
+    root: data-surface
+    holds:
+      - "the newest take: when, text, words and length"
+      - "Copy"
+      - "the take menu kebab"
+      - "today's numbers: takes, words per minute and time saved"
+    does:
+      - "Copy copies the full text of the take"
+    states:
+      - "hidden while there are no takes"
+      - "hidden in Select mode, where the newest take is a row"
+      - "'No takes yet today' when nothing was recorded today"
+    links:
+      - to: history.take-menu
+        via: the kebab
+  - id: history.take-list
+    area: history
+    title: Take list
+    root: data-surface
+    holds:
+      - "one overline per day with its count and a card of take rows"
+      - "Select, on the first day's overline"
+      - "Show older takes, while the server reports more"
+    does:
+      - "Select enters Select mode"
+      - "Show older takes appends the next ten"
+    states:
+      - "empty: the empty state"
+    links:
+      - to: history.take-row
+      - to: history.empty
+        via: no takes
+      - to: history.select-bar
+        via: Select
+  - id: history.take-row
+    area: history
+    title: Take row
+    root: data-surface
+    holds:
+      - "the time, one line of text, words and length, the source, a language chip when not the default"
+      - "the kebab"
+    does:
+      - "a tap copies the full text and shows Copied on the row"
+      - "in Select mode a tap ticks the row instead"
+    states:
+      - "the open row is marked on a wide window"
+      - "picked: ticked in Select mode"
+      - "no kebab in Select mode"
+    why: a row copies on tap because Copy is what the person does most; everything else is in the kebab.
+    links:
+      - to: history.take-menu
+        via: the kebab
+  - id: history.empty
+    area: history
+    title: History empty state
+    root: data-surface
+    reach:
+      - "no takes yet, or every take deleted"
+    holds:
+      - "'No takes yet, record something'"
+  - id: history.select-bar
+    area: history
+    title: Select bar
+    root: data-surface
+    reach:
+      - "Select on the first day's overline"
+    holds:
+      - "the count, 'N takes, oldest first'"
+      - "Cancel"
+      - "Copy"
+    does:
+      - "Copy joins the picked takes oldest first, a blank line between, and leaves Select mode"
+      - "Cancel leaves Select mode"
+    states:
+      - "Copy is disabled until a take is picked"
+      - "a refresh also leaves Select mode"
+  - id: history.take-menu
+    area: history
+    title: Take menu
+    root: data-surface
+    reach:
+      - "the kebab on a row or on the Latest take card"
+    holds:
+      - "Open take"
+      - "Share, only where the browser has a share sheet"
+      - "Copy as Markdown"
+      - "Send to task-os, only once Settings turns it on"
+      - "Refresh"
+      - "Delete, last and in danger colour"
+    does:
+      - "Open take opens the take sheet, or the detail pane on a wide window"
+      - "Share opens the share sheet with the full text, falling back to the clipboard"
+      - "Copy as Markdown copies the take as one bullet"
+      - "Send to task-os makes the take an Inbox task, once; a second tap says it is already there"
+      - "Refresh reloads the list"
+      - "Delete opens the take with its Delete already armed"
+    why: a delete is never one stray tap, so the menu hands over to the take's own two-tap confirm.
+    links:
+      - to: history.take-sheet
+        via: Open take or Delete on a phone
+      - to: history.take-detail
+        via: Open take or Delete on a wide window
+  - id: history.take-sheet
+    area: history
+    title: Take sheet
+    root: data-surface
+    reach:
+      - "Open take or Delete in the take menu on a phone or narrow window"
+    holds:
+      - "the take's date as the title and a close button"
+      - "the full text"
+      - "Copy"
+      - "Redo transcription"
+      - "Length, Language, Source, Served by"
+      - "Delete take"
+    does:
+      - "Copy copies the full text"
+      - "Redo transcription sends the saved audio through again and puts the result in the Text card"
+      - "Delete take arms on the first tap ('Tap again to delete') and deletes on the second"
+    states:
+      - "the preview shows at once and the full text replaces it when it arrives"
+      - "Redo is hidden once the audio is past its retention"
+      - "armed delete disarms after four seconds and when the sheet closes"
+      - "facts a take predates say 'Not recorded'"
+    why: the browser's own confirm is never used, so the second tap on the button is the confirmation.
+    links:
+      - to: gestures.dismiss
+        via: Escape or a tap on the backdrop
+  - id: history.take-detail
+    area: history
+    title: Take detail pane
+    root: data-surface
+    reach:
+      - "a wide window: the pane beside the list, always showing a take (the picked one, else the newest)"
+    holds:
+      - "the same card as the take sheet: title, close, text, Copy, Redo transcription, the facts, Delete take"
+    does:
+      - "the close button hides the pane until a take is opened again"
+    states:
+      - "empty list: the pane is hidden"
+      - "narrowing the window below the wide band moves the card back into the sheet"
+    why: one card moves between the sheet and the pane, so there is one renderer and one set of handlers.
+    phone: not shown
+  - id: settings.page
+    area: settings
+    title: Settings page
+    root: data-surface
+    reach:
+      - "the gear in either header"
+    holds:
+      - "the title and a close button"
+      - "the seven groups: Dictation, Sound, Polish, History, Display, Services, About"
+    does:
+      - "the close button, Escape and the backdrop return to the tab underneath"
+      - "opening it refreshes the Services values"
+    states:
+      - "a setting that fails to save shows a toast and keeps the old value"
+    why: Settings is a modal page over the tab, so the tab and its nav state are untouched.
+    links:
+      - to: settings.dictation
+      - to: settings.sound
+      - to: settings.polish
+      - to: settings.history
+      - to: settings.display
+      - to: settings.services
+      - to: settings.about
+  - id: settings.dictation
+    area: settings
+    title: Dictation
+    root: data-surface
+    holds:
+      - "Language, a select"
+      - "Translate to English, a switch"
+      - "Microphone, a select"
+      - "Prefer the built-in mic, a switch"
+    does:
+      - "Language and Translate apply to the next take and are not saved"
+      - "Microphone and Prefer the built-in mic save and drop the cached mic stream, so the next take re-opens the input"
+    states:
+      - "Microphone lists System default plus every input the browser names"
+    why: Language and Translate are per-session choices, so a different dictation language never sticks.
+  - id: settings.sound
+    area: settings
+    title: Sound
+    root: data-surface
+    holds:
+      - "Boost quiet audio, a switch"
+      - "Boost amount, a number in dB"
+      - "Stop after silence, a switch"
+      - "Silence length, a number in seconds"
+    does:
+      - "Boost makes a quiet recording louder before it is transcribed"
+      - "Stop after silence ends the take after the silence length, with a short notice first"
+  - id: settings.polish
+    area: settings
+    title: Polish
+    root: data-surface
+    holds:
+      - "Model, a select"
+      - "Style, a select"
+      - "Instructions, a row that opens the prompt sheet"
+    does:
+      - "Model and Style choose what Polish sends"
+    links:
+      - to: settings.prompt-sheet
+        via: Instructions
+  - id: settings.history
+    area: settings
+    title: History settings
+    root: data-surface
+    holds:
+      - "Keep audio for, a number of days"
+      - "Delete all takes"
+      - "Send to task-os, a switch"
+    does:
+      - "Keep audio for sets how long the audio is kept; the text stays"
+      - "Delete all takes opens its confirmation sheet"
+      - "Send to task-os adds that row to the take menu"
+    links:
+      - to: settings.delete-all-sheet
+        via: Delete all takes
+  - id: settings.display
+    area: settings
+    title: Display
+    root: data-surface
+    holds:
+      - "Text size, Small, Default or Large"
+    does:
+      - "a tap applies at once and is remembered on this device"
+  - id: settings.services
+    area: settings
+    title: Services
+    root: data-surface
+    holds:
+      - "Transcription, Local fallback, Polish, Audio conversion, each with its state in words"
+    states:
+      - "Ready, Not running, Not reachable, Missing, On the local fallback, Down"
+      - "Unknown while a probe has not answered or the poll failed"
+      - "only a down probe is tinted"
+  - id: settings.about
+    area: settings
+    title: About
+    root: data-surface
+    holds:
+      - "Build, the sha and time of the loaded code"
+    states:
+      - "Unavailable when the version call fails"
+  - id: settings.prompt-sheet
+    area: settings
+    title: Polish instructions sheet
+    root: data-surface
+    reach:
+      - "Settings, Polish, Instructions"
+    holds:
+      - "a note naming the style"
+      - "the prompt that is sent with the text, read-only"
+      - "Done"
+    does:
+      - "Done, the close button, Escape and the backdrop close it"
+    why: the prompt is long, so it sits in a sheet instead of a permanent box.
+  - id: settings.delete-all-sheet
+    area: settings
+    title: Delete all takes sheet
+    root: data-surface
+    reach:
+      - "Settings, History, Delete all takes"
+    holds:
+      - "the warning that every saved recording and transcript is removed and cannot be undone"
+      - "Delete all takes"
+    does:
+      - "Delete all takes removes them, toasts how many, and refreshes History"
+      - "the close button, Escape and the backdrop cancel"
+    why: the confirmation is a sheet, never the browser's own dialog.
+  - id: gestures.dismiss
+    area: gestures
+    title: Dismissing a sheet
+    root:
+      none: "an input handled by every dialog, with no element of its own."
+    reach:
+      - "Escape, the close button, or a tap on the backdrop outside the card"
+    does:
+      - "closes the take sheet, the prompt sheet, the delete-all sheet and the Settings page, and returns to the tab underneath"
+    links:
+      - to: history.take-sheet
+      - to: settings.prompt-sheet
+      - to: settings.delete-all-sheet
+  - id: gestures.menu-keys
+    area: gestures
+    title: Menu keys
+    root:
+      none: "keyboard paths inside the take menu, with no element of their own."
+    reach:
+      - "Enter, Space or a tap on a kebab opens the menu on its first item"
+      - "ArrowDown and ArrowUp on the kebab open it on the first or last item"
+    does:
+      - "ArrowDown, ArrowUp, Home and End move through the rows, wrapping"
+      - "Escape, choosing a row and Tab close the menu and return focus to the kebab"
+    links:
+      - to: history.take-menu
+  - id: gestures.visibility
+    area: gestures
+    title: Leaving the page mid-take
+    root:
+      none: "the page being hidden, with no element of its own."
+    reach:
+      - "switching apps or locking the screen while recording"
+    does:
+      - "the take is finalised so it is saved, then the status says it paused while away"
+      - "coming back re-takes the screen wake lock if a take is still live"
+      - "an idle page releases the mic so the phone's recording indicator goes off"
+    links:
+      - to: record.recorder

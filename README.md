@@ -81,6 +81,7 @@ One line per feature; each links to its reference doc.
 | [Testing](docs/testing.md) | pytest, Playwright browser tests, the pre-ship gate, Vitest, per-file coverage |
 | [Webapp architecture](docs/webapp-architecture.md) | Why the webapp is shaped the way it is |
 | [Take lifecycle](docs/take-lifecycle.md) | The browser recorder's declared states (`idle`, `starting`, `recording`, `finishing`), the legal moves, the one teardown and who reads the state |
+| [UX surface map](docs/ux-surface-map.md) | Every tab, sheet, dialog, menu, state and gesture, with how it is reached and what it holds; generated from `docs/ux-surfaces.yaml`, held to the markup by a gate ratchet |
 | [Internal structure diagram](docs/architecture.mmd) | Hand-authored Mermaid diagram of modules and data flow |
 | [Market scan](docs/market-scan/initial-scan.md) | Voice-dictation market research notes |
 

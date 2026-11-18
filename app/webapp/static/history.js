@@ -35,10 +35,22 @@ const wideLayout = window.matchMedia('(min-width: 1100px) and (pointer: fine)');
 // Refresh reloads the list. The Latest card and the day rows have one
 // controller each: the Latest card's kebab is one element for the page's life,
 // the rows are rebuilt on every render.
-const rowMenu = createRowMenu();
-const latestMenu = createRowMenu();
+const rowMenu = surfaceMenu(createRowMenu());
+const latestMenu = surfaceMenu(createRowMenu());
 let latestTake = null;
 let latestMenuBound = false;
+
+// The vendored menu builds its own element, so this call site stamps the surface id on
+// what `attach` returns.
+function surfaceMenu(ctl) {
+  const attach = ctl.attach;
+  ctl.attach = function (key, anchor, items, opts) {
+    const menu = attach(key, anchor, items, opts);
+    menu.dataset.surface = 'history.take-menu';
+    return menu;
+  };
+  return ctl;
+}
 
 function takeMenuItems(getTake) {
   return [
@@ -187,7 +199,9 @@ function renderEmptyState(count) {
   const existing = els.historyGroups.parentElement.querySelector(':scope > .empty-state');
   if (existing) existing.remove();
   if (count === 0) {
-    els.historyGroups.after(emptyStateEl('history', 'No takes yet — record something'));
+    const empty = emptyStateEl('history', 'No takes yet — record something');
+    empty.dataset.surface = 'history.empty';
+    els.historyGroups.after(empty);
   }
 }
 
@@ -321,6 +335,7 @@ function formatTime(iso) {
 function renderHistoryItem(s) {
   const li = document.createElement('li');
   li.className = 'take-row';
+  li.dataset.surface = 'history.take-row';
   li.dataset.sessionId = s.session_id;
   const picked = state.historySelected.has(s.session_id);
   li.classList.toggle('picked', picked);

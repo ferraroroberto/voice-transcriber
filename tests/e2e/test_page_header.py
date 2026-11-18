@@ -67,7 +67,7 @@ def test_every_pane_has_the_header_and_footer_and_settings_is_the_gear(
     page.click("#paneRecord .home-settings")
     expect(panel).to_be_visible()
     expect(page.locator("#paneSettings .settings-page-title")).to_have_text("Settings")
-    surface(page, "settings.pane")
+    surface(page, "settings.page")
     page.locator("#paneSettings .settings-page-close").click()
     expect(panel).to_be_hidden()
     expect(page.locator("#paneRecord")).to_be_visible()

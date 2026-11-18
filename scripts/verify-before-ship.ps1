@@ -20,7 +20,10 @@
 # file's count of write targets resolving under a code folder above
 # .runtime-write-ratchet-baseline.json; exit 3 fails too), the usage track ratchet (no
 # control, sheet or built id above .usage-track-ratchet-baseline.json, the usage log
-# wired; exit 3 fails too), the non-e2e pytest suite, then
+# wired; exit 3 fails too), the UX surface ratchet (every surface root carries a
+# data-surface id with an entry in docs/ux-surfaces.yaml and the generated
+# docs/ux-surface-map.md is current, beyond .ux-surface-ratchet-baseline.json; exit 3
+# fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -165,6 +168,15 @@ try {
     Write-Host "==> usage track ratchet (tracked controls, sheets and ids, usage log wired)..." -ForegroundColor Cyan
     & $python -m scripts.usage_track_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "usage track ratchet failed (an untracked control or sheet, a built id, the usage log not wired, or a file could not be read)." }
+
+    # UX surface ratchet: a surface root with no data-surface id, an id with no entry in
+    # docs/ux-surfaces.yaml, an entry no element carries, one id on two surfaces, a link to
+    # no entry, or a docs/ux-surface-map.md page not regenerated from the map. Call the
+    # wrapper: it maps exit 3 (a file could not be read or closed) to a failure
+    # (tests/ratchets/test_ratchet_stages.py pins it). Whole tree, never routed.
+    Write-Host "==> ux surface ratchet (surface ids, the map and its page)..." -ForegroundColor Cyan
+    & $python -m scripts.ux_surface_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "ux surface ratchet failed (an unmarked, unmapped, stale or duplicate surface, a stale map page, or a file could not be read)." }
 
     # Runtime write probe, first half: what already sits untracked or ignored under the
     # code folders, so the probe after the test runs names only what they wrote.

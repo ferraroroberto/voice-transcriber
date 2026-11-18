@@ -114,7 +114,7 @@ def test_latest_card_day_groups_select_mode_and_paging(
     )
     heads = authed_page.locator("#historyGroups .day-head")
     expect(heads).to_have_count(3)  # days of takes 1-3, 4-7, 8-9
-    surface(authed_page, "history.list")
+    surface(authed_page, "history.take-list")
     expect(authed_page.locator(".take-row .take-tick:visible")).to_have_count(0)
 
     authed_page.click("#selectTakes")
@@ -125,7 +125,7 @@ def test_latest_card_day_groups_select_mode_and_paging(
     rows.nth(2).locator(".history-main").click()
     expect(authed_page.locator("#selectCount")).to_have_text("2 takes · oldest first")
     expect(authed_page.locator("#historyHeadLine")).to_have_text("2 selected")
-    surface(authed_page, "history.select-mode")
+    surface(authed_page, "history.select-bar")
 
     fetched: list[str] = []
     authed_page.on(

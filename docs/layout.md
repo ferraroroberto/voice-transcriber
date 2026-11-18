@@ -105,6 +105,8 @@ voice-transcriber/
 │   ├── testing.md                 # pytest, Playwright, pre-ship gate, per-file coverage
 │   ├── webapp-architecture.md     # webapp design & architecture record
 │   ├── architecture.mmd           # hand-authored internal-structure diagram
+│   ├── ux-surfaces.yaml           # UX surface map: every tab, sheet, dialog, menu, state and gesture (the source)
+│   ├── ux-surface-map.md          # the readable page, generated from the map, never hand-edited
 │   ├── consuming-the-session-api.md  # session API integration guide
 │   ├── iphone-debugging.md        # iOS PWA / cert troubleshooting
 │   └── market-scan/               # market research notes
@@ -133,8 +135,11 @@ voice-transcriber/
 │   ├── doc_refs_ratchet_gate.py   # the gate's wrapper around it: exit 3 (a doc could not be read) fails
 │   ├── dead_code_ratchet.py       # vendored dead code ratchet (functions, classes and methods nothing references)
 │   ├── dead_code_ratchet_gate.py  # the gate's wrapper around it: exit 3 (a Python file could not be parsed) fails
+│   ├── ux_surface_ratchet.py      # vendored UX surface ratchet (data-surface ids, the map, its generated page)
+│   ├── ux_surface_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be read or closed) fails
+│   ├── ux_surface_map.py          # vendored generator for docs/ux-surface-map.md from docs/ux-surfaces.yaml
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references and dead code ratchets, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references, dead code and UX surface ratchets, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
