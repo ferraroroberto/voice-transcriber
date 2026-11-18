@@ -56,5 +56,6 @@
 /src/usage_log.py
 /tests/e2e/_e2e_live_guard.py
 /tests/e2e/_geometry.py
+/tests/e2e/_paced_browser.py
 /tests/e2e/_surface.py
 # END vendored-copies
