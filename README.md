@@ -61,7 +61,7 @@ Before declaring any webapp-touching change done, run the pre-ship gate:
 C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe -File scripts/verify-before-ship.ps1
 ```
 
-It byte-compiles, runs the static, docs, structure, conventions, comment, instruction, doc references and dead code ratchets and the non-e2e pytest suite, then the diff-routed Playwright e2e on a disposable instance. A green run ends with `✅ Ready to ship.` Details: [docs/testing.md](docs/testing.md).
+It byte-compiles, runs every ratchet declared in `.fleet.toml`, the non-e2e pytest suite, then the diff-routed Playwright e2e on a disposable instance. A green run ends with `✅ Ready to ship.` Full list: [docs/testing.md](docs/testing.md).
 
 ## 📚 Documentation
 
