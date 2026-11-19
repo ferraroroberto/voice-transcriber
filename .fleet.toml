@@ -257,6 +257,20 @@ allow_refs = [":8000", ":8090", ":8091", ":9221"]
 enabled  = true
 baseline = ".dead-code-ratchet-baseline.json"
 
+# [ci.nightly] -- the Mac Mini nightly's settings for this repo (project-scaffolding
+# docs/mac-runner.md, "The [ci.nightly] table"). `samples` seeds the gitignored
+# config/webapp_config.json the e2e fixtures need from its committed twin. The unit leg
+# skips `windows_only` tests; none carry the marker because every Windows-bound test
+# already skips itself off win32. `views` boots the throwaway instance declared in
+# [design.review.synthetic] for the iPhone-simulator smoke.
+[ci.nightly]
+python       = "3.12"
+requirements = ["requirements.txt", "requirements-dev.txt"]
+samples      = "config"
+unit         = ["tests", "--ignore=tests/e2e"]
+e2e          = ["tests/e2e", "--e2e-autoboot"]
+views        = ["/"]
+
 # Diff-proportionate e2e routing (project-scaffolding docs/e2e-routing.md).
 # Rules are evaluated top-to-bottom; first match wins. Unmatched paths fall
 # through to `full` by design — see the doc before narrowing this table.
