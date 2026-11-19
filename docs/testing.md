@@ -116,6 +116,7 @@ still covers the same logic via the parity port in
 | `tests\ratchets\test_ratchet_stages.py` | The gate's comment / instruction / doc-refs / dead-code ratchet stages map their vendored scripts' exit codes the same way, and each stage is declared in `.fleet.toml` with its script vendored and its baseline committed |
 | `tests\test_testing_doc_coverage.py` | This table itself — every tracked `tests\**\test_*.py` module has a row here |
 | `tests\ratchets\test_gate_doc_ratchet_coverage.py` | This section's own ratchet count — the gate paragraph names exactly as many `**<name> ratchet**` stages as `.fleet.toml` enables, so a dropped or forgotten stage fails loudly |
+| `tests\ratchets\test_sample_config_refs.py` | Every `scripts/...` path and `python -m` module named in a `config/*.sample.json` comment exists, so a fresh install never follows a dead command (the doc-refs ratchet does not scan JSON) |
 | `tests\test_recorder.py` | PortAudio device hot-plug recovery — device-table refresh + retry-once on stream-open failure |
 | `tests\test_runtime_files.py` | `src\runtime_files.py` guarded writers refuse a path under a code folder and write anywhere else |
 | `tests\test_single_instance.py` | Named-mutex primitive (`app/tray/single_instance.py`) — importable contract + in-process behaviour |
