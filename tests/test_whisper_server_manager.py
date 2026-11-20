@@ -13,8 +13,10 @@ import socket
 import subprocess
 import sys
 import time
+from dataclasses import replace
 from pathlib import Path
 
+import psutil
 import pytest
 
 from src.no_window import NO_WINDOW
@@ -64,12 +66,12 @@ def _config(tmp_path: Path, binary: Path, port: int) -> ServerConfig:
 def earlier_server(tmp_path):
     """A listener 'started by an earlier process': PID + log files on disk,
     no Popen handle in the manager under test."""
-    binary = _real_interpreter()
+    interpreter = _real_interpreter()
     port = _free_port()
-    cfg = _config(tmp_path, binary, port)
+    cfg = _config(tmp_path, interpreter, port)
     log = cfg.log_file.open("wb")
     proc = subprocess.Popen(
-        [str(binary), "-c", _LISTENER, str(port)], stdout=log, stderr=subprocess.STDOUT,
+        [str(interpreter), "-c", _LISTENER, str(port)], stdout=log, stderr=subprocess.STDOUT,
         creationflags=NO_WINDOW,
     )
     log.close()
@@ -78,6 +80,11 @@ def earlier_server(tmp_path):
     while time.time() < deadline and not WhisperServerManager(cfg).is_port_in_use():
         time.sleep(0.05)
     assert WhisperServerManager(cfg).is_port_in_use(), "listener never came up"
+    # The manager adopts a process only when its OS-reported exe equals the
+    # configured binary. On macOS a framework Python re-executes into its
+    # `Python.app` binary before it binds, so the launch path and the running
+    # exe differ; configure the path the live listener actually runs as.
+    cfg = replace(cfg, binary_path=Path(psutil.Process(proc.pid).exe()))
     yield cfg, proc
     if proc.poll() is None:
         proc.kill()
