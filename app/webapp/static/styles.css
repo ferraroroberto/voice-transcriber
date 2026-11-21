@@ -12,6 +12,7 @@
   --bg: #ffffff;            /* canvas (page background) */
   --card: #ffffff;          /* elevated card surface */
   --card-off: #f6f8fa;      /* canvas-subtle (inset / off-card surfaces) */
+  --card-2: var(--card-off); /* pressed-row fill the vendored settings-group / row-menu read */
   --ink: #1f2328;           /* fg (primary text) */
   --muted: #656d76;         /* fg-muted (secondary text) */
   --line: #d1d9e0;          /* border (default hairline) */
@@ -57,6 +58,7 @@
   --radius: 16px;           /* rounded.lg — cards */
   --radius-pill: 9999px;
   --radius-nav: 30px;       /* the floating bottom-tab bar */
+  --measure: 772px;         /* layout.measure — the centred content column */
   /* spacing scale */
   --space-xs: 4px;
   --space-sm: 8px;
@@ -113,6 +115,7 @@
   --bg: #0d1117;            /* canvas (GitHub dark canvas) */
   --card: #161b22;          /* elevated card surface */
   --card-off: #010409;      /* canvas-subtle (true black inset) */
+  --card-2: var(--line-muted); /* a notch lighter than card, so a pressed row reads on dark */
   --ink: #e6edf3;           /* fg */
   --muted: #7d8590;         /* fg-muted */
   --line: #30363d;          /* border */
@@ -238,7 +241,7 @@ html, body {
 }
 
 .app {
-  max-width: 772px;
+  max-width: var(--measure);
   margin: 0 auto;
 }
 /* Disjoint from the vendored nav's phone rule ((pointer: coarse) and
