@@ -13,6 +13,7 @@ import { setSwitch } from './_vendored/switch/switch.js';
 import { initUsageLog } from './_vendored/usage-log/usage-log.js';
 import { bindTextSize } from './_vendored/text-size/text-size.js';
 import { buildReadoutText, fmtBuildTime } from './_vendored/page-foot/page-foot.js';
+import { initRestartSheet } from './_vendored/page-foot/restart-sheet.js';
 import { els, state, captureTokenFromURL, getStoredToken } from './state.js';
 import { authFetch } from './api.js';
 import { copyText, isOn, renderTextCard, setTextView, shownText, showToast } from './ui.js';
@@ -106,11 +107,26 @@ async function init() {
   refreshStatus();
   refreshHistory();
   loadVersion();
+  initRestartSheet({ fetchJson: restartGet, postJson: restartPost });
 }
 
 // Surface the loaded build (Settings › About and the page footer) so "is the
 // phone running the current code?" is answerable. Nothing here reloads the
 // page; the build-watch prompt offers a reload on a tap.
+
+// The restart sheet reads the route's JSON, and a POST's status itself (a refusal is an answer).
+async function restartGet(url) {
+  const r = await authFetch(url);
+  if (!r.ok) throw new Error(String(r.status));
+  return r.json();
+}
+
+async function restartPost(url, body) {
+  const r = await authFetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  let data = null;
+  try { data = await r.json(); } catch (_) { data = null; }
+  return { status: r.status, body: data };
+}
 
 async function loadVersion() {
   if (!els.buildInfo) return;

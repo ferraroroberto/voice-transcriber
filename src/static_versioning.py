@@ -69,6 +69,7 @@ HTML_STAMPED_ASSETS = (
     "_vendored/row-menu/row-menu.css",
     "_vendored/icon-button/icon-button.css",
     "_vendored/page-foot/page-foot.css",
+    "_vendored/page-foot/restart-sheet.css",
     "_vendored/rec-wave/rec-wave.css",
     "_vendored/mic-notice/mic-notice.css",
 )
