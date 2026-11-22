@@ -65,7 +65,7 @@ nav = { src = "app/webapp/static/_vendored/nav", sha = "cb9fff9130453c781146f2cd
 select-native = { src = "app/webapp/static/_vendored/select-native", sha = "09fe2436b6bf3ee608d43fc8a26165e3e2400840", dest = "app/webapp/static/_vendored/select-native" }
 switch = { src = "app/webapp/static/_vendored/switch", sha = "8f15c49560adbc076d24a8a63dd671868ffa7a4e", dest = "app/webapp/static/_vendored/switch" }
 button = { src = "app/webapp/static/_vendored/button", sha = "53dd76e2d51869055b0abd18e8efe65d12534107", dest = "app/webapp/static/_vendored/button" }
-page-foot = { src = "app/webapp/static/_vendored/page-foot", sha = "fe8cc1bdbd038ed65947186248df13072eceb25a", dest = "app/webapp/static/_vendored/page-foot" }
+page-foot = { src = "app/webapp/static/_vendored/page-foot", sha = "3f1dcc76d5ba40c8b3d12a80a99659816ce1dd0e", dest = "app/webapp/static/_vendored/page-foot" }
 modal = { src = "app/webapp/static/_vendored/modal", sha = "713b1d1e36989440679ec4e415ff149b14d96c81", dest = "app/webapp/static/_vendored/modal" }
 sign-in = { src = "app/webapp/static/_vendored/sign-in", sha = "dbf47eb1bfe4aa2f9656db647520356536de14c8", dest = "app/webapp/static/_vendored/sign-in" }
 row-menu = { src = "app/webapp/static/_vendored/row-menu", sha = "a04abc7b3af872cbac974401dd0945587eac6cef", dest = "app/webapp/static/_vendored/row-menu" }
@@ -101,6 +101,7 @@ settings-group = { src = "app/webapp/static/_vendored/settings-group", sha = "75
 # Needs Node and ruff in the gate's venv; a detector that cannot run exits 3, which fails
 # the gate. Vendored copies are duplicates by design, so they are excluded. Procedure +
 # limits: project-scaffolding docs/static-ratchet.md.
+self_restart = { src = "src/self_restart.py", sha = "3f1dcc76d5ba40c8b3d12a80a99659816ce1dd0e", dest = "src/self_restart.py" }
 [static_ratchet]
 enabled  = true
 baseline = ".static-ratchet-baseline.json"

@@ -45,7 +45,7 @@ from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
 from app.webapp.audio import find_ffmpeg
-from app.webapp.middleware import BearerTokenMiddleware
+from app.webapp.middleware import BearerTokenMiddleware, require_authenticated
 from app.webapp.partial_worker import PartialWorker
 from app.webapp.routers import (
     activity,
@@ -67,7 +67,8 @@ from src.archive import SessionArchive
 from src.compression import StreamSafeGZipMiddleware
 from src.login_lockout import LoginLockout
 from src.polish import PolishClient
-from src.runtime_data import runtime_db_path
+from src.runtime_data import runtime_data_dir, runtime_db_path
+from src.self_restart import TRAY_RESTART, RestartTarget, restart_router
 from src.static_versioning import BuildInfo
 from src.usage_log import usage_router
 from src.webapp_config import WebappConfig, load_webapp_config, text_retention_days
@@ -186,6 +187,18 @@ async def _lifespan(app: FastAPI):
         pass
 
 
+def _mount_restart(app: FastAPI) -> None:
+    """The build readout's restart sheet: runs this repo's own `tray.bat --restart`.
+
+    Behind the same bearer gate as every other /api write (loopback bypasses it).
+    """
+    app.include_router(restart_router(
+        targets=[RestartTarget("app", "Restart app", TRAY_RESTART)],
+        status_dir=runtime_data_dir("voice-transcriber") / "restart",
+        guard=require_authenticated,
+    ))
+
+
 def create_app() -> FastAPI:
     """Build the FastAPI app — wired with all dependencies."""
     app_config = load_app_config()
@@ -263,6 +276,7 @@ def create_app() -> FastAPI:
             env_var="VT_USAGE_DB_PATH", create=True,
         ),
     ))
+    _mount_restart(app)
 
     logger.info(
         f"ℹ️  webapp build {BUILD_INFO.git_sha} "
