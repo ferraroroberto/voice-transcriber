@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "entries": [
+    {"key": "app/webapp/partial_worker.py", "counts": {"unwatched-loop": 1}},
+    {"key": "app/webapp/routers/sessions.py", "counts": {"default-pool": 8}},
+    {"key": "app/webapp/routers/task_os.py", "counts": {"default-pool": 1}},
+    {"key": "app/webapp/server.py", "counts": {"timing-middleware": 1}},
+    {"key": "app/webapp/static/level.js", "counts": {"fixed-rate-poll": 1, "poll-floor": 1}},
+    {"key": "src/process_supervisor.py", "counts": {"unwatched-loop": 1}},
+    {"key": "src/recorder.py", "counts": {"unwatched-loop": 1}}
+  ]
+}

@@ -22,6 +22,7 @@ voice-transcriber/
 │   ├── activity_log.py            # SQLite events log, 365-day retention
 │   ├── analytics.py               # today's take count / wpm / time-saved
 │   ├── usage_log.py               # vendored: local view/tap usage log (router + SQLite)
+│   ├── request_timing.py          # vendored: Server-Timing middleware and timed named pools (not yet wired in)
 │   ├── login_lockout.py           # vendored: per-client password lock-out + guessing alert
 │   ├── notify/                    # vendored: Telegram notifier (the guessing alert's transport)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
@@ -138,8 +139,11 @@ voice-transcriber/
 │   ├── ux_surface_ratchet.py      # vendored UX surface ratchet (data-surface ids, the map, its generated page)
 │   ├── ux_surface_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be read or closed) fails
 │   ├── ux_surface_map.py          # vendored generator for docs/ux-surface-map.md from docs/ux-surfaces.yaml
+│   ├── request_budget_ratchet.py  # vendored request budget ratchet (fixed-rate polls, short polls, unwatched loops, default-pool work, timing middleware)
+│   ├── request_budget_scan.py     # vendored JS and Python readers the request budget ratchet loads
+│   ├── request_budget_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be read or parsed) fails
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references, dead code and UX surface ratchets, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references, dead code, UX surface and request budget ratchets, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/

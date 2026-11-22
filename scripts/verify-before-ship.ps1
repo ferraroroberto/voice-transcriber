@@ -23,7 +23,9 @@
 # wired; exit 3 fails too), the UX surface ratchet (every surface root carries a
 # data-surface id with an entry in docs/ux-surfaces.yaml and the generated
 # docs/ux-surface-map.md is current, beyond .ux-surface-ratchet-baseline.json; exit 3
-# fails too), the non-e2e pytest suite, then
+# fails too), the request budget ratchet (no file's count of fixed-rate polls, short polls,
+# unwatched loops, default-pool work or a missing timing middleware above
+# .request-budget-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -177,6 +179,14 @@ try {
     Write-Host "==> ux surface ratchet (surface ids, the map and its page)..." -ForegroundColor Cyan
     & $python -m scripts.ux_surface_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "ux surface ratchet failed (an unmarked, unmapped, stale or duplicate surface, a stale map page, or a file could not be read)." }
+
+    # Request budget ratchet: a fixed-rate browser poll, a poll under 2 s, an unwatched
+    # server loop, a directory scan in a handler, default-pool work, a missing timing
+    # middleware. Call the wrapper: it maps exit 3 (a file could not be read or parsed) to a
+    # failure (tests/ratchets/test_ratchet_stages.py pins it). Whole tree, never routed.
+    Write-Host "==> request budget ratchet (polls, loops, pools, timing middleware)..." -ForegroundColor Cyan
+    & $python -m scripts.request_budget_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "request budget ratchet failed (a rule's hits rose, or a file could not be read or parsed)." }
 
     # Runtime write probe, first half: what already sits untracked or ignored under the
     # code folders, so the probe after the test runs names only what they wrote.
