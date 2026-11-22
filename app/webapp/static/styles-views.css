@@ -225,25 +225,10 @@
 /* Delete take below it is a 48px tint; a shorter Copy would leave the
    destructive control the largest one in the sheet. */
 .take-sheet-copy { height: 48px; min-height: 48px; }
-.take-sheet-action {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  min-height: var(--hit-min);
-  margin-top: var(--space-xs);
-  padding: 0;
-  font-family: var(--font);
-  font-size: var(--font-label);
-  font-weight: 600;
-  text-align: left;
-  color: var(--ink);
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-.take-sheet-action .icon { width: var(--icon-inline); height: var(--icon-inline); }
+/* A surface button's tap target grows 4px on each side, so the button
+   stacked under Copy needs an 8px gap. */
+.take-sheet-redo { margin-top: var(--space-sm); }
+.take-sheet-redo .icon { width: var(--icon-inline); height: var(--icon-inline); }
 /* The values read quieter than their labels (the modal styles every row
    span as a bold label). */
 .take-card .row .take-sheet-value {
