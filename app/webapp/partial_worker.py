@@ -45,7 +45,7 @@ class PartialWorker:
 
     ``transcribe`` runs whisper.cpp against a WAV path and returns text.
     ``transcode`` shells out to ffmpeg (raw.webm → WAV). Both are async
-    callables — wrap sync code with ``asyncio.to_thread`` at the call
+    callables — the call site runs sync code on a named thread pool
     site so this module stays transport-agnostic.
     """
 

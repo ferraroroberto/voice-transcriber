@@ -38,6 +38,7 @@ export function setupLevelMeter(stream, onAutoStop) {
     // 15 is a deliberate compromise; expose as a config knob later
     // if it needs per-mic tuning.
     const VAD_LOUDNESS_THRESHOLD = 15;
+    // request-budget-exempt: reads the local AnalyserNode every 80 ms for VAD auto-stop while a take records; it makes no server call (onAutoStop only stops the local recording), and the 80 ms cadence is what detects a speech pause
     state.levelTimer = setInterval(() => {
       analyser.getByteTimeDomainData(data);
       let max = 0;

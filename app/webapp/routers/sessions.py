@@ -26,6 +26,7 @@ from app.webapp.audio import (
     wav_duration_seconds,
 )
 from app.webapp.partial_worker import PartialWorker, encode_sse
+from app.webapp.route_pools import AUDIO_FILES, SERVICE_CALLS, run_on
 from app.webapp.routers._helpers import current_webapp_config, maybe_json
 from src import TranscriptionClient, TranscriptionError, activity_log, runtime_files
 from src.app_config import resolve_iso
@@ -306,8 +307,8 @@ async def _polish_and_persist(
     polish_client: PolishClient,
 ) -> Dict[str, Any]:
     try:
-        result = await asyncio.to_thread(
-            polish_client.polish, text, model=model, system=prompt.system,
+        result = await run_on(
+            SERVICE_CALLS, polish_client.polish, text, model=model, system=prompt.system,
         )
     except PolishError as exc:
         session.mark_polish_failed(model, str(exc), prompt_id=prompt.id)
@@ -591,8 +592,8 @@ async def _transcribe_session_payload(
     wav_path = session.wav_path()
 
     try:
-        await asyncio.to_thread(
-            transcode_to_wav, raw_path, wav_path, app_cfg.sample_rate,
+        await run_on(
+            AUDIO_FILES, transcode_to_wav, raw_path, wav_path, app_cfg.sample_rate,
         )
     except AudioToolMissing as exc:
         activity_log.record_event(
@@ -615,8 +616,8 @@ async def _transcribe_session_payload(
     # Silence gate — skip whisper entirely on near-silent audio so it
     # can't hallucinate "Thanks for watching" on an empty take.
     cfg: WebappConfig = current_webapp_config(request.app)
-    silent, dbfs = await asyncio.to_thread(
-        is_silent_wav, wav_path, cfg.silence_dbfs_threshold,
+    silent, dbfs = await run_on(
+        AUDIO_FILES, is_silent_wav, wav_path, cfg.silence_dbfs_threshold,
     )
     if silent:
         session.write_transcript("")
@@ -642,12 +643,12 @@ async def _transcribe_session_payload(
     # Quiet-environment gain boost — amplifies the take before whisper sees
     # it. Runs after the silence gate so the gate's calibration is unaffected.
     if cfg.gain_boost_enabled:
-        await asyncio.to_thread(apply_gain_to_wav, wav_path, cfg.gain_boost_db)
+        await run_on(AUDIO_FILES, apply_gain_to_wav, wav_path, cfg.gain_boost_db)
 
     client: TranscriptionClient = request.app.state.transcription_client
     try:
-        text = await asyncio.to_thread(
-            client.transcribe_file, wav_path, iso, translate,
+        text = await run_on(
+            SERVICE_CALLS, client.transcribe_file, wav_path, iso, translate,
         )
     except TranscriptionError as exc:
         session.meta.error = str(exc)
@@ -811,15 +812,15 @@ def _ensure_partial_worker(app: FastAPI, session) -> PartialWorker:
         # the boost unconditionally so partial and final transcripts share
         # the same audio quality.
         if cfg.gain_boost_enabled:
-            await asyncio.to_thread(apply_gain_to_wav, wav_path, cfg.gain_boost_db)
+            await run_on(AUDIO_FILES, apply_gain_to_wav, wav_path, cfg.gain_boost_db)
         iso = _resolve_iso_for_session()
-        return await asyncio.to_thread(
-            transcription_client.transcribe_file, wav_path, iso, False,
+        return await run_on(
+            SERVICE_CALLS, transcription_client.transcribe_file, wav_path, iso, False,
         )
 
     async def _transcode(src: Path, dst: Path) -> None:
-        await asyncio.to_thread(
-            transcode_to_wav, src, dst, app_cfg.sample_rate,
+        await run_on(
+            AUDIO_FILES, transcode_to_wav, src, dst, app_cfg.sample_rate,
         )
 
     effective_interval = interval if interval > 0 else 2.0
