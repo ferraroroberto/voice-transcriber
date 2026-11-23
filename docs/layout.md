@@ -142,8 +142,10 @@ voice-transcriber/
 │   ├── request_budget_ratchet.py  # vendored request budget ratchet (fixed-rate polls, short polls, unwatched loops, default-pool work, timing middleware)
 │   ├── request_budget_scan.py     # vendored JS and Python readers the request budget ratchet loads
 │   ├── request_budget_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be read or parsed) fails
+│   ├── windows_only_ratchet.py    # vendored windows-only ratchet (tests that need Windows without the windows_only marker or a platform guard)
+│   ├── windows_only_ratchet_gate.py # the gate's wrapper around it: exit 3 (a test module could not be read or parsed) fails
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
-│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references, dead code, UX surface and request budget ratchets, pytest, diff-routed disposable-instance e2e
+│   └── verify-before-ship.ps1     # pre-ship gate: byte-compile, static, docs, structure, conventions, comment, instruction, doc references, dead code, UX surface, request budget and windows-only ratchets, pytest, diff-routed disposable-instance e2e
 ├── archive/                       # gitignored runtime data — sessions
 └── vendor/                        # gitignored, populated by setup.bat
     └── whisper.cpp/
