@@ -204,6 +204,25 @@ def _mount_restart(app: FastAPI) -> None:
     ))
 
 
+def _add_middleware(app: FastAPI) -> None:
+    """The middleware stack, innermost first: bearer gate, request timing, gzip."""
+    # Read the token from the live config on every request so a rotation
+    # (/api/config patch or a config-file edit) takes effect without a restart.
+    app.add_middleware(
+        BearerTokenMiddleware,
+        get_token=lambda: current_webapp_config(app).auth_token,
+    )
+
+    # Wraps the bearer gate, so a 401 is timed too: every /api request gets a
+    # Server-Timing header and a slow one logs where its time went.
+    app.add_middleware(RequestTimingMiddleware)
+
+    # Registered last so it is the outermost layer: an auth 401 or a
+    # bodyless 304 passes through it unchanged. The one stream route
+    # (session SSE) is ``text/event-stream``, which it never compresses.
+    app.add_middleware(StreamSafeGZipMiddleware, bypass_paths=())
+
+
 def create_app() -> FastAPI:
     """Build the FastAPI app — wired with all dependencies."""
     app_config = load_app_config()
@@ -223,21 +242,7 @@ def create_app() -> FastAPI:
         lifespan=_lifespan,
     )
 
-    # Read the token from the live config on every request so a rotation
-    # (/api/config patch or a config-file edit) takes effect without a restart.
-    app.add_middleware(
-        BearerTokenMiddleware,
-        get_token=lambda: current_webapp_config(app).auth_token,
-    )
-
-    # Wraps the bearer gate, so a 401 is timed too: every /api request gets a
-    # Server-Timing header and a slow one logs where its time went.
-    app.add_middleware(RequestTimingMiddleware)
-
-    # Registered last so it is the outermost layer: an auth 401 or a
-    # bodyless 304 passes through it unchanged. The one stream route
-    # (session SSE) is ``text/event-stream``, which it never compresses.
-    app.add_middleware(StreamSafeGZipMiddleware, bypass_paths=())
+    _add_middleware(app)
 
     # Stash dependencies on app.state so handlers can reach them without
     # a global. This also keeps the module import-side-effect-free, which
