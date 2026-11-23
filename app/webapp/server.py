@@ -34,6 +34,7 @@ separate, much-longer-retention persistent activity log.
 from __future__ import annotations
 
 # Standard library imports
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -67,6 +68,7 @@ from src.archive import SessionArchive
 from src.compression import StreamSafeGZipMiddleware
 from src.login_lockout import LoginLockout
 from src.polish import PolishClient
+from src.request_timing import RequestTimingMiddleware, default_executor
 from src.runtime_data import runtime_data_dir, runtime_db_path
 from src.self_restart import TRAY_RESTART, RestartTarget, restart_router
 from src.static_versioning import BuildInfo
@@ -148,6 +150,9 @@ class CachingStaticFiles(StaticFiles):
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
     """Startup: prune archive older than retention window. Shutdown: close clients."""
+    # Any work still handed to the loop's own pool is timed under its name,
+    # so a request's Server-Timing shows it was not on a named pool.
+    asyncio.get_running_loop().set_default_executor(default_executor())
     cfg: WebappConfig = app.state.webapp_config
     archive: SessionArchive = app.state.archive
     try:
@@ -224,6 +229,10 @@ def create_app() -> FastAPI:
         BearerTokenMiddleware,
         get_token=lambda: current_webapp_config(app).auth_token,
     )
+
+    # Wraps the bearer gate, so a 401 is timed too: every /api request gets a
+    # Server-Timing header and a slow one logs where its time went.
+    app.add_middleware(RequestTimingMiddleware)
 
     # Registered last so it is the outermost layer: an auth 401 or a
     # bodyless 304 passes through it unchanged. The one stream route

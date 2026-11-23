@@ -8,12 +8,12 @@ its owner, and the phone may be outside the tailnet behind the tunnel.
 from __future__ import annotations
 
 # Standard library imports
-import asyncio
 from typing import Any, Dict
 
 # Third-party imports
 from fastapi import APIRouter, HTTPException, Request
 
+from app.webapp.route_pools import SERVICE_CALLS, run_on
 from app.webapp.routers._helpers import current_webapp_config
 from src.task_os import TaskOsError, send_to_task_os, session_external_id
 
@@ -35,8 +35,8 @@ async def send_take_to_task_os(session_id: str, request: Request) -> Dict[str, A
         raise HTTPException(status_code=404, detail=f"unknown session {session_id}")
     text = session.read_polished() or session.read_transcript() or ""
     try:
-        result = await asyncio.to_thread(
-            send_to_task_os, cfg.task_os_url, text, session_external_id(session_id),
+        result = await run_on(
+            SERVICE_CALLS, send_to_task_os, cfg.task_os_url, text, session_external_id(session_id),
         )
     except TaskOsError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc

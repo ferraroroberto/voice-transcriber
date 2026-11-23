@@ -212,6 +212,26 @@ enabled      = true
 baseline     = ".request-budget-ratchet-baseline.json"
 handler_dirs = ["app/webapp/routers"]
 
+# Server loops that run on purpose under 5 s. Each runs only while its job is
+# live (a take recording, a server starting), and its cadence is the product.
+[[request_budget.loops]]
+path       = "src/recorder.py"
+function   = "AudioRecorder._capture"
+interval_s = 0.05
+why        = "checks the stop event and reports the mic level while one take records; 50 ms is how fast a hotkey stop takes effect"
+
+[[request_budget.loops]]
+path       = "app/webapp/partial_worker.py"
+function   = "PartialWorker._run"
+interval_s = 2
+why        = "parks on the take's dirty event and sleeps only to debounce new chunks into one partial pass; the interval is the partial-transcript setting and the worker reaps itself when the take goes quiet"
+
+[[request_budget.loops]]
+path       = "src/process_supervisor.py"
+function   = "wait_until_ready"
+interval_s = 0.4
+why        = "polls a server it just started until it answers or its deadline passes; runs once per start, never after"
+
 # [comment_ratchet] -- the scaffold's baseline-and-ratchet for issue references in
 # product-code comments. The gate (scripts/verify-before-ship.ps1) runs
 # scripts/comment_ratchet.py through scripts/comment_ratchet_gate.py: a file's count of
