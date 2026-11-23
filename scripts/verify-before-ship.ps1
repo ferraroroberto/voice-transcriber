@@ -25,7 +25,9 @@
 # docs/ux-surface-map.md is current, beyond .ux-surface-ratchet-baseline.json; exit 3
 # fails too), the request budget ratchet (no file's count of fixed-rate polls, short polls,
 # unwatched loops, default-pool work or a missing timing middleware above
-# .request-budget-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .request-budget-ratchet-baseline.json; exit 3 fails too), the windows-only ratchet (no
+# test that needs Windows lacks the windows_only marker or a platform guard, beyond
+# .windows-only-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -187,6 +189,15 @@ try {
     Write-Host "==> request budget ratchet (polls, loops, pools, timing middleware)..." -ForegroundColor Cyan
     & $python -m scripts.request_budget_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "request budget ratchet failed (a rule's hits rose, or a file could not be read or parsed)." }
+
+    # Windows-only ratchet: a test that needs Windows with no `windows_only` marker or
+    # platform guard turns the Mac nightly red. Call the wrapper, never
+    # scripts/windows_only_ratchet.py: the wrapper maps exit 3 (a test module could not be
+    # read or parsed) to a failure (tests/ratchets/test_ratchet_stages.py pins it). Whole
+    # tree, never routed.
+    Write-Host "==> windows only ratchet (Windows-only tests carry the marker or a guard)..." -ForegroundColor Cyan
+    & $python -m scripts.windows_only_ratchet_gate
+    if ($LASTEXITCODE -ne 0) { Fail "windows only ratchet failed (an unmarked Windows-only test, or a test module could not be read or parsed)." }
 
     # Runtime write probe, first half: what already sits untracked or ignored under the
     # code folders, so the probe after the test runs names only what they wrote.

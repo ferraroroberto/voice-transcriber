@@ -84,6 +84,7 @@ ux_surface_map = { src = "scripts/ux_surface_map.py", sha = "adf0375e08a18633019
 request_budget_ratchet = { src = "scripts/request_budget_ratchet.py", sha = "4952ab7d1b1528548ebedaff72e2222fb0c27447", dest = "scripts/request_budget_ratchet.py" }
 request_budget_scan = { src = "scripts/request_budget_scan.py", sha = "5ba99b0a04b1b5d7b3689f8f7a59bd3fe625a9bc", dest = "scripts/request_budget_scan.py" }
 poll = { src = "app/webapp/static/_vendored/poll", sha = "4952ab7d1b1528548ebedaff72e2222fb0c27447", dest = "app/webapp/static/_vendored/poll" }
+windows_only_ratchet = { src = "scripts/windows_only_ratchet.py", sha = "5ba99b0a04b1b5d7b3689f8f7a59bd3fe625a9bc", dest = "scripts/windows_only_ratchet.py" }
 request_timing = { src = "src/request_timing.py", sha = "4952ab7d1b1528548ebedaff72e2222fb0c27447", dest = "src/request_timing.py" }
 single_instance = { src = "app/tray/single_instance.py", sha = "fe8cc1bdbd038ed65947186248df13072eceb25a", dest = "app/tray/single_instance.py" }
 compression = { src = "src/compression.py", sha = "d930466848d17d47261261c490c4e9c1cce9399e", dest = "src/compression.py" }
@@ -293,6 +294,18 @@ allow_refs = [":8000", ":8090", ":8091", ":9221"]
 [dead_code_ratchet]
 enabled  = true
 baseline = ".dead-code-ratchet-baseline.json"
+
+# [windows_only_ratchet] -- the scaffold's baseline-and-ratchet for the Mac nightly's
+# `windows_only` convention. The gate (scripts/verify-before-ship.ps1) runs
+# scripts/windows_only_ratchet.py: a test that touches a Windows-only module or API (or
+# plants a Windows install under a Windows-only variable) without the marker, a skipif on
+# the platform or a platform guard fails when its file's count rises above
+# .windows-only-ratchet-baseline.json. Exit 3 (a test module cannot be read or parsed)
+# fails the gate. Stdlib only, whole tree, never path-routed. Procedure + limits:
+# project-scaffolding docs/windows-only-ratchet.md.
+[windows_only_ratchet]
+enabled  = true
+baseline = ".windows-only-ratchet-baseline.json"
 
 # [ci.nightly] -- the Mac Mini nightly's settings for this repo (project-scaffolding
 # docs/mac-runner.md, "The [ci.nightly] table"). `samples` seeds the gitignored
