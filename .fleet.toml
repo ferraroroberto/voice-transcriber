@@ -82,6 +82,7 @@ usage_track_scan = { src = "scripts/usage_track_scan.py", sha = "c4a7afcb413fe88
 ux_surface_ratchet = { src = "scripts/ux_surface_ratchet.py", sha = "adf0375e08a186330196b8d6be7b8b51078a73ae", dest = "scripts/ux_surface_ratchet.py" }
 ux_surface_map = { src = "scripts/ux_surface_map.py", sha = "adf0375e08a186330196b8d6be7b8b51078a73ae", dest = "scripts/ux_surface_map.py" }
 request_budget_ratchet = { src = "scripts/request_budget_ratchet.py", sha = "4952ab7d1b1528548ebedaff72e2222fb0c27447", dest = "scripts/request_budget_ratchet.py" }
+request_budget_probe = { src = "tests/e2e/budget/_request_budget.py", sha = "2a65b20ee0b426fa8246bfc7ac3dd28e019a39b3", dest = "tests/e2e/budget/_request_budget.py" }
 request_budget_scan = { src = "scripts/request_budget_scan.py", sha = "5ba99b0a04b1b5d7b3689f8f7a59bd3fe625a9bc", dest = "scripts/request_budget_scan.py" }
 poll = { src = "app/webapp/static/_vendored/poll", sha = "4952ab7d1b1528548ebedaff72e2222fb0c27447", dest = "app/webapp/static/_vendored/poll" }
 windows_only_ratchet = { src = "scripts/windows_only_ratchet.py", sha = "5ba99b0a04b1b5d7b3689f8f7a59bd3fe625a9bc", dest = "scripts/windows_only_ratchet.py" }
@@ -487,3 +488,11 @@ ready_selector = "#recordHeadLine"
 name   = "take"
 module = "app/webapp/static/take.js"
 type   = "TAKE_STATES"
+
+# [request_budget] -- what the runtime check (tests/e2e/budget/_request_budget.py, run by
+# tests/e2e/test_request_budget.py) lets the main page read in one visible minute. Measured at
+# 8-9 requests (the load-time reads, the usage-log flush and the Services status poll); 10
+# leaves one tick of timing jitter and still trips on a second poll or a faster cadence.
+# Rules and why: project-scaffolding docs/polling-budget.md.
+[request_budget]
+visible_requests_per_minute = 10
