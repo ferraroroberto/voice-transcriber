@@ -70,10 +70,10 @@ def test_real_rules_route_representative_paths() -> None:
 
 def test_ratchet_baseline_routes_to_skip() -> None:
     cfg = load_config(REAL_FLEET_TOML)
-    assert classify([".static-ratchet-baseline.json"], cfg).tier == "skip"
-    assert classify([".docs-ratchet-baseline.json"], cfg).tier == "skip"
-    assert classify([".conventions-ratchet-baseline.json"], cfg).tier == "skip"
-    assert classify([".comment-ratchet-baseline.json"], cfg).tier == "skip"
-    assert classify([".instruction-ratchet-baseline.json"], cfg).tier == "skip"
-    assert classify([".doc-refs-ratchet-baseline.json"], cfg).tier == "skip"
-    assert classify([".dead-code-ratchet-baseline.json"], cfg).tier == "skip"
+    assert classify([".ratchets/static.json"], cfg).tier == "skip"
+    assert classify([".ratchets/docs.json"], cfg).tier == "skip"
+    assert classify([".ratchets/conventions.json"], cfg).tier == "skip"
+    assert classify([".ratchets/comment.json"], cfg).tier == "skip"
+    assert classify([".ratchets/instruction.json"], cfg).tier == "skip"
+    assert classify([".ratchets/doc-refs.json"], cfg).tier == "skip"
+    assert classify([".ratchets/dead-code.json"], cfg).tier == "skip"
