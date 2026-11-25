@@ -10,7 +10,6 @@ from __future__ import annotations
 # Standard library imports
 import hashlib
 import logging
-from typing import Any, Dict
 
 # Third-party imports
 from fastapi import APIRouter, HTTPException, Request
@@ -71,18 +70,6 @@ async def index(request: Request) -> Response:
     if _if_none_match_hits(request.headers.get("if-none-match", ""), headers["ETag"]):
         return Response(status_code=304, headers=headers)
     return HTMLResponse(html, headers=headers)
-
-
-@router.get("/healthz")
-async def healthz() -> Dict[str, Any]:
-    return {"ok": True, "service": "voice-transcriber-webapp"}
-
-
-@router.get("/api/version")
-async def version(request: Request) -> Dict[str, str]:
-    """Build identity so the phone (and tests) can confirm which build
-    is loaded."""
-    return request.app.state.build_info.as_dict()
 
 
 @router.get("/install-ca")
