@@ -20,7 +20,7 @@ selector loop's lack of subprocess support is a non-issue here.
 
 Wired into every place that spawns ``app.webapp.server:app`` under
 uvicorn -- ``--loop app.webapp.event_loop:selector_loop_factory`` for CLI
-invocations (``WebappManager._build_command``, ``webapp.bat``, the e2e
+invocations (``WebappManager._build_command``, ``scripts/webapp.bat``, the e2e
 autoboot spawn in ``tests/e2e/conftest.py``). Keep all of them pointed at
 the same dotted path below.
 

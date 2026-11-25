@@ -11,7 +11,7 @@ REM    scripts/server.bat logs
 REM ============================================================================
 
 setlocal
-set "SCRIPT_DIR=%~dp0..\"
+for %%I in ("%~dp0..") do set "SCRIPT_DIR=%%~fI\"
 set "VENV_PY=%SCRIPT_DIR%.venv\Scripts\python.exe"
 if not exist "%VENV_PY%" (
     echo [ERROR] .venv missing. Run setup.bat first.
@@ -20,5 +20,5 @@ if not exist "%VENV_PY%" (
 
 cd /d "%SCRIPT_DIR%" || exit /b 1
 
-"%VENV_PY%" launcher.py server %*
+"%VENV_PY%" scripts\launcher.py server %*
 exit /b %ERRORLEVEL%

@@ -1,9 +1,9 @@
-"""Standalone webapp launcher for ``webapp.bat`` -- headless boxes, dev
+"""Standalone webapp launcher for ``scripts/webapp.bat`` -- headless boxes, dev
 iteration, or running the webapp without the tray icon / global hotkey.
 
 Builds the exact same ``-m app.webapp.serve ...`` argv the tray's ``WebappManager``
 uses via ``app.webapp.manager.build_webapp_command`` and runs it in the
-foreground, inheriting this console. ``webapp.bat`` shells out to this module
+foreground, inheriting this console. ``scripts/webapp.bat`` shells out to this module
 instead of hand-writing the uvicorn argv itself, so a flag added to the tray's
 spawn path is never missing here.
 """
@@ -16,7 +16,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
-# Run directly as `python scripts/run_webapp.py` (see webapp.bat), so
+# Run directly as `python scripts/run_webapp.py` (see scripts/webapp.bat), so
 # sys.path[0] is this script's own directory, not the repo root -- `app`
 # isn't importable without this.
 if str(PROJECT_ROOT) not in sys.path:
@@ -40,10 +40,10 @@ def main() -> int:
         print(f"[INFO] HTTPS via {certs[0]}")
 
     cmd = [sys.executable] + build_webapp_command(HOST, PORT, certs)
-    # Foreground, console-visible spawn -- webapp.bat is a deliberately
+    # Foreground, console-visible spawn -- scripts/webapp.bat is a deliberately
     # interactive terminal session, so this inherits stdio rather than
     # suppressing the console window.
-    # no-window-exempt: webapp.bat is an interactive terminal session; the console is the UI
+    # no-window-exempt: scripts/webapp.bat is an interactive terminal session; the console is the UI
     # subprocess-timeout-exempt: foreground server that runs until the user stops it; no bound fits
     return subprocess.run(cmd, cwd=str(PROJECT_ROOT)).returncode
 

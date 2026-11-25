@@ -1,11 +1,11 @@
 """CLI entry point — dispatches subcommands.
 
 Examples:
-    python launcher.py record
-    python launcher.py transcribe path/to/file.wav
-    python launcher.py gui
-    python launcher.py tray
-    python launcher.py server start|stop|status|logs
+    python scripts/launcher.py record
+    python scripts/launcher.py transcribe path/to/file.wav
+    python scripts/launcher.py gui
+    python scripts/launcher.py tray
+    python scripts/launcher.py server start|stop|status|logs
 """
 
 from __future__ import annotations
@@ -61,7 +61,7 @@ def main(argv=None) -> int:
 
     # No subcommand given → day-to-day default is the tray. Lets Windows
     # shortcuts / Stream Deck / task-scheduler entries point at the bare
-    # `python launcher.py` without needing an explicit `tray` argument.
+    # `python scripts/launcher.py` without needing an explicit `tray` argument.
     if not args.command:
         args.command = "tray"
 

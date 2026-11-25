@@ -1,6 +1,6 @@
 """Start uvicorn + cloudflared on a named (persistent) tunnel.
 
-Used by `webapp_tunnel_named.bat` for headless / no-tray use. The
+Used by `scripts/webapp_tunnel_named.bat` for headless / no-tray use. The
 tray (`tray.bat`) already does this same work as part of normal
 startup — only reach for this script when running without the tray.
 
@@ -38,7 +38,7 @@ from typing import Optional
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Run directly as `python scripts/run_named_tunnel.py` (see
-# webapp_tunnel_named.bat), so sys.path[0] is this script's own directory,
+# scripts/webapp_tunnel_named.bat), so sys.path[0] is this script's own directory,
 # not the repo root -- `src` isn't importable without this.
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))

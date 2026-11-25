@@ -90,12 +90,12 @@ def test_e2e_autoboot_wires_loop_factory():
 
 
 def test_webapp_bat_delegates_to_run_webapp_module():
-    """webapp.bat (voice-transcriber#174) carries no uvicorn flag list of
+    """scripts/webapp.bat (voice-transcriber#174) carries no uvicorn flag list of
     its own — it shells out to scripts/run_webapp.py, which sources the
     argv from build_webapp_command (see
     test_run_webapp_delegates_to_shared_command_builder for the loop/proxy-
     headers wiring pin at that single source)."""
-    src = (_REPO_ROOT / "webapp.bat").read_text(encoding="utf-8")
+    src = (_REPO_ROOT / "scripts" / "webapp.bat").read_text(encoding="utf-8")
     assert "scripts\\run_webapp.py" in src
     assert "-m uvicorn" not in src
 

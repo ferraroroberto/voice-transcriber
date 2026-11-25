@@ -11,7 +11,7 @@ ladder, readiness wait):
   started uvicorn is left alone.
 
 Used by the tray (`app/tray/tray.py`) so launching `tray.bat` brings up
-the webapp alongside whisper-server. Standalone `webapp.bat` is the
+the webapp alongside whisper-server. Standalone `scripts/webapp.bat` is the
 "server only, no tray" alternative.
 """
 

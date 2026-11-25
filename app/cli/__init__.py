@@ -1,1 +1,1 @@
-"""argparse CLI dispatcher — `python launcher.py <command>`."""
+"""argparse CLI dispatcher — `python scripts/launcher.py <command>`."""
