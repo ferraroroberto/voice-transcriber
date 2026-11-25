@@ -66,6 +66,7 @@ from app.webapp.routers._helpers import (
 from src import activity_log, build_transcription_client, load_app_config
 from src.archive import SessionArchive
 from src.compression import StreamSafeGZipMiddleware
+from src.health_routes import health_router
 from src.login_lockout import LoginLockout
 from src.polish import PolishClient
 from src.request_timing import RequestTimingMiddleware, default_executor
@@ -273,6 +274,8 @@ def create_app() -> FastAPI:
             name="static",
         )
 
+    # The fleet's standard liveness and build identity routes (vendored).
+    app.include_router(health_router(service="voice-transcriber-webapp", identity=BUILD_INFO.as_dict()))
     app.include_router(misc.router)
     app.include_router(config.router)
     app.include_router(auth.router)
