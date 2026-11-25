@@ -38,6 +38,8 @@ config/vocabulary.json
 config/snippets.json
 config/speaker_blocklist.json
 config/disfluencies.json
+# Backup the installer leaves beside a settings file it topped up (src/installer.py).
+config/*.bak-*
 
 # --- Webapp runtime data --------------------------------------------------
 archive/

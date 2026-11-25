@@ -11,14 +11,16 @@ the cuBLAS prebuilt), falls back to CPU cleanly.
 
 Self-contained: clone the repo, run `setup.bat`, and the whisper.cpp
 binary + `ggml-large-v3-turbo.bin` model are downloaded into `vendor/`
-and used from there — no shared system install required.
+and used from there — no shared system install required. Moving to
+another PC, updating, migrating an existing install and uninstalling:
+[docs/install.md](docs/install.md).
 
 ## 🚀 Quickstart
 
 ```bat
 git clone <this-repo>
 cd voice-transcriber
-setup.bat                 :: creates .venv, installs deps, fetches whisper.cpp + model
+setup.bat                 :: creates .venv, installs deps, creates configs, fetches whisper.cpp + model, prints a checklist
 tray.bat                  :: system-tray mode, global hotkey F8 (tap = toggle, hold = push-to-talk)
 ```
 
@@ -34,7 +36,7 @@ server it started.
 | `scripts\webapp.bat`     | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
 | `scripts\webapp_tunnel_named.bat` | Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See [Persistent URL via Cloudflare tunnel](docs/remote-access.md#persistent-url-via-cloudflare-tunnel) for the one-time setup. |
 | `scripts\server.bat start / stop / status / logs` | Direct control of the whisper-server process.      |
-| `setup.bat`              | One-shot installer (venv + deps + whisper.cpp + ggml model).             |
+| `setup.bat`              | Installer and top-up, safe to rerun (venv + deps + configs + whisper.cpp + ggml model); `-WhatIf` changes nothing. |
 
 Or use the Python entry point directly:
 
@@ -69,6 +71,7 @@ One line per feature; each links to its reference doc.
 
 | Topic | What it covers |
 |---|---|
+| [Install, update and move](docs/install.md) | `setup.bat` on a fresh PC, the update commands, migrating from an existing install (which ignored configs, state and certificates to carry over), uninstall |
 | [Configuration](docs/configuration.md) | `config/config.json`, the optional companion files (vocabulary, snippets, speaker blocklist, disfluencies), `config/whisper_server.yaml` (`local` vs `external` mode), which model is serving, GPU / CPU build choice, first-run checklist |
 | [Repository layout](docs/layout.md) | The `src/` (logic) + `app/` (UI surfaces) tree, file by file, the declared `webapp-tray` shape and its exceptions |
 | [Mobile web app](docs/webapp-usage.md) | Where to launch from, local HTTPS cert, iPhone Home Screen install, daily use, Append / Incognito / Tk controls, silence skip, gain boost, text size, rolling transcription, auto-stop, switching apps, the status line |
