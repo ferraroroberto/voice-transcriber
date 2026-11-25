@@ -61,7 +61,7 @@ voice-transcriber/
 │       ├── server.py              # wiring: create_app(), lifespan, static mount
 │       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
 │       ├── middleware.py          # bearer-token auth, loopback bypass
-│       ├── audio.py               # ffmpeg webm->wav transcode
+│       ├── audio.py               # ffmpeg webm->wav transcode (PCM WAV copied as-is)
 │       ├── partial_worker.py      # rolling ~2s partial transcription
 │       ├── event_loop.py          # selector event-loop shim (Windows :8443 wedge fix)
 │       ├── routers/               # sessions · auth · config · misc · activity · analytics
