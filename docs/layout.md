@@ -4,7 +4,7 @@ The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — 
 
 ```
 voice-transcriber/
-├── setup.bat                      # one-shot: venv + pip + whisper.cpp + model
+├── setup.bat                      # runs src/installer.py (venv, deps, configs, whisper.cpp + model, checklist)
 ├── tray.bat                       # default daily launcher (boots whisper + webapp + Cloudflare tunnel)
 ├── requirements.txt
 ├── .gitignore
@@ -21,6 +21,7 @@ voice-transcriber/
 │   ├── usage_log.py               # vendored: local view/tap usage log (router + SQLite)
 │   ├── request_timing.py          # vendored: Server-Timing middleware and timed named pools (not yet wired in)
 │   ├── login_lockout.py           # vendored: per-client password lock-out + guessing alert
+│   ├── installer.py               # vendored: the clone-and-setup installer setup.bat runs (stdlib only; docs/install.md)
 │   ├── notify/                    # vendored: Telegram notifier (the guessing alert's transport)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
 │   ├── vocabulary.py              # per-language vocab prompts + hot-reload
@@ -93,6 +94,7 @@ voice-transcriber/
 │   ├── webapp_config.json         # gitignored — polish model/style, retention, mic prefs
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
+│   ├── install.md                 # fresh PC, update, migrate from an existing install, uninstall
 │   ├── configuration.md           # config.json, whisper_server.yaml, model, GPU/CPU, first run
 │   ├── layout.md                  # this tree
 │   ├── webapp-usage.md            # mobile web app: setup, daily use, per-feature behaviour
@@ -115,6 +117,7 @@ voice-transcriber/
 │   ├── server.bat                 # raw whisper-server start|stop|status|logs
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF
+│   ├── setup_assets.py            # the installer's dependency step: both fetches in order
 │   ├── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
 │   ├── gen_token.py               # generate/rotate/clear the bearer auth token
 │   ├── gen_app_icons.py           # regenerate PWA/favicon/Stream Deck icons from the fleet brand SVG

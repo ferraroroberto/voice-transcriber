@@ -32,6 +32,46 @@ not_applicable = true
 reason         = "the self-signed cert serves loopback SANs for getUserMedia, which a tailscale cert leaf cannot; remote access is Cloudflare-only"
 disproof       = "https://github.com/ferraroroberto/voice-transcriber/issues/151"
 
+# The clone-and-setup installer (src/installer.py, run by setup.bat; docs/install.md).
+# Only config/webapp_config.json is topped up with new keys: it is the one config
+# the app rewrites. The four companion lists are the owner's own and are created
+# from their samples when missing, never rewritten. config/config.json,
+# polish_prompts.json and whisper_server.yaml are tracked, so they are not targets.
+# webapp/cloudflared.yml is deliberately no target: its sample holds a placeholder
+# tunnel, which the tray would try to run. It is the owner's own file (docs/install.md).
+[install]
+requirements = "requirements.txt"
+samples      = ["config"]
+settings     = ["config/webapp_config.json"]
+
+# `python -m src.password status` always exits 0, so the checklist reads the
+# hash file itself: the file exists exactly when a hash is stored.
+# Fetches whisper.cpp and the ggml model into vendor/; the script returns at once
+# when both are there. It reruns when it or the server config (model path) changes.
+[install.deps]
+command = ["{python}", "scripts/setup_assets.py"]
+inputs  = ["config/whisper_server.yaml", "scripts/setup_assets.py"]
+
+[[install.check]]
+name  = "Sign-in password"
+paths = ["config/app_password.json"]
+hint  = "set one with: .venv\\Scripts\\python.exe -m src.password set"
+
+[[install.check]]
+name  = "HTTPS certificate"
+paths = ["webapp/certificates/cert.pem", "webapp/certificates/key.pem"]
+hint  = "run: .venv\\Scripts\\python.exe scripts\\gen_ssl_cert.py"
+
+[[install.check]]
+name  = "whisper.cpp server"
+paths = ["vendor/whisper.cpp/whisper-server.exe"]
+hint  = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
+
+[[install.check]]
+name  = "ggml model"
+paths = ["vendor/whisper.cpp/models/ggml-large-v3-turbo.bin"]
+hint  = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
+
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "tests/e2e/_e2e_live_guard.py" }
 surface_capture = { src = "tests/e2e/_surface.py", sha = "5c4d3a7947dae8b3b4a028bf636c0f052ea3b1f7", dest = "tests/e2e/_surface.py" }
@@ -113,6 +153,7 @@ build_info = { src = "src/build_info.py", sha = "1c1007fcd0b65b54342779250cb6697
 health_routes = { src = "src/health_routes.py", sha = "732c304a4735d4e654f5acb3b6f53b7db67d47ef", dest = "src/health_routes.py" }
 restart_check = { src = "src/restart_check.py", sha = "f8c2f66eae7a69f3c834386579702ed5b747d7af", dest = "src/restart_check.py" }
 ratchet_baseline = { src = "scripts/ratchet_baseline.py", sha = "48db2132dab2dfc38b6154948ca17fd1f4b9232f", dest = "scripts/ratchet_baseline.py" }
+installer = { src = "src/installer.py", sha = "c23c5bf575a3f375a4ddbfb99a31763a80c6bee5", dest = "src/installer.py" }
 
 [static_ratchet]
 enabled  = true
