@@ -12,7 +12,7 @@
 #   3. cloudflared tunnel route dns voice voice.<your-domain>
 #   4. Copy this file to webapp/cloudflared.yml and edit `tunnel:` and
 #      `hostname:` to match.
-#   5. webapp_tunnel_named.bat
+#   5. scripts\webapp_tunnel_named.bat
 #
 # See docs/remote-access.md → "Persistent URL via Cloudflare tunnel" for the
 # full walkthrough including the Cloudflare Access policy.

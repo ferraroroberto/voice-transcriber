@@ -152,7 +152,7 @@ def main() -> int:
 
     logger.info("")
     logger.info("✅ Done. Next steps:")
-    logger.info(f"   • Restart webapp.bat / tray.bat — uvicorn will pick up the new cert.")
+    logger.info(f"   • Restart scripts\\webapp.bat / tray.bat — uvicorn will pick up the new cert.")
     logger.info(f"   • iOS: open  https://<host>:8443/install-ca")
     logger.info(f"     then Settings → General → VPN & Device Management → install profile,")
     logger.info(f"     then Settings → General → About → Certificate Trust Settings → enable.")

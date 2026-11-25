@@ -7,7 +7,7 @@ REM  Starts the webapp on :8443 (HTTPS if cert exists) and a *named* Cloudflare
 REM  tunnel using webapp/cloudflared.yml so the public URL stays the same on
 REM  every launch. Bookmark once, forever.
 REM
-REM  One-time setup (run from this directory):
+REM  One-time setup (run from the repo root):
 REM    cloudflared tunnel login
 REM    cloudflared tunnel create voice
 REM    cloudflared tunnel route dns voice voice.your-domain.example
@@ -22,7 +22,7 @@ REM  Press Ctrl+C to stop both.
 REM ============================================================================
 
 setlocal
-set "SCRIPT_DIR=%~dp0"
+for %%I in ("%~dp0..") do set "SCRIPT_DIR=%%~fI\"
 set "VENV_PY=%SCRIPT_DIR%.venv\Scripts\python.exe"
 
 if not exist "%VENV_PY%" (

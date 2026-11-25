@@ -12,7 +12,7 @@ the local LLM hub (filler-word removal, no rephrasing).
 |---|---|---|
 | Sitting at the PC | `tray.bat` (or already running) | `https://127.0.0.1:8443`, or tray → **📋 Copy local URL** |
 | Anywhere else (phone, work PC, hotel Wi-Fi) | `tray.bat` on the home PC | Your bookmarked Cloudflare URL, e.g. `https://voice.<your-domain>` — tray → **📋 Copy Cloudflare URL** |
-| Headless box / dev | `webapp.bat` (no tunnel) or `webapp_tunnel_named.bat` (with tunnel) | `https://127.0.0.1:8443` / your Cloudflare URL |
+| Headless box / dev | `scripts\webapp.bat` (no tunnel) or `scripts\webapp_tunnel_named.bat` (with tunnel) | `https://127.0.0.1:8443` / your Cloudflare URL |
 
 The tray launches whisper-server, the webapp, and (if
 `webapp/cloudflared.yml` exists) cloudflared too. One launch covers

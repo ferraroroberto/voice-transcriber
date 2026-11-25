@@ -135,6 +135,7 @@ still covers the same logic via the parity port in
 | `tests\webapp\test_design_review_synthetic_isolation.py` | The design-review synthetic instance's spawn environment keeps the archive and the activity database inside its temp state dir, checked in a fresh interpreter |
 | `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths); `/api/login` lock-out on a fake clock (401s, then 429 with `Retry-After`, success after the wait, the PC never locked) and the guessing alert on a fake notifier (once per streak, no secrets in the text) |
 | `tests\webapp\test_webapp_restart.py` | The build readout's `/api/restart` route: lists the one tray recipe, refuses a remote caller without the token and a cross-origin POST, refuses when the middleware is missing; never posts a same-origin restart |
+| `tests\webapp\test_root_launchers.py` | The launchers live in `scripts/`: the root holds none of them, `tray.bat`'s process match finds both the old and new spelling and launches `scripts\launcher.py`, each moved `.bat` finds the repo root, and the launcher prints a usage line for a bad command |
 | `tests\test_access_guards.py` | Pre-publish request gates — `publish_refusal_reason` blocks cloudflared from spawning while `auth_token` is empty |
 | `tests\webapp\test_webapp_api_activity.py` | `GET /api/activity` — persistent activity log API |
 | `tests\webapp\test_webapp_api_analytics.py` | `GET /api/analytics/summary` — usage analytics API |

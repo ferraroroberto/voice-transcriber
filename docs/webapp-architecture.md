@@ -83,8 +83,8 @@ Three launch surfaces, **identical feature surface**:
 | Launcher | What it spawns | Used when |
 |---|---|---|
 | `tray.bat` | whisper + webapp + tray icon + hotkey | Daily driver |
-| `webapp.bat` | webapp only (adopts whisper if running) | Headless box, dev mode |
-| `python launcher.py …` | CLI entry point — `tray`, `gui`, `record`, `transcribe`, `server` | Scripting / Stream Deck |
+| `scripts\webapp.bat` | webapp only (adopts whisper if running) | Headless box, dev mode |
+| `python scripts/launcher.py …` | CLI entry point — `tray`, `gui`, `record`, `transcribe`, `server` | Scripting / Stream Deck |
 
 ## Layout — aligned with the monorepo
 
@@ -151,7 +151,7 @@ console.
 
 ## Bearer-token auth for the public tunnel
 
-`webapp_tunnel_named.bat` puts the recorder on a persistent
+`scripts\webapp_tunnel_named.bat` puts the recorder on a persistent
 `https://<your-domain>` URL. Anyone who guesses or intercepts that
 URL while the tunnel is up can record / transcribe / polish on the home
 PC, burning local hardware and (for the `claude-*` models) Claude

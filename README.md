@@ -31,20 +31,20 @@ server it started.
 | Command                  | What it does                                                              |
 |--------------------------|---------------------------------------------------------------------------|
 | `tray.bat`               | Resident tray icon + global hotkey (default: `F8` — **tap to toggle**, **hold ≥ 600 ms for push-to-talk**). Result auto-pastes at the caret in the focused window. Day-to-day default. Also boots whisper-server, the webapp on `:8443`, and the Cloudflare tunnel (when `webapp/cloudflared.yml` exists). |
-| `webapp.bat`             | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
-| `webapp_tunnel_named.bat`| Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See [Persistent URL via Cloudflare tunnel](docs/remote-access.md#persistent-url-via-cloudflare-tunnel) for the one-time setup. |
+| `scripts\webapp.bat`     | Standalone FastAPI webapp on `https://127.0.0.1:8443` — for headless / dev use. The tray spawns this for you in normal use. |
+| `scripts\webapp_tunnel_named.bat` | Webapp + Cloudflare named tunnel without the tray — for headless boxes. Tray.bat already covers this in normal use. See [Persistent URL via Cloudflare tunnel](docs/remote-access.md#persistent-url-via-cloudflare-tunnel) for the one-time setup. |
 | `scripts\server.bat start / stop / status / logs` | Direct control of the whisper-server process.      |
 | `setup.bat`              | One-shot installer (venv + deps + whisper.cpp + ggml model).             |
 
 Or use the Python entry point directly:
 
 ```bash
-.venv/Scripts/python.exe launcher.py  # defaults to tray
-.venv/Scripts/python.exe launcher.py tray
-.venv/Scripts/python.exe launcher.py record [--language MODE] [--start-server]
-.venv/Scripts/python.exe launcher.py transcribe <file> [--language MODE]
-.venv/Scripts/python.exe launcher.py gui
-.venv/Scripts/python.exe launcher.py server start|stop|status|logs
+.venv/Scripts/python.exe scripts/launcher.py  # defaults to tray
+.venv/Scripts/python.exe scripts/launcher.py tray
+.venv/Scripts/python.exe scripts/launcher.py record [--language MODE] [--start-server]
+.venv/Scripts/python.exe scripts/launcher.py transcribe <file> [--language MODE]
+.venv/Scripts/python.exe scripts/launcher.py gui
+.venv/Scripts/python.exe scripts/launcher.py server start|stop|status|logs
 ```
 
 All subcommands accept `--debug` and `--config path/to/config.json`.

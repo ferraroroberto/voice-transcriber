@@ -4,11 +4,8 @@ The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — 
 
 ```
 voice-transcriber/
-├── launcher.py                    # entry point (python launcher.py tray|record|gui|…)
 ├── setup.bat                      # one-shot: venv + pip + whisper.cpp + model
 ├── tray.bat                       # default daily launcher (boots whisper + webapp + Cloudflare tunnel)
-├── webapp.bat                     # standalone FastAPI webapp launcher (no tunnel)
-├── webapp_tunnel_named.bat        # webapp + named Cloudflare tunnel, no tray (headless use)
 ├── requirements.txt
 ├── .gitignore
 ├── src/                           # ── LOGIC layer (no UI imports) ──
@@ -112,6 +109,9 @@ voice-transcriber/
 │   ├── iphone-debugging.md        # iOS PWA / cert troubleshooting
 │   └── market-scan/               # market research notes
 ├── scripts/
+│   ├── launcher.py                # entry point (python scripts/launcher.py tray|record|gui|…)
+│   ├── webapp.bat                 # standalone FastAPI webapp launcher (no tunnel)
+│   ├── webapp_tunnel_named.bat    # webapp + named Cloudflare tunnel, no tray (headless use)
 │   ├── server.bat                 # raw whisper-server start|stop|status|logs
 │   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF

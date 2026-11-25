@@ -150,6 +150,6 @@ Tray menu items for sharing the URL:
   what to paste on the phone or share. Both URLs include
   `?token=…` automatically when bearer-token auth is enabled.
 
-For headless / no-tray use, `webapp_tunnel_named.bat` does the same
+For headless / no-tray use, `scripts\webapp_tunnel_named.bat` does the same
 work in one foreground process.
 
