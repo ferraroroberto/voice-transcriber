@@ -363,10 +363,15 @@ ffmpeg sniffs the actual format at transcode time. Send a truthful
 If you're a non-browser consumer with arbitrary audio, anything ffmpeg
 can decode works for the single-shot `/upload` path.
 
-> ffmpeg must be on `PATH` or in `vendor/ffmpeg/` for any transcode to
-> succeed. The webapp logs a warning at boot if it's missing;
-> `/finish` and `/upload` return `503` until it's installed
-> (`winget install Gyan.FFmpeg`).
+> ffmpeg must be on `PATH` or in `vendor/ffmpeg/` to transcode webm, mp4
+> or any other container. The webapp logs a warning at boot if it's
+> missing; `/finish` and `/upload` return `503` for those until it's
+> installed (`winget install Gyan.FFmpeg`).
+>
+> A take that is already **16 kHz mono 16-bit PCM WAV** needs no ffmpeg:
+> the server reads the header (never the file extension) and copies it.
+> A streamed take may be one open-ended WAV (RIFF and data lengths
+> `0xFFFFFFFF` or 0); its length is taken from the bytes received.
 
 ---
 

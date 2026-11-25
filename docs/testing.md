@@ -99,7 +99,7 @@ still covers the same logic via the parity port in
 | `tests\test_archive.py` | Dated session folders, hydrate, cleanup |
 | `tests\test_activity_log.py` | Persistent SQLite events log — record, read, count, prune-older-than |
 | `tests\test_analytics.py` | Today's usage summary — take count / wpm / time-saved, derived from the activity log |
-| `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows |
+| `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows and the PCM WAV no-ffmpeg passthrough |
 | `tests\test_event_loop.py` | Selector event-loop shim wiring + accept-loop resilience — root cause of the :8443 wedge |
 | `tests\test_probe_cache.py` | `ProbeCache` on a fake clock and a stuck probe — fresh/stale/too-old reads, a probe that has not answered is unknown (never up or down), one probe in flight at a time, a failing probe stays unknown |
 | `tests\test_process_supervisor.py` | Shared adopt-or-spawn primitives — TCP probe, ownership ladder, spawn recipe, stop ladder, readiness poll, and a guard that neither manager calls `Popen` itself — composed by both `WhisperServerManager` and `WebappManager` |
@@ -144,6 +144,7 @@ still covers the same logic via the parity port in
 | `tests\webapp\test_webapp_api_usage.py` | The vendored usage log mounted in the webapp — events land in the app's own usage SQLite file behind the bearer-token gate |
 | `tests\webapp\test_webapp_compression.py` | The stream-safe gzip middleware wiring — it's the outermost layer, and the session SSE feed still delivers its first chunk at once |
 | `tests\webapp\test_webapp_finish_partial.py` | `POST /api/sessions/{id}/finish`'s rolling-partial shortcut — serves the worker's last partial instead of a final whisper pass, plus the served-by stamp it leaves; a translate or different-language request falls through to the real transcription path |
+| `tests\webapp\test_webapp_pcm_wav_no_ffmpeg.py` | A closed or open-ended 16 kHz mono PCM WAV take (upload, or streamed chunks then finish) transcribes with ffmpeg absent; a webm take still returns 503 |
 | `tests\test_orphan_css.py` | Every class a first-party `styles*.css` selector names is used by the static HTML/JS or the Python emitting markup (an orphaned rule fails) |
 | `tests\test_static_app_js.py` | `polishModelLabel` parity + source pins across the static/ JS module graph |
 | `tests\test_take_lifecycle.py` | The take lifecycle in `take.js`, run under Node: every legal move is taken and every other move is refused with one console error and no change; `state.mode` is written only by `take.js` and no reader compares it to a string. The recorder-level exits (self-stop, a throwing `MediaRecorder`, a failed session create, a denied mic) are the Vitest table in `app/webapp/static/__tests__/take.test.js` |
