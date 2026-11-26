@@ -1,6 +1,6 @@
 """`scripts/install_whisper_cpp.py`: which release asset it picks, and `--from`.
 
-`fixtures/whisper_cpp_releases.json` is a trimmed recording of upstream's
+`tests/fixtures/whisper_cpp_releases.json` is a trimmed recording of upstream's
 release list: version tags with no assets (the first is what `releases/latest`
 returns), and build releases carrying either CUDA naming scheme. Nothing here
 reaches the network or runs a real binary.
@@ -21,7 +21,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RELEASES = json.loads(
-    (Path(__file__).parent / "fixtures" / "whisper_cpp_releases.json").read_text(encoding="utf-8")
+    (REPO_ROOT / "tests" / "fixtures" / "whisper_cpp_releases.json").read_text(encoding="utf-8")
 )
 
 CUDA_NEW = "whisper-bin-win-cuda-12.4.0-x64.zip"

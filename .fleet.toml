@@ -423,7 +423,7 @@ extensions = ["py"]
 
 [[e2e.rule]]             # recorded data the installer unit tests read -> none
 tier       = "none"
-prefix     = "tests/install/"
+prefix     = "tests/fixtures/"
 extensions = ["json"]
 
 [[e2e.rule]]             # tooling scripts (incl. this classifier) -> none
