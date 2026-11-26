@@ -6,7 +6,7 @@ Voice Transcriber moves to another Windows PC the way any app in the toolbox doe
 
 - Windows 10 or 11, `git`, and Python 3.11 or newer (the `py` launcher, or `python` on `PATH`).
 - A microphone, and about 2 GB of free disk for `vendor/` (the whisper.cpp release and the `ggml-large-v3-turbo.bin` model).
-- Optional: an NVIDIA GPU (the prebuilt cuBLAS server is chosen automatically, else the CPU build), `cloudflared` for remote access ([remote access](remote-access.md)), and the `local-llm-hub` on `:8000` for the primary transcription path (the app falls back to its own whisper-server when the hub is down).
+- Optional: an NVIDIA GPU (the prebuilt CUDA server is chosen automatically, else the CPU build), `cloudflared` for remote access ([remote access](remote-access.md)), and the `local-llm-hub` on `:8000` for the primary transcription path (the app falls back to its own whisper-server when the hub is down).
 
 ## Fresh PC
 
@@ -29,7 +29,7 @@ The checklist names what still needs you:
 
 - **Sign-in password:** `.\.venv\Scripts\python.exe -m src.password set`. Only needed when the webapp is reachable from other devices ([remote access](remote-access.md)). The item reads the stored hash: `ok` when a usable one (or the legacy `auth_password`) is there, `missing` when none is, an empty or corrupt `config/app_password.json` included, and `unknown` when a file it needs cannot be read.
 - **HTTPS certificate:** `.\.venv\Scripts\python.exe scripts\gen_ssl_cert.py`. It writes `webapp/certificates/` and installs the CA into the Windows user trust store; restart the tray afterwards. A phone that trusted the old CA has to install the new profile again ([iPhone debugging](iphone-debugging.md)).
-- **whisper.cpp server / ggml model:** `setup.bat` fetches both; if the checklist still says `missing`, the fetch failed (read its output above the checklist), and `.\.venv\Scripts\python.exe scripts\setup_assets.py` retries it.
+- **whisper.cpp server / ggml model:** `setup.bat` fetches both; if the checklist still says `missing`, the fetch failed (read its output above the checklist), and `.\.venv\Scripts\python.exe scripts\setup_assets.py` retries it. When the PC cannot download it and already has a working copy, `.\.venv\Scripts\python.exe scripts\install_whisper_cpp.py --from <OTHER FOLDER>\vendor\whisper.cpp` copies that copy (and its models) in instead ([GPU / CPU compatibility](configuration.md#-gpu--cpu-compatibility)).
 
 Remote access is not part of `setup.bat`: it needs your Cloudflare account. Follow [Persistent URL via Cloudflare tunnel](remote-access.md#persistent-url-via-cloudflare-tunnel) to create `webapp/cloudflared.yml`; without that file the tray simply skips the tunnel.
 

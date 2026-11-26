@@ -421,6 +421,11 @@ tier       = "none"
 prefix     = "tests/"
 extensions = ["py"]
 
+[[e2e.rule]]             # recorded data the installer unit tests read -> none
+tier       = "none"
+prefix     = "tests/install/"
+extensions = ["json"]
+
 [[e2e.rule]]             # tooling scripts (incl. this classifier) -> none
 tier       = "none"
 prefix     = "scripts/"

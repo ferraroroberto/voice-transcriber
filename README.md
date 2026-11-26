@@ -7,7 +7,7 @@ fallback when the hub is unreachable (see `transcribe_base_url` in
 [configuration](docs/configuration.md)).
 Designed as a drop-in WhisperFlow replacement: tray-resident app, global
 hotkey, instant record → transcribe → clipboard. CUDA on by default (via
-the cuBLAS prebuilt), falls back to CPU cleanly.
+the CUDA prebuilt), falls back to CPU cleanly.
 
 Self-contained: clone the repo, run `setup.bat`, and the whisper.cpp
 binary + `ggml-large-v3-turbo.bin` model are downloaded into `vendor/`

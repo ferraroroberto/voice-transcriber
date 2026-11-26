@@ -115,7 +115,7 @@ voice-transcriber/
 │   ├── webapp.bat                 # standalone FastAPI webapp launcher (no tunnel)
 │   ├── webapp_tunnel_named.bat    # webapp + named Cloudflare tunnel, no tray (headless use)
 │   ├── server.bat                 # raw whisper-server start|stop|status|logs
-│   ├── install_whisper_cpp.py     # download prebuilt cuBLAS whisper.cpp
+│   ├── install_whisper_cpp.py     # download (or --from copy) a prebuilt whisper.cpp
 │   ├── download_model.py          # fetch ggml model from HF
 │   ├── setup_assets.py            # the installer's dependency step: both fetches in order
 │   ├── gen_ssl_cert.py            # self-signed CA + iOS .mobileconfig
