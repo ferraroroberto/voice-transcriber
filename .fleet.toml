@@ -44,18 +44,19 @@ requirements = "requirements.txt"
 samples      = ["config"]
 settings     = ["config/webapp_config.json"]
 
-# `python -m src.password status` always exits 0, so the checklist reads the
-# hash file itself: the file exists exactly when a hash is stored.
 # Fetches whisper.cpp and the ggml model into vendor/; the script returns at once
 # when both are there. It reruns when it or the server config (model path) changes.
 [install.deps]
 command = ["{python}", "scripts/setup_assets.py"]
 inputs  = ["config/whisper_server.yaml", "scripts/setup_assets.py"]
 
+# The status probe reads the stored hash, not just the file: exit 0 stored, 1 none or unusable, 2 unreadable.
+# --legacy counts the old plaintext value the login route still honours. It runs as a file, not
+# `-m`: that imports the src package first, whose missing dependency would exit 1 and read as no password.
 [[install.check]]
-name  = "Sign-in password"
-paths = ["config/app_password.json"]
-hint  = "set one with: .venv\\Scripts\\python.exe -m src.password set"
+name    = "Sign-in password"
+command = ["{python}", "src/password.py", "status", "--legacy", "config/webapp_config.json", "auth_password"]
+hint    = "set one with: .venv\\Scripts\\python.exe -m src.password set"
 
 [[install.check]]
 name  = "HTTPS certificate"
