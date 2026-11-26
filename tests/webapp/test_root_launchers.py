@@ -26,8 +26,8 @@ def _tray_bat() -> str:
 
 
 def _tray_match() -> re.Pattern[str]:
-    found = re.search(r'-TrayMatch "([^"]+)"', _tray_bat())
-    assert found, "tray.bat passes no -TrayMatch"
+    found = re.search(r'set "TRAY_MATCH=([^"]+)"', _tray_bat())
+    assert found, "tray.bat sets no TRAY_MATCH"
     return re.compile(found.group(1))
 
 
