@@ -20,7 +20,8 @@ import psutil
 import pytest
 
 from src.no_window import NO_WINDOW
-from src.process_supervisor import OWNERSHIP_EXTERNAL, OWNERSHIP_NONE
+from src.process_supervisor import OWNERSHIP_NONE
+from src.whisper_server import LISTENER_UNCONFIRMED
 from src.whisper_server.manager import ServerConfig, WhisperServerManager
 
 _LISTENER = (
@@ -94,7 +95,9 @@ def earlier_server(tmp_path):
 def test_stop_ends_server_started_by_earlier_process(earlier_server):
     cfg, proc = earlier_server
     manager = WhisperServerManager(cfg)
-    assert manager.status().ownership == OWNERSHIP_EXTERNAL  # fresh process: no Popen
+    # A fresh process holds no Popen, and this stand-in never answers HTTP:
+    # our own server that stopped responding must still be stoppable.
+    assert manager.status().listener == LISTENER_UNCONFIRMED
 
     result = manager.stop()
 
@@ -126,7 +129,8 @@ def test_stop_leaves_foreign_listener_alone(tmp_path):
 
         result = manager.stop()
 
-        assert result.ownership == OWNERSHIP_EXTERNAL
+        assert result.listener == LISTENER_UNCONFIRMED
+        assert manager.is_port_in_use()
         assert cfg.pid_file.exists()
         assert manager.log_lines() == []
     finally:

@@ -120,7 +120,7 @@ class ServiceSupervisor:
     def model_label(self) -> str:
         try:
             desc = self.server.describe()
-            return f"🧠 {desc.model_display_name}"
+            return f"🧠 {desc.serving_name}"
         except Exception:
             return "🧠 model: ?"
 

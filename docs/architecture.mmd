@@ -96,7 +96,7 @@ flowchart TB
     RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py"]
     TUNNEL["tunnel.py\ncloudflared spawn/persist,\nshared by service_supervisor.py + scripts/run_named_tunnel.py;\nstop delegates to PROCSUP.stop_popen"]
     HOTRELOAD["hot_reload_json.py\nshared mtime-cached JSON loader,\nused by vocabulary.py, snippets.py, speaker_label.py, disfluency.py"]
-    WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external"]
+    WHISPERMGR["whisper_server/manager.py\nspawn/kill/health/PID, mode: local|external\nidentity.py: adopt or refuse a held :8090"]
     WHISPERYAML["config/whisper_server.yaml\nport 8090, model path, CLI args"]
     PROCSUP["process_supervisor.py\nshared adopt-or-spawn primitives: TCP probe,\nstop ladder, readiness poll — WHISPERMGR + WEBAPPMGR compose it"]
   end

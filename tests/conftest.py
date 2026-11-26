@@ -142,7 +142,7 @@ def webapp_client(tmp_path: Path, monkeypatch):
     fake_wsm.config = MagicMock(base_url="http://stub:8090")
     fake_wsm.status.return_value = MagicMock(
         running=False, ownership="none",
-        base_url="http://stub:8090", detail="stubbed",
+        base_url="http://stub:8090", detail="stubbed", listener="none", engine=None, model=None,
     )
 
     from app.webapp import server as server_mod

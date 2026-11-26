@@ -101,6 +101,9 @@ def build_status_cache(app: FastAPI) -> ProbeCache:
             "ownership": st.ownership,
             "base_url": st.base_url,
             "detail": st.detail,
+            "listener": st.listener,
+            "engine": st.engine,
+            "model": st.model,
         }
 
     return ProbeCache({
@@ -117,7 +120,9 @@ def status(request: Request) -> Dict[str, Any]:
     A plain ``def`` so FastAPI runs it on a worker thread: the bounded wait
     on a cold probe must not hold the event loop. A probe with no answer is
     ``null`` (unknown), never ``false``; ``age_seconds`` says how old each
-    answer is.
+    answer is. ``whisper.listener`` says what holds the ASR port; ``engine``
+    and ``model`` are the ASR backend's own report (``model`` is null when it
+    gives none, as an external whisper.cpp does).
     """
     app = request.app
     cache: ProbeCache = app.state.status_cache
@@ -130,6 +135,9 @@ def status(request: Request) -> Dict[str, Any]:
             "ownership": None,
             "base_url": app.state.server_manager.config.base_url,
             "detail": "not checked yet",
+            "listener": None,
+            "engine": None,
+            "model": None,
         }
     return {
         "whisper": whisper,

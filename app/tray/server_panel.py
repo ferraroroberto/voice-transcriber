@@ -15,7 +15,12 @@ import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-from src.whisper_server import OWNERSHIP_OURS, WhisperServerManager
+from src.whisper_server import (
+    LISTENER_NOT_ASR,
+    LISTENER_UNCONFIRMED,
+    OWNERSHIP_OURS,
+    WhisperServerManager,
+)
 
 from .diagnostics_window import DiagnosticsWindow
 
@@ -73,6 +78,10 @@ class ServerPanel(ttk.Frame):
             self.status_var.set(f"🟢 running (ours) :{status.port}")
         elif status.running:
             self.status_var.set(f"🟢 running (external) :{status.port}")
+        elif status.listener == LISTENER_NOT_ASR:
+            self.status_var.set(f"🔴 port held, not ASR :{status.port}")
+        elif status.listener == LISTENER_UNCONFIRMED:
+            self.status_var.set(f"🔴 port held, unidentified :{status.port}")
         else:
             self.status_var.set(f"🔴 not running :{status.port}")
 
