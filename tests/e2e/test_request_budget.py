@@ -3,8 +3,9 @@
 The probe (`tests/e2e/budget/_request_budget.py`) loads the page on a fake
 clock and counts API requests: a visible minute within the `.fleet.toml`
 budget, a hidden minute at zero, and at most one catch-up read per path when
-the tab returns. Chromium only: the clock and the visibility switch are engine
-independent, so a second projection would repeat the same count.
+the tab returns. Both projections: timer and poll behaviour differ between
+engines enough to cross a budget edge, and the gate's WebKit stage
+(`scripts/tools/webkit_budget_check.py`) needs a run that really measures.
 """
 
 from __future__ import annotations
@@ -30,9 +31,7 @@ _HIDE_FLUSH = "/api/usage/events"
 
 
 @pytest.mark.smoke
-def test_main_page_keeps_its_request_budget(authed_page: Page, base_url: str, browser_name: str) -> None:
-    if browser_name != "chromium":
-        pytest.skip("the request count is engine independent: measured once, on Chromium")
+def test_main_page_keeps_its_request_budget(authed_page: Page, base_url: str) -> None:
     reading = measure_request_budget(authed_page, f"{base_url}/")
     assert reading.hidden[_HIDE_FLUSH] <= 1, reading.summary()
     del reading.hidden[_HIDE_FLUSH]
