@@ -34,8 +34,8 @@ from src import (
     port_owner,
 )
 from src.whisper_server import (
-    MODE_LOCAL,
     LISTENER_NONE,
+    MODE_LOCAL,
     OWNERSHIP_EXTERNAL,
     OWNERSHIP_OURS,
     WhisperServerManager,
