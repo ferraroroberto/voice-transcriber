@@ -467,18 +467,7 @@ class WhisperServerManager:
         if current.running and current.ownership == OWNERSHIP_OURS:
             logger.info(f"ℹ️  Whisper server already {current.detail}")
             return current
-        if current.listener in (LISTENER_NOT_ASR, LISTENER_UNCONFIRMED):
-            retry = (
-                " If it is still starting up, try again."
-                if current.listener == LISTENER_UNCONFIRMED
-                else ""
-            )
-            message = (
-                f"❌ Not starting whisper.cpp: {current.detail}. Stop that process "
-                f"or free port {self.config.port}.{retry}"
-            )
-            logger.warning(message)
-            raise RuntimeError(message)
+        self._refuse_foreign_listener(current)
         if current.running:  # externally held
             if self.config.mode == MODE_EXTERNAL:
                 logger.info(
@@ -537,6 +526,22 @@ class WhisperServerManager:
             self._wait_until_ready()
 
         return self.status()
+
+    def _refuse_foreign_listener(self, current: ServerStatus) -> None:
+        """Raise when the port is held by anything but speech recognition."""
+        if current.listener not in (LISTENER_NOT_ASR, LISTENER_UNCONFIRMED):
+            return
+        retry = (
+            " If it is still starting up, try again."
+            if current.listener == LISTENER_UNCONFIRMED
+            else ""
+        )
+        message = (
+            f"❌ Not starting whisper.cpp: {current.detail}. Stop that process "
+            f"or free port {self.config.port}.{retry}"
+        )
+        logger.warning(message)
+        raise RuntimeError(message)
 
     # -------------------------------------------------------------------- stop
 
