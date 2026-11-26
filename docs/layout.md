@@ -21,6 +21,7 @@ voice-transcriber/
 │   ├── usage_log.py               # vendored: local view/tap usage log (router + SQLite)
 │   ├── request_timing.py          # vendored: Server-Timing middleware and timed named pools (not yet wired in)
 │   ├── login_lockout.py           # vendored: per-client password lock-out + guessing alert
+│   ├── ps_script.py               # vendored: starts a PowerShell script under any execution policy; tray.bat uses it
 │   ├── installer.py               # vendored: the clone-and-setup installer setup.bat runs (stdlib only; docs/install.md)
 │   ├── notify/                    # vendored: Telegram notifier (the guessing alert's transport)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json

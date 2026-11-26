@@ -25,7 +25,7 @@ REM
 REM  The full detect -> kill -> reclaim -> start -> verify lifecycle lives in
 REM  the ONE shared, machine-local tray_lifecycle.ps1 owned by fleet-config
 REM  (project-scaffolding#153) -- exposed at %USERPROFILE%\.claude\tray\ by
-REM  fleet-config's install.ps1 junction, shelled to with -File, NOT in
+REM  fleet-config's install.ps1 junction, shelled to as one script run, NOT in
 REM  cmd-side `for /f` output capture or inline `powershell -Command "..."`.
 REM  Both cmd shapes have failed under non-interactive nested callers (Git Bash
 REM  -> `cmd /c "tray.bat --restart"`, or a finisher skill's Bash tool): detect
@@ -52,6 +52,12 @@ REM  IMPORTANT: ports :8090 and :8091 are SHARED with the sibling
 REM  local-llm-hub (whisper-server and translate-server). They are
 REM  deliberately NOT in OWNED_PORTS below, to avoid killing a running hub.
 REM  Only the webapp port :8443, which this tray definitively owns, is reclaimed.
+REM
+REM  The helper is started through this repo's src\ps_script.py (vendored from
+REM  the scaffold): under AllSigned / Restricted, where `-File` refuses an
+REM  unsigned script, it loads the helper as a ScriptBlock; the machine's
+REM  execution policy is never set or overridden. It prints which launch it
+REM  used, and a helper it cannot run exits non-zero.
 REM ============================================================================
 
 setlocal EnableDelayedExpansion
@@ -85,8 +91,9 @@ set "WANT_RESTART="
 if /i "%~1"=="--restart" set "WANT_RESTART=1"
 if /i "%~1"=="-r"        set "WANT_RESTART=1"
 
-REM === ADAPT (3/4): in the -TrayMatch below, replace with a regex matching
-REM     THIS app's tray invocation, e.g. (scripts[\/]+)?launcher\.py\s+tray  or  -m\s+tray
+REM === ADAPT (3/4): a regex matching THIS app's tray invocation. Keep it that
+REM     specific: a bare word such as `tray` also matches the script launcher.
+set "TRAY_MATCH=(scripts[\/]+)?launcher\.py\s+tray"
 set "PS=C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe"
 set "TRAY_VENV=%SCRIPT_DIR%.venv"
 REM  ONE shared, machine-local copy owned by fleet-config (project-scaffolding#153)
@@ -115,10 +122,32 @@ REM http://127.0.0.1:<first-owned-port>/api/version, which would always fail
 REM restart verification against an HTTPS-only listener. Set explicitly.
 set "VERSION_URL=https://127.0.0.1:8443/api/version"
 
+REM  No parenthesised if-block below: a path holding ")" would end it early.
+if not exist "%TRAY_VENV%\Scripts\python.exe" goto :file_start
+
+REM  The helper's arguments travel as environment variables, never on the
+REM  launcher's command line: the helper finds a running tray by matching the
+REM  command lines of python.exe processes under this .venv, and would take a
+REM  launcher carrying TRAY_LAUNCH for the tray itself. The switch is cleared
+REM  first so a value inherited from the caller can never ask for a restart.
+set "PSL_ARG_AppName=%TRAY_APP_NAME%"
+set "PSL_ARG_ScriptDir=%SCRIPT_DIR_ARG%"
+set "PSL_ARG_VenvDir=%TRAY_VENV%"
+set "PSL_ARG_TrayMatch=%TRAY_MATCH%"
+set "PSL_ARG_Ports=%OWNED_PORTS%"
+set "PSL_ARG_TrayLaunch=%TRAY_LAUNCH%"
+set "PSL_ARG_VersionUrl=%VERSION_URL%"
+set "PSL_SWITCH_Restart="
+if defined WANT_RESTART set "PSL_SWITCH_Restart=1"
+"%TRAY_VENV%\Scripts\python.exe" -m src.ps_script "%TRAY_PS%" launch
+exit /b %ERRORLEVEL%
+
+REM  Only a checkout with no .venv takes the plain -File line.
+:file_start
 set "RESTART_ARG="
 if defined WANT_RESTART set "RESTART_ARG=-Restart"
-
-%PS% -NoProfile -NonInteractive -File "%TRAY_PS%" launch -AppName "%TRAY_APP_NAME%" -ScriptDir "%SCRIPT_DIR_ARG%" -VenvDir "%TRAY_VENV%" -TrayMatch "(scripts[\/]+)?launcher\.py\s+tray" -Ports "%OWNED_PORTS%" -TrayLaunch "%TRAY_LAUNCH%" -VersionUrl "%VERSION_URL%" !RESTART_ARG!
+echo PowerShell launch: -File for tray_lifecycle.ps1 (no .venv, so the execution policy was not read)
+%PS% -NoProfile -NonInteractive -File "%TRAY_PS%" launch -AppName "%TRAY_APP_NAME%" -ScriptDir "%SCRIPT_DIR_ARG%" -VenvDir "%TRAY_VENV%" -TrayMatch "%TRAY_MATCH%" -Ports "%OWNED_PORTS%" -TrayLaunch "%TRAY_LAUNCH%" -VersionUrl "%VERSION_URL%" !RESTART_ARG!
 exit /b %ERRORLEVEL%
 
 REM  Standalone start (project-scaffolding#345): the shared helper is missing,
