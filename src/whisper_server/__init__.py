@@ -6,6 +6,12 @@ stopping, health-checking, and describing the model that's serving. The
 port, CLI args, and the `mode` (local vs external).
 """
 
+from .identity import (
+    LISTENER_ASR,
+    LISTENER_NONE,
+    LISTENER_NOT_ASR,
+    LISTENER_UNCONFIRMED,
+)
 from .manager import (
     MODE_EXTERNAL,
     MODE_LOCAL,
@@ -20,6 +26,10 @@ from .manager import (
 )
 
 __all__ = [
+    "LISTENER_ASR",
+    "LISTENER_NONE",
+    "LISTENER_NOT_ASR",
+    "LISTENER_UNCONFIRMED",
     "MODE_EXTERNAL",
     "MODE_LOCAL",
     "OWNERSHIP_EXTERNAL",

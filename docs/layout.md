@@ -39,7 +39,8 @@ voice-transcriber/
 │   ├── probe_cache.py             # background-refreshed cache for slow reachability probes (/api/status)
 │   ├── process_supervisor.py      # shared adopt-or-spawn primitives: ownership ladder, spawn recipe, stop, readiness (whisper + webapp managers)
 │   └── whisper_server/
-│       └── manager.py             # spawn / kill / health / PID / describe
+│       ├── manager.py             # spawn / kill / health / PID / describe
+│       └── identity.py            # what holds the ASR port: speech recognition, something else, or unconfirmed
 ├── app/                           # ── UI surfaces ──
 │   ├── cli/
 │   │   ├── main.py                # argparse dispatcher

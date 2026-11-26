@@ -24,8 +24,8 @@ setup.bat                 :: creates .venv, installs deps, creates configs, fetc
 tray.bat                  :: system-tray mode, global hotkey F8 (tap = toggle, hold = push-to-talk)
 ```
 
-That's it. The tray launches and, if no server is running yet, spawns the
-bundled `whisper-server` with the configured model. On exit it stops the
+That's it. The tray launches and, if nothing is listening on `:8090` yet, spawns
+the bundled `whisper-server` with the configured model. On exit it stops the
 server it started.
 
 ## 📋 Modes of use
@@ -91,9 +91,9 @@ One line per feature; each links to its reference doc.
 ## 🔗 See also
 
 - [ferraroroberto/local-llm-hub](https://github.com/ferraroroberto/local-llm-hub)
-  — the sibling hub for local LLMs. When it's running it already owns
-  port 8090 with a whisper-server; the app reuses that instance by default
-  (`mode: external` in `config/whisper_server.yaml`), and `mode: local` opts
-  out so it spawns and owns its own.
+  — the sibling hub for local LLMs. When its speech-recognition backend holds
+  port 8090, the app checks what answers there and reuses it by default
+  (`mode: external` in `config/whisper_server.yaml`); `mode: local` opts out
+  of sharing. See [configuration](docs/configuration.md).
 - [ggerganov/whisper.cpp](https://github.com/ggerganov/whisper.cpp)
   — upstream inference engine and release artefacts.

@@ -15,12 +15,14 @@
 #              surface a clear error. Otherwise spawn our own binary and
 #              kill it on exit.
 #
-#   external — a whisper-server may already be running (e.g. started by
-#              the sibling `local-llm-hub` hub). At launch, probe
-#              `host:port`; if reachable, reuse it untouched. If nothing
-#              is there, fall back to spawning our own so the app still
-#              works offline. An externally-owned server is never stopped
-#              by this app.
+#   external — a speech-recognition backend may already be running (e.g.
+#              started by the sibling `local-llm-hub` hub). At launch, probe
+#              `host:port`; if it identifies as one (whisper.cpp, or a
+#              `/health` naming an engine and a model), reuse it untouched.
+#              If nothing is there, fall back to spawning our own so the app
+#              still works offline. An externally-owned server is never
+#              stopped by this app. In either mode, a port held by anything
+#              else starts nothing and is reported.
 #
 # `external` is the default — port 8090 is intentionally
 # mutex-shared with `local-llm-hub`, and `local` hard-fails with a

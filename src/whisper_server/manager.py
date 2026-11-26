@@ -1,10 +1,10 @@
 """Whisper-server process manager — mirrors `local-llm-hub/src/backend_process.py`.
 
 One singleton process per project, keyed by `config/whisper_server.yaml`.
-The port is fixed, so the OS guarantees mutual exclusion: if another project
-(or a manual run) already holds the port, `start()` returns cleanly with
-`already running (external)` and ownership is reported as EXTERNAL — the
-caller must not kill it on exit.
+The port is fixed, so the OS guarantees mutual exclusion. When someone else
+already holds it, the listener is identified first (`identity.py`): a
+speech-recognition backend is adopted, reported as EXTERNAL and never stopped;
+anything else is not "running", and `start()` refuses with the reason.
 """
 
 from __future__ import annotations
@@ -34,6 +34,14 @@ from src.process_supervisor import (
     stop_pid,
     stop_popen,
     wait_until_ready,
+)
+from src.whisper_server.identity import (
+    ENGINE_WHISPER_CPP,
+    LISTENER_ASR,
+    LISTENER_NONE,
+    LISTENER_NOT_ASR,
+    LISTENER_UNCONFIRMED,
+    identify_listener,
 )
 
 try:
@@ -98,6 +106,9 @@ class ServerStatus:
     port: Optional[int] = None
     base_url: Optional[str] = None
     detail: str = ""
+    listener: str = LISTENER_NONE  # LISTENER_* constant: what holds the port
+    engine: Optional[str] = None  # of an ASR listener
+    model: Optional[str] = None  # None when that listener does not report one
 
 
 @dataclass
@@ -135,9 +146,22 @@ class ServerDescription:
     process_rss_bytes: Optional[int]
     # Parsed from whisper.cpp's startup log lines — see `_parse_runtime_info`.
     runtime_info: Dict[str, str]
+    # What an ASR listener says about itself.
+    engine: Optional[str] = None
+    served_model: Optional[str] = None
+
+    @property
+    def serving_name(self) -> str:
+        """The model to show: an external backend's own report wins over the
+        configured whisper model, which is not what is serving then."""
+        if self.ownership == OWNERSHIP_EXTERNAL and self.served_model:
+            return f"{self.engine}: {self.served_model}"
+        return self.model_display_name
 
     def summary_line(self) -> str:
         """One-line human summary — used in GUI status labels and toasts."""
+        if self.serving_name != self.model_display_name:
+            return self.serving_name
         mem = (
             f", {_human_bytes(self.process_rss_bytes)} RSS"
             if self.process_rss_bytes is not None
@@ -154,6 +178,10 @@ class ServerDescription:
         """Multi-line block used by the CLI `server status` output."""
         lines: List[str] = []
         lines.append(f"📐 mode      : {self.mode}")
+        if self.ownership == OWNERSHIP_EXTERNAL and self.engine:
+            lines.append(
+                f"🔌 serving   : {self.engine}: {self.served_model or '(model not reported)'}"
+            )
         lines.append(f"🧠 model     : {self.model_display_name}")
         lines.append(f"   path      : {self.model_path}")
         if self.model_size_bytes is not None:
@@ -358,36 +386,62 @@ class WhisperServerManager:
         return is_port_in_use(self.config.host, self.config.port)
 
     def status(self) -> ServerStatus:
-        reachable = self.is_reachable() or self.is_port_in_use()
-        ownership = ownership_of(self._proc, reachable=reachable)
+        held = self.is_port_in_use()
+        ownership = ownership_of(self._proc, reachable=held)
+        port, base_url = self.config.port, self.config.base_url
 
         if ownership == OWNERSHIP_OURS:
             return ServerStatus(
                 running=True,
                 ownership=ownership,
                 pid=self._proc.pid,
-                port=self.config.port,
-                base_url=self.config.base_url,
+                port=port,
+                base_url=base_url,
                 detail="running (started by this process)",
+                listener=LISTENER_ASR,
+                engine=ENGINE_WHISPER_CPP,
+                model=_infer_display_name(self.config.model_path.name),
             )
 
-        if ownership == OWNERSHIP_EXTERNAL:
-            pid = self._read_pid_file()
+        if not held:
+            return ServerStatus(
+                running=False,
+                ownership=ownership,
+                port=port,
+                base_url=base_url,
+                detail="not running",
+            )
+
+        found = identify_listener(
+            self._session, base_url, self.config.request_timeout_seconds
+        )
+        if found.kind == LISTENER_ASR:
+            served = " ".join(part for part in (found.engine, found.model) if part)
+            note = f", {found.note}" if found.note else ""
             return ServerStatus(
                 running=True,
                 ownership=ownership,
-                pid=pid,
-                port=self.config.port,
-                base_url=self.config.base_url,
-                detail="running (external — started elsewhere)",
+                pid=self._adopted_pid(),
+                port=port,
+                base_url=base_url,
+                detail=f"running (external — started elsewhere: {served}{note})",
+                listener=found.kind,
+                engine=found.engine,
+                model=found.model,
             )
 
+        what = (
+            "a listener that is not speech recognition"
+            if found.kind == LISTENER_NOT_ASR
+            else "a listener that could not be identified"
+        )
         return ServerStatus(
             running=False,
-            ownership=ownership,
-            port=self.config.port,
-            base_url=self.config.base_url,
-            detail="not running",
+            ownership=OWNERSHIP_NONE,
+            port=port,
+            base_url=base_url,
+            detail=f"port {port} is held by {what} ({found.note})",
+            listener=found.kind,
         )
 
     # ------------------------------------------------------------------- start
@@ -398,9 +452,13 @@ class WhisperServerManager:
         - `mode=local`: refuse to reuse an externally-held port. If
           something else is already bound to host:port, raise
           `RuntimeError` so the caller can surface the conflict.
-        - `mode=external`: reuse an already-reachable server untouched;
-          fall back to spawning our own when nothing is listening so the
-          app still works without the sibling hub.
+        - `mode=external`: reuse an already-running speech-recognition
+          backend untouched; fall back to spawning our own when nothing is
+          listening so the app still works without the sibling hub.
+
+        In both modes a port held by anything that did not identify itself
+        as speech recognition raises `RuntimeError`: nothing is spawned
+        against it.
 
         Idempotent — returns the current status when the server is already
         ours.
@@ -409,11 +467,23 @@ class WhisperServerManager:
         if current.running and current.ownership == OWNERSHIP_OURS:
             logger.info(f"ℹ️  Whisper server already {current.detail}")
             return current
+        if current.listener in (LISTENER_NOT_ASR, LISTENER_UNCONFIRMED):
+            retry = (
+                " If it is still starting up, try again."
+                if current.listener == LISTENER_UNCONFIRMED
+                else ""
+            )
+            message = (
+                f"❌ Not starting whisper.cpp: {current.detail}. Stop that process "
+                f"or free port {self.config.port}.{retry}"
+            )
+            logger.warning(message)
+            raise RuntimeError(message)
         if current.running:  # externally held
             if self.config.mode == MODE_EXTERNAL:
                 logger.info(
-                    f"🔗 Reusing external whisper-server at {current.base_url} "
-                    "(mode=external)"
+                    f"🔗 Reusing external ASR at {current.base_url}: {current.engine} "
+                    f"{current.model or '(model not reported)'} (mode=external)"
                 )
                 return current
             raise RuntimeError(
@@ -477,10 +547,16 @@ class WhisperServerManager:
         previous `scripts/server.bat start`): the PID file it wrote identifies it.
         """
         status = self.status()
-        if status.ownership == OWNERSHIP_EXTERNAL:
+        # A server of ours that stopped answering is unidentified, not external,
+        # so a held port with no child of this process is checked the same way.
+        if status.ownership == OWNERSHIP_EXTERNAL or (
+            self._proc is None and status.listener != LISTENER_NONE
+        ):
             adopted = self._adopted_pid()
             if adopted is None:
-                logger.info("✋ Leaving external whisper-server running (not ours)")
+                logger.info(
+                    f"✋ Leaving the listener on port {self.config.port} running (not ours)"
+                )
                 return status
             self._stop_pid(adopted)
             self._clear_pid_file()
@@ -588,6 +664,8 @@ class WhisperServerManager:
             running=status.running,
             process_rss_bytes=rss,
             runtime_info=runtime_info,
+            engine=status.engine,
+            served_model=status.model,
         )
 
     # ------------------------------------------------------------------ helpers

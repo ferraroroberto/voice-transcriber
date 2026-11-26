@@ -35,6 +35,7 @@ from src import (
 )
 from src.whisper_server import (
     MODE_LOCAL,
+    LISTENER_NONE,
     OWNERSHIP_EXTERNAL,
     OWNERSHIP_OURS,
     WhisperServerManager,
@@ -143,7 +144,7 @@ class DiagnosticsWindow:
         server_log = self.manager.log_lines()
 
         owner: Optional[PortOwner] = None
-        if status.running:
+        if status.listener != LISTENER_NONE:
             owner = port_owner(self.manager.config.port)
 
         backend = infer_backend(owner, server_log)
@@ -187,7 +188,7 @@ class DiagnosticsWindow:
             )
 
         summary_lines.append("")
-        summary_lines.append(f"Model           : {description.model_display_name}")
+        summary_lines.append(f"Model           : {description.serving_name}")
         summary_lines.append(f"  path          : {description.model_path}")
         summary_lines.append(f"  args (config) : {' '.join(description.extra_args)}")
 
@@ -211,7 +212,7 @@ class DiagnosticsWindow:
                 summary_lines.append("  ⚠️ -ng / --no-gpu present — server is forced to CPU")
             if owner.exe and not owner.has_cuda_dlls():
                 summary_lines.append("  (no cuBLAS DLLs next to the binary — CPU build likely)")
-        elif status.running:
+        elif status.listener != LISTENER_NONE:
             summary_lines.append("")
             summary_lines.append(
                 "Port owner       : (psutil could not identify the listening pid)"

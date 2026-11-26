@@ -368,7 +368,7 @@ class TrayApp:
                 logger.debug(f"details dialog failed, falling back to toast: {exc}")
         description = self.services.server.describe()
         self._notify(
-            f"🧠 {description.model_display_name}",
+            f"🧠 {description.serving_name}",
             description.summary_line(),
         )
 

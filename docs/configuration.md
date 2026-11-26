@@ -123,7 +123,18 @@ The key knob is **`mode`**:
 | `mode`     | Behaviour on startup                                                             |
 |------------|----------------------------------------------------------------------------------|
 | `local`    | **This project owns the server.** If `host:port` is already in use by something else, refuse to start and surface a clear error. Otherwise spawn the bundled `whisper-server`. Stop it on exit. |
-| `external` | **Reuse an already-running server if present** (e.g. one started by the sibling [`local-llm-hub`](https://github.com/ferraroroberto/local-llm-hub) hub). If nothing is listening, spawn our own binary. Never stops a server it didn't start. |
+| `external` | **Reuse an already-running speech-recognition backend** (e.g. one started by the sibling [`local-llm-hub`](https://github.com/ferraroroberto/local-llm-hub) hub). If nothing is listening, spawn our own binary. Never stops a server it didn't start. |
+
+A held port is not enough to be reused. The app asks the listener who it is (`GET /health`), and both modes act on the answer:
+
+| On `host:port` | `listener` | What the app does |
+|---|---|---|
+| Nothing | `none` | Spawns the bundled `whisper-server`. |
+| whisper.cpp (its `Server` header), or a `/health` with `status: ok`, `engine` and `model` | `asr` | `external` adopts it; `local` refuses to share. |
+| Something that answers as anything else | `not_asr` | Starts nothing and reports the port as held. |
+| No answer in `request_timeout_seconds`, a 503, or an `engine` whose `status` is not `ok` | `unconfirmed` | Starts nothing; try again once it has finished starting. |
+
+`GET /api/status` carries this in its `whisper` block: `listener`, `engine` and `model`. An external whisper.cpp does not report its model, so `model` is `null` for it. `running` is `true` only for `asr`. The check runs when the app starts its server and whenever status is read, so the start order of the hub and this app does not matter once either one is listening; a hub still loading its model has not taken the port yet, and the app then starts its own whisper.cpp on it.
 
 Switch by editing the top of `config/whisper_server.yaml`:
 
@@ -160,7 +171,8 @@ The tray, main window, and CLI all surface the active model so you can
 confirm it without grepping logs.
 
 - **Tray menu**: the first entry shows the configured model
-  (`🧠 large-v3-turbo`). Pick **ℹ Model info…** for a full dump.
+  (`🧠 large-v3-turbo`), or the engine and model an adopted external backend
+  reports. Pick **ℹ Model info…** for a full dump.
 - **Main window**: a `🧠 …` line appears under *Server* with the model
   name, on-disk size, and resident memory. **ℹ Details** opens a dialog
   with mode, path, binary, endpoint, threads/processors, and the
