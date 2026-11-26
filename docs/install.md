@@ -27,7 +27,7 @@ cd voice-transcriber
 
 The checklist names what still needs you:
 
-- **Sign-in password:** `.\.venv\Scripts\python.exe -m src.password set`. Only needed when the webapp is reachable from other devices ([remote access](remote-access.md)).
+- **Sign-in password:** `.\.venv\Scripts\python.exe -m src.password set`. Only needed when the webapp is reachable from other devices ([remote access](remote-access.md)). The item reads the stored hash: `ok` when a usable one (or the legacy `auth_password`) is there, `missing` when none is, an empty or corrupt `config/app_password.json` included, and `unknown` when a file it needs cannot be read.
 - **HTTPS certificate:** `.\.venv\Scripts\python.exe scripts\gen_ssl_cert.py`. It writes `webapp/certificates/` and installs the CA into the Windows user trust store; restart the tray afterwards. A phone that trusted the old CA has to install the new profile again ([iPhone debugging](iphone-debugging.md)).
 - **whisper.cpp server / ggml model:** `setup.bat` fetches both; if the checklist still says `missing`, the fetch failed (read its output above the checklist), and `.\.venv\Scripts\python.exe scripts\setup_assets.py` retries it.
 
