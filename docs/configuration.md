@@ -222,17 +222,26 @@ backend`; a CPU build logs `whisper_backend_init: using CPU backend`.
 
 | Hardware | Build chosen |
 |---|---|
-| NVIDIA GPU (any — GTX, RTX, Quadro, Tesla…) | cuBLAS build — CUDA DLLs bundled, no Toolkit needed |
+| NVIDIA GPU (any — GTX, RTX, Quadro, Tesla…) | CUDA build — CUDA DLLs bundled, no Toolkit needed |
 | AMD / Intel / no discrete GPU | CPU-only build — works on any Windows PC |
 
+The binaries come from the newest `ggml-org/whisper.cpp` release that carries
+one: upstream attaches them to its build releases (`b…`), not to the version
+tag that GitHub reports as latest. The script logs the release, the asset and
+the archive layout it installed.
+
 Detection runs `nvidia-smi` and, as a fallback, probes for `nvcuda.dll`.
-Only a recent NVIDIA driver is required for the cuBLAS path — no CUDA
+Only a recent NVIDIA driver is required for the CUDA path — no CUDA
 Toolkit install. `manager.py` prepends the binary's folder to `PATH` when
 spawning so the bundled DLLs load cleanly.
 
 **Override flags for `install_whisper_cpp.py`:**
 - `--cpu` — force the CPU build even if an NVIDIA GPU is detected
-- `--cuda 12.4.0` — pin a specific cuBLAS version
+- `--cuda 12.4.0` — prefer a specific CUDA version
+- `--from <folder>` — download nothing; copy a working install from the folder
+  that holds `whisper-server` (usually `<other install>\vendor\whisper.cpp`),
+  with its DLLs and any `models\ggml-*.bin`. Nothing is copied unless that
+  binary runs where it is
 
 To force CPU-only inference at runtime (after install), add `-ng`
 (or `--no-gpu`) to the `args` list in `whisper_server.yaml`.

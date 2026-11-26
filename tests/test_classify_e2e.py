@@ -52,6 +52,7 @@ def test_real_rules_route_representative_paths() -> None:
     assert tier("app/cli/main.py") == "skip"
     assert tier("src/app_config.py") == "skip"
     assert tier("tests/test_app_config.py") == "skip"
+    assert tier("tests/fixtures/whisper_cpp_releases.json") == "skip"
     assert tier("scripts/gen_token.py") == "skip"
     assert tier("docs/architecture.mmd") == "skip"
     assert tier("README.md") == "skip"
