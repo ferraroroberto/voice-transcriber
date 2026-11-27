@@ -55,8 +55,8 @@ def _state(root: Path) -> str:
     """The state the installer's checklist gives this repo's declared password item."""
     declared = [check for check in installer.load_plan(REPO_ROOT).checks if check.name == ITEM]
     report = installer.Report(what_if=False)
-    installer.build_checklist(root, installer.Plan(checks=declared), report, _run_probe)
-    (state,) = [state for state, item, _ in report.checklist if item == ITEM]
+    installer.build_checklist(root, installer.Plan(checks=declared), report, _run_probe, {})
+    (state,) = [state for state, item, _ in report.optional if item == ITEM]
     return state
 
 
@@ -64,9 +64,9 @@ def _password_file(root: Path) -> Path:
     return root / "config" / "app_password.json"
 
 
-def test_a_stored_hash_reads_ok(clone: Path) -> None:
+def test_a_stored_hash_reads_available(clone: Path) -> None:
     password.set_password("1234", _password_file(clone))
-    assert _state(clone) == installer.OK
+    assert _state(clone) == "available"
 
 
 @pytest.mark.parametrize(
@@ -74,19 +74,19 @@ def test_a_stored_hash_reads_ok(clone: Path) -> None:
     [None, "", "{not json", "{}", '{"password_hash": "plaintext"}'],
     ids=["no-file", "empty", "corrupt", "no-hash-key", "not-a-hash"],
 )
-def test_a_file_without_a_usable_hash_reads_missing(clone: Path, content: str | None) -> None:
+def test_a_file_without_a_usable_hash_reads_off(clone: Path, content: str | None) -> None:
     if content is not None:
         _password_file(clone).write_text(content, encoding="utf-8")
-    assert _state(clone) == installer.MISSING
+    assert _state(clone) == "off"
 
 
 def test_an_unreadable_file_reads_unknown(clone: Path) -> None:
     # A folder at the file's path is there but cannot be read, on every platform.
     _password_file(clone).mkdir()
-    assert _state(clone) == installer.UNKNOWN
+    assert _state(clone) == "unknown"
 
 
-def test_the_old_plaintext_password_still_reads_ok(clone: Path) -> None:
+def test_the_old_plaintext_password_still_reads_available(clone: Path) -> None:
     # The login route honours it until a hash is stored, so the PC can sign in.
     (clone / "config" / "webapp_config.json").write_text(json.dumps({"auth_password": "old"}), encoding="utf-8")
-    assert _state(clone) == installer.OK
+    assert _state(clone) == "available"

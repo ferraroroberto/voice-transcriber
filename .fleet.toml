@@ -55,23 +55,31 @@ inputs  = ["config/whisper_server.yaml", "scripts/setup_assets.py"]
 # `-m`: that imports the src package first, whose missing dependency would exit 1 and read as no password.
 [[install.check]]
 name    = "Sign-in password"
+level   = "optional"
+blocks  = "remote sign-in"
 command = ["{python}", "src/password.py", "status", "--legacy", "config/webapp_config.json", "auth_password"]
 hint    = "set one with: .venv\\Scripts\\python.exe -m src.password set"
 
 [[install.check]]
-name  = "HTTPS certificate"
-paths = ["webapp/certificates/cert.pem", "webapp/certificates/key.pem"]
-hint  = "run: .venv\\Scripts\\python.exe scripts\\gen_ssl_cert.py"
+name   = "HTTPS certificate"
+level  = "optional"
+blocks = "phone access"
+paths  = ["webapp/certificates/cert.pem", "webapp/certificates/key.pem"]
+hint   = "run: .venv\\Scripts\\python.exe scripts\\gen_ssl_cert.py"
 
 [[install.check]]
-name  = "whisper.cpp server"
-paths = ["vendor/whisper.cpp/whisper-server.exe"]
-hint  = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
+name   = "whisper.cpp server"
+level  = "optional"
+blocks = "transcription when the hub is down"
+paths  = ["vendor/whisper.cpp/whisper-server.exe"]
+hint   = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
 
 [[install.check]]
-name  = "ggml model"
-paths = ["vendor/whisper.cpp/models/ggml-large-v3-turbo.bin"]
-hint  = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
+name   = "ggml model"
+level  = "optional"
+blocks = "transcription when the hub is down"
+paths  = ["vendor/whisper.cpp/models/ggml-large-v3-turbo.bin"]
+hint   = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
 
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "tests/e2e/_e2e_live_guard.py" }
@@ -154,7 +162,7 @@ build_info = { src = "src/build_info.py", sha = "1c1007fcd0b65b54342779250cb6697
 health_routes = { src = "src/health_routes.py", sha = "732c304a4735d4e654f5acb3b6f53b7db67d47ef", dest = "src/health_routes.py" }
 restart_check = { src = "src/restart_check.py", sha = "f8c2f66eae7a69f3c834386579702ed5b747d7af", dest = "src/restart_check.py" }
 ratchet_baseline = { src = "scripts/ratchet_baseline.py", sha = "48db2132dab2dfc38b6154948ca17fd1f4b9232f", dest = "scripts/ratchet_baseline.py" }
-installer = { src = "src/installer.py", sha = "bafa9446b907dcb7fc6d833c1edfb1a069b7ca38", dest = "src/installer.py" }
+installer = { src = "src/installer.py", sha = "f774234582bc8fe2ce2e44804275b690b192f40d", dest = "src/installer.py" }
 ps_script = { src = "src/ps_script.py", sha = "2d786d295c9b8d545aaf35703889638096f251ad", dest = "src/ps_script.py" }
 
 [static_ratchet]
