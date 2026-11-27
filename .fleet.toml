@@ -438,6 +438,10 @@ static_pytest_target = "tests/e2e/test_smoke.py"
 static_browsers       = ["chromium"]
 full_pytest_target    = "tests/e2e"
 junit_xml             = ".pytest_cache/e2e-junit.xml"
+# Ceiling on collected e2e nodes (both browser projections count), in place of the
+# scaffold's 15: this suite's size comes from the two projections, not duplicated
+# coverage. Lower it when the suite trims; past it, merge or delete before adding.
+test_budget           = 36
 
 [[e2e.rule]]              # inert assets under the webapp static tree -> static
 tier       = "static"
