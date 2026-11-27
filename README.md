@@ -12,8 +12,8 @@ the CUDA prebuilt), falls back to CPU cleanly.
 Self-contained: clone the repo, run `setup.bat`, and the whisper.cpp
 binary + `ggml-large-v3-turbo.bin` model are downloaded into `vendor/`
 and used from there — no shared system install required. Moving to
-another PC, updating, migrating an existing install and uninstalling:
-[docs/install.md](docs/install.md).
+another PC, updating, reinstalling in place, migrating an existing install
+and uninstalling: [docs/install.md](docs/install.md).
 
 ## 🚀 Quickstart
 
@@ -71,7 +71,7 @@ One line per feature; each links to its reference doc.
 
 | Topic | What it covers |
 |---|---|
-| [Install, update and move](docs/install.md) | `setup.bat` on a fresh PC, the update commands, migrating from an existing install (which ignored configs, state and certificates to carry over), uninstall |
+| [Install, update and migrate](docs/install.md) | `setup.bat` on a fresh PC, the update commands, `-InPlace` and `-MigrateFrom` (which ignored configs, state and certificates are carried over), uninstall |
 | [Configuration](docs/configuration.md) | `config/config.json`, the optional companion files (vocabulary, snippets, speaker blocklist, disfluencies), `config/whisper_server.yaml` (`local` vs `external` mode), which model is serving, GPU / CPU build choice, first-run checklist |
 | [Repository layout](docs/layout.md) | The `src/` (logic) + `app/` (UI surfaces) tree, file by file, the declared `webapp-tray` shape and its exceptions |
 | [Mobile web app](docs/webapp-usage.md) | Where to launch from, local HTTPS cert, iPhone Home Screen install, daily use, Append / Incognito / Tk controls, silence skip, gain boost, text size, rolling transcription, auto-stop, switching apps, the status line |

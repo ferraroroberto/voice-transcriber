@@ -81,6 +81,43 @@ blocks = "transcription when the hub is down"
 paths  = ["vendor/whisper.cpp/models/ggml-large-v3-turbo.bin"]
 hint   = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
 
+# What `setup.bat -MigrateFrom <old folder>` and `setup.bat -InPlace` carry over and verify
+# (docs/install.md "Migrate"). The webapp binds config/config.json's webapp.port when a PC
+# sets one, else 8443, behind its own self-signed certificate. Start is the default
+# `tray.bat --restart`.
+[install.endpoint]
+scheme       = "https"
+port         = 8443
+version_path = "/api/version"
+self_signed  = true
+port_config  = "config/config.json"
+port_key     = "webapp.port"
+
+# `copy` is this PC's own gitignored files: settings, owner lists, password hash, saved takes,
+# the certificates the phone trusts and the tunnel config. vendor/ is left out because setup
+# fetches it again. The runtime databases stay where they are, in the shared folder.
+[install.migrate]
+copy = [
+    "config/webapp_config.json",
+    "config/vocabulary.json",
+    "config/snippets.json",
+    "config/speaker_blocklist.json",
+    "config/disfluencies.json",
+    "config/app_password.json",
+    "archive",
+    "webapp/certificates",
+    "webapp/cloudflared.yml",
+    "app/webapp/static/ca.crt",
+    "app/webapp/static/voice-transcriber-ca.mobileconfig",
+]
+secrets = [
+    "config/webapp_config.json",
+    "config/app_password.json",
+    "webapp/certificates/key.pem",
+    "webapp/certificates/ca.key",
+]
+shared = ["voice-transcriber"]
+
 [vendored]
 e2e_live_guard = { src = "tests/e2e/_e2e_live_guard.py", sha = "4c699636afecd5cae5e966bc2bcb17fa49744390", dest = "tests/e2e/_e2e_live_guard.py" }
 surface_capture = { src = "tests/e2e/_surface.py", sha = "5c4d3a7947dae8b3b4a028bf636c0f052ea3b1f7", dest = "tests/e2e/_surface.py" }
@@ -162,7 +199,11 @@ build_info = { src = "src/build_info.py", sha = "1c1007fcd0b65b54342779250cb6697
 health_routes = { src = "src/health_routes.py", sha = "732c304a4735d4e654f5acb3b6f53b7db67d47ef", dest = "src/health_routes.py" }
 restart_check = { src = "src/restart_check.py", sha = "f8c2f66eae7a69f3c834386579702ed5b747d7af", dest = "src/restart_check.py" }
 ratchet_baseline = { src = "scripts/ratchet_baseline.py", sha = "48db2132dab2dfc38b6154948ca17fd1f4b9232f", dest = "scripts/ratchet_baseline.py" }
-installer = { src = "src/installer.py", sha = "f774234582bc8fe2ce2e44804275b690b192f40d", dest = "src/installer.py" }
+installer = { src = "src/installer.py", sha = "a40310fe47f82ed7af62835fbfb3ea7ba9e04f8d", dest = "src/installer.py" }
+installer_migrate = { src = "src/installer_migrate.py", sha = "a40310fe47f82ed7af62835fbfb3ea7ba9e04f8d", dest = "src/installer_migrate.py" }
+installer_declaration = { src = "src/installer_declaration.py", sha = "a40310fe47f82ed7af62835fbfb3ea7ba9e04f8d", dest = "src/installer_declaration.py" }
+installer_inplace = { src = "src/installer_inplace.py", sha = "a40310fe47f82ed7af62835fbfb3ea7ba9e04f8d", dest = "src/installer_inplace.py" }
+install_standard_ratchet = { src = "scripts/install_standard_ratchet.py", sha = "a40310fe47f82ed7af62835fbfb3ea7ba9e04f8d", dest = "scripts/install_standard_ratchet.py" }
 ps_script = { src = "src/ps_script.py", sha = "2d786d295c9b8d545aaf35703889638096f251ad", dest = "src/ps_script.py" }
 
 [static_ratchet]
@@ -353,6 +394,16 @@ allow_refs = [":8000", ":8090", ":8091", ":9221"]
 enabled  = true
 baseline = ".ratchets/dead-code.json"
 
+# [install_standard_ratchet] -- scripts/install_standard_ratchet.py fails when the repo lacks
+# a piece of the fleet install standard: an installer module that is missing, undeclared or
+# not the scaffold's current content, an [install.migrate] that does not parse, or a
+# docs/install.md without Install, Update and Migrate sections, beyond
+# .ratchets/install-standard.json. Exit 3 is "not confirmed", never clean. Mechanism:
+# project-scaffolding docs/install-standard-ratchet.md.
+[install_standard_ratchet]
+enabled  = true
+baseline = ".ratchets/install-standard.json"
+
 # [windows_only_ratchet] -- the scaffold's baseline-and-ratchet for the Mac nightly's
 # `windows_only` convention. The gate (scripts/verify-before-ship.ps1) runs
 # scripts/windows_only_ratchet.py: a test that touches a Windows-only module or API (or
@@ -510,6 +561,10 @@ path = ".ratchets/doc-refs.json"
 [[e2e.rule]]             # dead-code-ratchet baseline: read by the gate only, never the browser -> none
 tier = "none"
 path = ".ratchets/dead-code.json"
+
+[[e2e.rule]]             # install-standard-ratchet baseline: read by the gate only, never the browser -> none
+tier = "none"
+path = ".ratchets/install-standard.json"
 
 [[e2e.rule]]             # sample config the e2e run never reads -> none
 tier = "none"
