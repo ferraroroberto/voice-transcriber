@@ -19,7 +19,6 @@ import pytest
 from src.webapp_config import (
     DEFAULT_GAIN_BOOST_DB,
     DEFAULT_GAIN_BOOST_ENABLED,
-    DEFAULT_LLM_HUB_URL,
     DEFAULT_POLISH_PROMPT_ID,
     DEFAULT_RETENTION_DAYS,
     DEFAULT_SILENCE_DBFS_THRESHOLD,
@@ -123,7 +122,7 @@ class TestDefaultWebappConfig:
         assert cfg.polish_model_default == sample_polish_payload["polish_model_default"]
         assert cfg.polish_models_available == sample_polish_payload["polish_models_available"]
         assert cfg.polish_prompt_default == DEFAULT_POLISH_PROMPT_ID
-        assert cfg.llm_hub_url == DEFAULT_LLM_HUB_URL
+        assert cfg.llm_hub_url == ""
         assert cfg.history_retention_days == DEFAULT_RETENTION_DAYS
         assert cfg.silence_dbfs_threshold == DEFAULT_SILENCE_DBFS_THRESHOLD
         assert cfg.gain_boost_enabled == DEFAULT_GAIN_BOOST_ENABLED

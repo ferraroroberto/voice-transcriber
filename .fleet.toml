@@ -104,8 +104,9 @@ port_config  = "config/config.json"
 port_key     = "webapp.port"
 
 # `copy` is this PC's own gitignored files: settings, owner lists, password hash, saved takes,
-# the certificates the phone trusts and the tunnel config. vendor/ is left out because setup
-# fetches it again. The runtime databases stay where they are, in the shared folder.
+# the certificates the phone trusts and the tunnel config. vendor/ is carried too: it holds a
+# whisper binary and model that already work on this PC, and fetching them again is about
+# 2 GB that can fail. The runtime databases stay where they are, in the shared folder.
 [install.migrate]
 copy = [
     "config/webapp_config.json",
@@ -119,6 +120,7 @@ copy = [
     "webapp/cloudflared.yml",
     "app/webapp/static/ca.crt",
     "app/webapp/static/voice-transcriber-ca.mobileconfig",
+    "vendor",
 ]
 secrets = [
     "config/webapp_config.json",
@@ -380,8 +382,8 @@ repeated_text_words = 12
 # loopback port named in README.md, CLAUDE.md or docs/**/*.md that no longer resolves
 # against the tracked tree and `port` above fails unless .doc-refs-ratchet-baseline.json
 # records it. allow_refs lists the other services' ports the docs name: the hub (:8000),
-# whisper-server (:8090), the translate server (:8091) and the iPhone DevTools proxy
-# (:9221), none of them this app's `port`. Exit 3 (git
+# the lite hub (:8020), whisper-server (:8090), the translate server (:8091) and the
+# iPhone DevTools proxy (:9221), none of them this app's `port`. Exit 3 (git
 # unusable, a file that is not UTF-8, an unclosed fence) fails the gate as NOT CONFIRMED.
 # Whole tree, never path-routed. Procedure + limits: project-scaffolding
 # docs/doc-refs-ratchet.md.
@@ -389,7 +391,7 @@ repeated_text_words = 12
 enabled  = true
 trees    = true
 baseline = ".ratchets/doc-refs.json"
-allow_refs = [":8000", ":8090", ":8091", ":9221"]
+allow_refs = [":8000", ":8020", ":8090", ":8091", ":9221"]
 
 # [dead_code_ratchet] -- the scaffold's baseline-and-ratchet for definitions nothing
 # references. The gate (scripts/verify-before-ship.ps1) runs scripts/dead_code_ratchet.py

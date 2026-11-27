@@ -11,10 +11,9 @@ for the Google AI Pro path. When Anthropic or Google ship a new
 version, only the hub's `display_name` needs updating — these aliases
 stay the same.
 
-The hub itself lives in `E:\\automation\\local-llm-hub\\` and binds to
-`http://127.0.0.1:8000` by default. The base URL is configurable via
-`config/webapp_config.json` so it can also point at a remote hub if you
-ever run one.
+`llm_hub_url` in `config/webapp_config.json` names the hub, local or remote,
+and a named hub is the only one used. With none named, the client looks for
+one on this PC: `local-llm-hub` on :8000, then `local-llm-hub-lite` on :8020.
 """
 
 from __future__ import annotations
@@ -43,6 +42,10 @@ _OPEN_THINK_RE = re.compile(r"<think\b[^>]*>", re.IGNORECASE)
 POLISH_SYSTEM_PROMPT = FILLER_WORDS_SYSTEM_PROMPT
 
 DEFAULT_TIMEOUT = 120.0
+# Where a hub on this PC listens, in the order they are asked.
+HUB_CANDIDATES = ("http://127.0.0.1:8000", "http://127.0.0.1:8020")
+# `GET /v1/models` only lists the registry, so a hub that is up answers well inside this.
+HUB_PROBE_TIMEOUT_S = 2.0
 # Reasoning models (qwen3.5-*, glm) emit a <think>...</think> chain before
 # the answer; the hub strips it server-side, but only when both tags are
 # present. With a tight budget the model can spend the whole allowance
@@ -69,23 +72,56 @@ class PolishClient:
 
     def __init__(
         self,
-        base_url: str = "http://127.0.0.1:8000",
+        base_url: str = "",
         timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
-        self.base_url = base_url.rstrip("/")
+        # Empty means "no hub named": one is looked for when first needed.
+        self._configured = base_url.rstrip("/")
+        self._found = ""
         self.timeout = timeout
         self._session = requests.Session()
+
+    @property
+    def base_url(self) -> str:
+        """The named hub, else the one found, else the first place looked."""
+        return self._configured or self._found or HUB_CANDIDATES[0]
 
     def close(self) -> None:
         self._session.close()
 
     def is_reachable(self) -> bool:
         """Quick liveness check — the hub answers `GET /v1/models` on success."""
+        if not (self._configured or self._found):
+            return self._find_hub()
         try:
-            r = self._session.get(self.base_url + "/v1/models", timeout=2.0)
-            return r.status_code == 200
+            r = self._session.get(self.base_url + "/v1/models", timeout=HUB_PROBE_TIMEOUT_S)
         except requests.RequestException:
+            r = None
+        if r is not None and r.status_code == 200:
+            return True
+        if self._configured:
             return False
+        self._found = ""
+        return self._find_hub()
+
+    def _find_hub(self) -> bool:
+        """Keep the first candidate that answers as a hub; False when none does.
+
+        Any program can hold a port, so a 200 is not enough: the answer must be
+        a model list before a transcript is ever sent there.
+        """
+        for url in HUB_CANDIDATES:
+            try:
+                response = self._session.get(url + "/v1/models", timeout=HUB_PROBE_TIMEOUT_S)
+                body = response.json() if response.status_code == 200 else None
+            except (requests.RequestException, ValueError) as exc:
+                logger.debug(f"no hub at {url}: {exc}")
+                continue
+            if isinstance(body, dict) and isinstance(body.get("data"), list):
+                logger.info(f"🔎 llm_hub_url not set; using the hub at {url}")
+                self._found = url
+                return True
+        return False
 
     def polish(
         self,
@@ -103,6 +139,12 @@ class PolishClient:
         """
         if not text.strip():
             raise PolishError("nothing to polish (empty text)")
+
+        if not (self._configured or self._found or self._find_hub()):
+            raise PolishError(
+                f"no LLM hub answers on {' or '.join(HUB_CANDIDATES)}; start one, "
+                "or set llm_hub_url in config/webapp_config.json"
+            )
 
         system_prompt = system if (system and system.strip()) else POLISH_SYSTEM_PROMPT
         url = self.base_url + "/v1/messages"
@@ -127,6 +169,9 @@ class PolishClient:
                 headers={"Content-Type": "application/json"},
             )
         except requests.RequestException as exc:
+            # A found hub that stopped answering is looked for again next time.
+            if isinstance(exc, requests.ConnectionError):
+                self._found = ""
             raise PolishError(
                 f"could not reach LLM hub at {url}: {exc}"
             ) from exc

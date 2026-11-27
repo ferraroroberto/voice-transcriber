@@ -21,7 +21,7 @@ cd voice-transcriber
 
 1. creates `.venv` when it is missing;
 2. installs `requirements.txt`, and later reinstalls only when that file changed (its hash is kept inside `.venv`);
-3. runs `scripts/setup_assets.py`, which fetches the whisper.cpp server and the ggml model into `vendor/whisper.cpp/`; it reruns only when that script or `config/whisper_server.yaml` changed, and each fetch returns at once when its file is already there;
+3. runs `scripts/setup_assets.py`, which fetches the whisper.cpp server and the ggml model into `vendor/whisper.cpp/`; it reruns only when that script or `config/whisper_server.yaml` changed, and each fetch returns at once when its file is already there, and a download that is missing, empty or corrupt is refused before it is opened, with an error naming it;
 4. creates each ignored config from its tracked sample when the config is missing (`config/webapp_config.json`, `vocabulary.json`, `snippets.json`, `speaker_blocklist.json`, `disfluencies.json`);
 5. ends with two lists: the required items, each `ok`, `missing` or `unknown`, and the optional features, each `available`, `off` or `unknown` with what it unlocks.
 
@@ -70,9 +70,10 @@ What moves is declared in `[install.migrate]` of `.fleet.toml`, each file only w
 - configs: `config/webapp_config.json`, `config/vocabulary.json`, `config/snippets.json`, `config/speaker_blocklist.json`, `config/disfluencies.json`;
 - sign-in password: `config/app_password.json` (the salted hash);
 - state: `archive/`, the saved takes with their audio, transcripts and history;
+- assets: `vendor/`, the whisper-server and model that already work on this PC (about 2 GB), so setup downloads neither;
 - certificates and tunnel: `webapp/certificates/`, `app/webapp/static/ca.crt` and `app/webapp/static/voice-transcriber-ca.mobileconfig` (together they keep the CA that your phone already trusts valid), and `webapp/cloudflared.yml`.
 
-The runtime databases (`activity.sqlite3`, `usage.sqlite3`) are not in the folder. They live in the `voice-transcriber` folder of the runtime-data root (`C:\sqlite\voice-transcriber\` by default), where the new copy reads them. `vendor/` is not copied: setup downloads it again, so the PC needs a connection and about 2 GB for it. `webapp/last_tunnel_url.txt` and `webapp/auth.log` are rewritten by the app. The installer does the whole move; nothing here or in `setup.bat` deletes the old copy.
+The runtime databases (`activity.sqlite3`, `usage.sqlite3`) are not in the folder. They live in the `voice-transcriber` folder of the runtime-data root (`C:\sqlite\voice-transcriber\` by default), where the new copy reads them. `webapp/last_tunnel_url.txt` and `webapp/auth.log` are rewritten by the app. The installer does the whole move; nothing here or in `setup.bat` deletes the old copy.
 
 **Reinstall in the same folder (the usual case).** It works whatever version the installed copy is, because it runs from a fresh clone and never runs the old copy's code. Run these in order from `<root>`, the folder that holds `voice-transcriber`, in a plain terminal:
 
@@ -87,7 +88,7 @@ It stops the app, renames `voice-transcriber` to `voice-transcriber.bak-YYYYMMDD
 
 - Both copies must have the same `origin`. If `git -C voice-transcriber remote get-url origin` prints another URL than the one above (an SSH one, a fork), clone that URL instead.
 - `voice-transcriber.incoming` must be fresh: clean, with no `.venv`. The `-WhatIf` run leaves it so, ready for the real run.
-- `-WhatIf` lists every file it would copy, one line each, so a large `archive/` makes it long. The archive is copied, not moved, so it needs that much free disk again, and the migration step (copy, install, downloads, start) is cut off after 30 minutes.
+- `-WhatIf` lists every file it would copy, one line each, so a large `archive/` makes it long. `archive/` and `vendor/` are copied, not moved, so they need that much free disk again, and the migration step (copy, install, downloads, start) is cut off after 30 minutes.
 
 On an install whose `setup.bat` already has `-InPlace`, `.\voice-transcriber\setup.bat -InPlace` does the same and makes the clone itself.
 
@@ -99,7 +100,7 @@ cd <NEW FOLDER>
 .\setup.bat -MigrateFrom <OLD FOLDER> -StopOld
 ```
 
-`-StopOld` is needed on the same PC: two copies cannot both run there (one tray lock, one port). To skip the download, copy the old copy's `vendor/` folder into the new clone before running it.
+`-StopOld` is needed on the same PC: two copies cannot both run there (one tray lock, one port).
 
 Only you can do these steps:
 

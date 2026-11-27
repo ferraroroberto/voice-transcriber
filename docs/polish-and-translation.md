@@ -29,6 +29,8 @@ translate mode by design.
 
 ## Polish models
 
+Polish goes to the hub named by `llm_hub_url` in `config/webapp_config.json`. A value there is the only one used, even while that hub is down. When the key is empty or absent, the app looks for a hub on this PC: `local-llm-hub` on `:8000`, then `local-llm-hub-lite` on `:8020`, taking the first whose `GET /v1/models` returns a model list. It looks again after that hub stops answering. `setup.bat` creates the file from the sample, which names `:8000`, so set `"llm_hub_url": ""` on a PC that should find its hub; keep the empty key rather than deleting it, because `setup.bat` adds a deleted key back. This setting covers polish only: transcription goes to `transcribe_base_url` ([configuration](configuration.md)).
+
 Defaults to `gemini_flash` — the local-llm-hub alias for Google's
 Gemini Flash, routed via the `gemini` CLI on a Google AI Pro
 subscription. The polish client allocates a generous `max_tokens`

@@ -87,7 +87,7 @@ class TestIsReachable:
         assert client.is_reachable() is False
 
     def test_returns_false_on_connection_error(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         fake_session.get.side_effect = requests.ConnectionError("nope")
         assert client.is_reachable() is False
@@ -128,21 +128,21 @@ class TestPolishHappyPath:
         assert payload["model"] == "gemini_flash"
 
     def test_uses_default_system_prompt_when_none_provided(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         fake_session.post.return_value = self._ok_response()
         client.polish("x", model="gemini_flash")
         assert fake_session.post.call_args.kwargs["json"]["system"] == POLISH_SYSTEM_PROMPT
 
     def test_uses_custom_system_prompt_when_provided(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         fake_session.post.return_value = self._ok_response()
         client.polish("x", model="gemini_flash", system="custom prompt")
         assert fake_session.post.call_args.kwargs["json"]["system"] == "custom prompt"
 
     def test_falls_back_to_default_when_custom_system_is_blank(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         fake_session.post.return_value = self._ok_response()
         client.polish("x", model="gemini_flash", system="   ")
@@ -155,19 +155,19 @@ class TestPolishHappyPath:
 
 class TestPolishErrors:
     def test_empty_input_raises(self):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         with pytest.raises(PolishError, match="empty"):
             client.polish("   ", model="gemini_flash")
 
     def test_connection_error_wraps_as_polish_error(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         fake_session.post.side_effect = requests.ConnectionError("hub down")
         with pytest.raises(PolishError, match="could not reach LLM hub"):
             client.polish("x", model="gemini_flash")
 
     def test_non_200_status_raises(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         resp = MagicMock(status_code=502, text="upstream error")
         fake_session.post.return_value = resp
@@ -175,7 +175,7 @@ class TestPolishErrors:
             client.polish("x", model="gemini_flash")
 
     def test_non_json_body_raises(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         resp = MagicMock(status_code=200)
         resp.json.side_effect = ValueError("no json")
@@ -186,7 +186,7 @@ class TestPolishErrors:
     def test_unterminated_think_block_raises_with_helpful_message(self, mocker):
         """Reasoning model exhausted its token budget mid-think — the
         error should hint at fallback options."""
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         resp = MagicMock(status_code=200)
         resp.json.return_value = {
@@ -198,7 +198,7 @@ class TestPolishErrors:
             client.polish("x", model="qwen_thinking")
 
     def test_empty_response_raises(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         resp = MagicMock(status_code=200)
         resp.json.return_value = {"content": [], "stop_reason": "end_turn"}
@@ -207,7 +207,7 @@ class TestPolishErrors:
             client.polish("x", model="gemini_flash")
 
     def test_max_tokens_with_empty_polished_raises(self, mocker):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         fake_session = mocker.patch.object(client, "_session")
         resp = MagicMock(status_code=200)
         resp.json.return_value = {
@@ -229,7 +229,7 @@ class TestBaseUrl:
         assert client.base_url == "http://hub:8000"
 
     def test_close_is_idempotent(self):
-        client = PolishClient()
+        client = PolishClient(base_url="http://hub:8000")
         client.close()
         # Calling close twice should not raise.
         client.close()
