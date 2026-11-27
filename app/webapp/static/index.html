@@ -282,6 +282,21 @@
           <svg class="icon" aria-hidden="true"><use href="#i-settings" /></svg>
         </button>
       </div>
+      <!-- Shown only while the server reports ffmpeg missing: the one command
+           that installs it, to copy (the app never runs it), and a re-check. -->
+      <section id="ffmpegNotice" class="card ffmpeg-notice" data-surface="record.ffmpeg-notice" aria-labelledby="ffmpegNoticeTitle" hidden>
+        <h2 class="card-title" id="ffmpegNoticeTitle"><svg class="icon" aria-hidden="true"><use href="#i-triangle-alert" /></svg> Audio conversion unavailable</h2>
+        <p class="ffmpeg-notice-text">ffmpeg is missing. Run this in PowerShell on the computer running this app, then check again.</p>
+        <div class="ffmpeg-listing">
+          <div class="ffmpeg-listing-head">
+            <span>PowerShell</span>
+            <button id="ffmpegCopy" type="button" class="icon-button" title="Copy the install command" aria-label="Copy the install command" data-track="ffmpeg.copy-command"><svg class="icon" aria-hidden="true"><use href="#i-copy" /></svg></button>
+          </div>
+          <code id="ffmpegCommand" class="ffmpeg-command"></code>
+        </div>
+        <button id="ffmpegRecheck" type="button" class="button-surface text-verb" data-track="ffmpeg.check-again"><svg class="icon" aria-hidden="true"><use href="#i-refresh-cw" /></svg> Check again</button>
+      </section>
+
       <!-- The recorder (#262): one circle in four states (idle accent "Record",
            live danger "Stop", finishing disabled, and back from another app
            a smaller Record beside "Continue this text"), the status line, the

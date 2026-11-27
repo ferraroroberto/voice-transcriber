@@ -34,7 +34,7 @@ Walked 2026-11-18 against build `781ad17`, at widths 390, 1280, themes light, da
 | Area | Surfaces |
 |---|---|
 | [App chrome](#app-chrome) | 5 |
-| [Record](#record) | 5 |
+| [Record](#record) | 6 |
 | [History](#history) | 10 |
 | [Settings](#settings) | 10 |
 | [Gestures and keys](#gestures-and-keys) | 3 |
@@ -51,9 +51,9 @@ flowchart LR
   s3["New-version notice"]
   s4["Sign-in sheet"]
   s5(["Record tab · Record"])
-  s10(["History tab · History"])
+  s11(["History tab · History"])
   s0 -->|"Record"| s5
-  s0 -->|"History"| s10
+  s0 -->|"History"| s11
 ```
 
 ### `app.nav` Navigation
@@ -116,22 +116,24 @@ The default tab. One circle, the mode switches and one Text card.
 flowchart LR
   s5["Record tab"]
   s6["Record header"]
-  s7["Recorder"]
-  s8["Mic notice"]
-  s9["Text card"]
+  s7["Audio conversion notice"]
+  s8["Recorder"]
+  s9["Mic notice"]
+  s10["Text card"]
   s0(["Navigation · App chrome"])
-  s20(["Settings page · Settings"])
-  s13(["Take list · History"])
-  s32(["Leaving the page mid-take · Gestures and keys"])
+  s21(["Settings page · Settings"])
+  s14(["Take list · History"])
+  s33(["Leaving the page mid-take · Gestures and keys"])
   s0 -->|"Record"| s5
   s5 --> s6
-  s5 --> s7
-  s5 --> s9
-  s6 -->|"the gear"| s20
-  s7 -->|"while a take is live"| s8
-  s7 -->|"the transcript lands there"| s9
-  s7 -->|"a saved take appears in History"| s13
-  s32 --> s7
+  s5 -->|"while ffmpeg is missing"| s7
+  s5 --> s8
+  s5 --> s10
+  s6 -->|"the gear"| s21
+  s8 -->|"while a take is live"| s9
+  s8 -->|"the transcript lands there"| s10
+  s8 -->|"a saved take appears in History"| s14
+  s33 --> s8
 ```
 
 ### `record.pane` Record tab
@@ -143,6 +145,7 @@ flowchart LR
 - **Holds:** the header, the recorder card, the Text card
 - **Leads to:**
   - [Record header](#recordheader-record-header)
+  - [Audio conversion notice](#recordffmpeg-notice-audio-conversion-notice) (while ffmpeg is missing)
   - [Recorder](#recordrecorder-recorder)
   - [Text card](#recordtext-card-text-card)
 
@@ -160,6 +163,22 @@ flowchart LR
   - Polish unavailable, when the hub is down
   - Transcription offline, when neither route can transcribe
 - **Leads to:** [Settings page](#settingspage-settings-page) (the gear)
+
+### `record.ffmpeg-notice` Audio conversion notice
+
+- **Root:** `data-surface`
+- **Reach:** shown by itself while the server reports ffmpeg missing
+- **Holds:**
+  - 'Audio conversion unavailable' and what to do about it
+  - the winget install command in a listing, with a copy button
+  - Check again
+- **Does:**
+  - the copy button puts the command on the clipboard; the app never runs it
+  - Check again looks for ffmpeg again, so a fresh install is found without a restart
+- **States:**
+  - hidden while ffmpeg is found, and until the first status answer
+  - unchanged when a status poll fails or the probe has not answered
+- **Why:** a missing ffmpeg is said up front with its one fix, not after a failed take.
 
 ### `record.recorder` Recorder
 
@@ -230,38 +249,38 @@ The list of saved takes, each reachable in one tap; the take sheet (phone) or de
 
 ```mermaid
 flowchart LR
-  s10["History tab"]
-  s11["History header"]
-  s12["Latest take card"]
-  s13["Take list"]
-  s14["Take row"]
-  s15["History empty state"]
-  s16["Select bar"]
-  s17["Take menu"]
-  s18["Take sheet"]
-  s19["Take detail pane"]
+  s11["History tab"]
+  s12["History header"]
+  s13["Latest take card"]
+  s14["Take list"]
+  s15["Take row"]
+  s16["History empty state"]
+  s17["Select bar"]
+  s18["Take menu"]
+  s19["Take sheet"]
+  s20["Take detail pane"]
   s0(["Navigation · App chrome"])
-  s7(["Recorder · Record"])
-  s20(["Settings page · Settings"])
-  s30(["Dismissing a sheet · Gestures and keys"])
-  s31(["Menu keys · Gestures and keys"])
-  s0 -->|"History"| s10
-  s7 -->|"a saved take appears in History"| s13
-  s10 --> s11
-  s10 --> s12
-  s10 --> s13
-  s10 -->|"a wide window"| s19
-  s11 -->|"the gear"| s20
-  s12 -->|"the kebab"| s17
-  s13 --> s14
-  s13 -->|"no takes"| s15
-  s13 -->|"Select"| s16
-  s14 -->|"the kebab"| s17
-  s17 -->|"Open take or Delete on a phone"| s18
-  s17 -->|"Open take or Delete on a wide window"| s19
-  s18 -->|"Escape or a tap on the backdrop"| s30
-  s30 --> s18
-  s31 --> s17
+  s8(["Recorder · Record"])
+  s21(["Settings page · Settings"])
+  s31(["Dismissing a sheet · Gestures and keys"])
+  s32(["Menu keys · Gestures and keys"])
+  s0 -->|"History"| s11
+  s8 -->|"a saved take appears in History"| s14
+  s11 --> s12
+  s11 --> s13
+  s11 --> s14
+  s11 -->|"a wide window"| s20
+  s12 -->|"the gear"| s21
+  s13 -->|"the kebab"| s18
+  s14 --> s15
+  s14 -->|"no takes"| s16
+  s14 -->|"Select"| s17
+  s15 -->|"the kebab"| s18
+  s18 -->|"Open take or Delete on a phone"| s19
+  s18 -->|"Open take or Delete on a wide window"| s20
+  s19 -->|"Escape or a tap on the backdrop"| s31
+  s31 --> s19
+  s32 --> s18
 ```
 
 ### `history.pane` History tab
@@ -417,32 +436,32 @@ A full page opened by the header gear. Rows hold a choice inline and save as the
 
 ```mermaid
 flowchart LR
-  s20["Settings page"]
-  s21["Dictation"]
-  s22["Sound"]
-  s23["Polish"]
-  s24["History settings"]
-  s25["Display"]
-  s26["Services"]
-  s27["About"]
-  s28["Polish instructions sheet"]
-  s29["Delete all takes sheet"]
+  s21["Settings page"]
+  s22["Dictation"]
+  s23["Sound"]
+  s24["Polish"]
+  s25["History settings"]
+  s26["Display"]
+  s27["Services"]
+  s28["About"]
+  s29["Polish instructions sheet"]
+  s30["Delete all takes sheet"]
   s6(["Record header · Record"])
-  s11(["History header · History"])
-  s30(["Dismissing a sheet · Gestures and keys"])
-  s6 -->|"the gear"| s20
-  s11 -->|"the gear"| s20
-  s20 --> s21
-  s20 --> s22
-  s20 --> s23
-  s20 --> s24
-  s20 --> s25
-  s20 --> s26
-  s20 --> s27
-  s23 -->|"Instructions"| s28
-  s24 -->|"Delete all takes"| s29
-  s30 --> s28
-  s30 --> s29
+  s12(["History header · History"])
+  s31(["Dismissing a sheet · Gestures and keys"])
+  s6 -->|"the gear"| s21
+  s12 -->|"the gear"| s21
+  s21 --> s22
+  s21 --> s23
+  s21 --> s24
+  s21 --> s25
+  s21 --> s26
+  s21 --> s27
+  s21 --> s28
+  s24 -->|"Instructions"| s29
+  s25 -->|"Delete all takes"| s30
+  s31 --> s29
+  s31 --> s30
 ```
 
 ### `settings.page` Settings page
@@ -565,20 +584,20 @@ Inputs that are not elements of their own.
 
 ```mermaid
 flowchart LR
-  s30["Dismissing a sheet"]
-  s31["Menu keys"]
-  s32["Leaving the page mid-take"]
-  s18(["Take sheet · History"])
-  s28(["Polish instructions sheet · Settings"])
-  s29(["Delete all takes sheet · Settings"])
-  s17(["Take menu · History"])
-  s7(["Recorder · Record"])
-  s18 -->|"Escape or a tap on the backdrop"| s30
-  s30 --> s18
-  s30 --> s28
-  s30 --> s29
-  s31 --> s17
-  s32 --> s7
+  s31["Dismissing a sheet"]
+  s32["Menu keys"]
+  s33["Leaving the page mid-take"]
+  s19(["Take sheet · History"])
+  s29(["Polish instructions sheet · Settings"])
+  s30(["Delete all takes sheet · Settings"])
+  s18(["Take menu · History"])
+  s8(["Recorder · Record"])
+  s19 -->|"Escape or a tap on the backdrop"| s31
+  s31 --> s19
+  s31 --> s29
+  s31 --> s30
+  s32 --> s18
+  s33 --> s8
 ```
 
 ### `gestures.dismiss` Dismissing a sheet
@@ -619,6 +638,7 @@ flowchart LR
 | [Navigation](#appnav-navigation) | Record | [Record tab](#recordpane-record-tab) |
 | [Navigation](#appnav-navigation) | History | [History tab](#historypane-history-tab) |
 | [Record tab](#recordpane-record-tab) |  | [Record header](#recordheader-record-header) |
+| [Record tab](#recordpane-record-tab) | while ffmpeg is missing | [Audio conversion notice](#recordffmpeg-notice-audio-conversion-notice) |
 | [Record tab](#recordpane-record-tab) |  | [Recorder](#recordrecorder-recorder) |
 | [Record tab](#recordpane-record-tab) |  | [Text card](#recordtext-card-text-card) |
 | [Record header](#recordheader-record-header) | the gear | [Settings page](#settingspage-settings-page) |

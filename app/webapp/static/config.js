@@ -1,6 +1,6 @@
 /* Config + settings — loads /api/config, renders the Settings groups,
  * saves each setting as it changes, polls /api/status (the Services group),
- * and draws the Record and Settings header lines from them.
+ * and draws the Record and Settings header lines and the ffmpeg notice.
  */
 
 'use strict';
@@ -8,7 +8,7 @@
 import { setSwitch } from './_vendored/switch/switch.js';
 import { els, state } from './state.js';
 import { authFetch, promptForPassword, readErrorMessage } from './api.js';
-import { capitalize, isOn, renderTextCard, setHeadLine, showToast } from './ui.js';
+import { capitalize, copyText, isOn, renderTextCard, setHeadLine, showToast } from './ui.js';
 import { renderHistoryHeadLine } from './history.js';
 import { polishModelLabel } from './labels.js';
 
@@ -274,10 +274,34 @@ const STATUS_RETRY_MAX = 3;
 let statusRetryTimer = null;
 let statusRetries = 0;
 
-export async function refreshStatus() {
+// Record's "Audio conversion unavailable" notice. Only an answered probe
+// moves it: a failed poll or an unanswered probe leaves it as it was.
+function renderFfmpegNotice(s) {
+  if (!s || s.ffmpeg_present === null) return;
+  els.ffmpegCommand.textContent = s.ffmpeg_install_command || '';
+  els.ffmpegNotice.hidden = s.ffmpeg_present !== false;
+}
+
+async function onFfmpegRecheck() {
+  await refreshStatus({ recheckFfmpeg: true });
+  const present = state.services ? state.services.ffmpeg_present : null;
+  if (present === true) showToast('ffmpeg found: audio conversion is ready');
+  else if (present === false) showToast('ffmpeg is still not found');
+  else showToast("Couldn't check for ffmpeg", 'error');
+}
+
+export function bindFfmpegNotice() {
+  els.ffmpegCopy.addEventListener('click', async () => {
+    await copyText(els.ffmpegCommand.textContent);
+    showToast('Command copied: paste it into PowerShell');
+  });
+  els.ffmpegRecheck.addEventListener('click', onFfmpegRecheck);
+}
+
+export async function refreshStatus({ recheckFfmpeg = false } = {}) {
   clearTimeout(statusRetryTimer);
   try {
-    const r = await authFetch('/api/status');
+    const r = await authFetch(recheckFfmpeg ? '/api/status?recheck_ffmpeg=true' : '/api/status');
     if (!r.ok) throw new Error(`/api/status returned ${r.status}`);
     const s = await r.json();
     state.services = s;
@@ -294,6 +318,7 @@ export async function refreshStatus() {
     state.servicesFailed = true;
   }
   renderServices(state.services);
+  renderFfmpegNotice(state.services);
   renderRecordHeadLine();
   renderTextCard();
 }

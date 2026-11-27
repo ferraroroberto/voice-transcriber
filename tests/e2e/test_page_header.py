@@ -95,6 +95,16 @@ def _assert_one_row(page: Page, pane: str) -> None:
 
 _UP = {"whisper": {"running": True}, "llm_hub": {"reachable": True}, "ffmpeg_present": True}
 _DOWN = {"whisper": {"running": False}, "llm_hub": {"reachable": False}, "ffmpeg_present": True}
+_INSTALL = "winget install --id Gyan.FFmpeg --exact --source winget"
+_NO_FFMPEG = {**_UP, "ffmpeg_present": False, "ffmpeg_install_command": _INSTALL}
+# Records what the page writes, so the check needs no clipboard permission.
+_CLIPBOARD_SPY = """() => {
+  window.__copied = [];
+  Object.defineProperty(window, 'ClipboardItem', { value: undefined, configurable: true });
+  Object.defineProperty(navigator, 'clipboard', {
+    value: { writeText: async (t) => { window.__copied.push(t); } }, configurable: true,
+  });
+}"""
 
 
 def test_header_line_names_only_exceptions_and_never_wraps(
@@ -102,9 +112,12 @@ def test_header_line_names_only_exceptions_and_never_wraps(
 ) -> None:
     """Every pane's context line (#261): a plain fact by default, one
     exception in its tone while it applies, and back again when it clears.
-    The header row stays one 52px line whatever the line says."""
+    The header row stays one 52px line whatever the line says.
+
+    A missing ffmpeg also gets Record's notice: the install command to copy and
+    a re-check that clears it."""
     status = {"reply": _UP}
-    authed_page.route("**/api/status", lambda route: route.fulfill(json=status["reply"]))
+    authed_page.route("**/api/status*", lambda route: route.fulfill(json=status["reply"]))
     _open(authed_page, base_url)
     line = authed_page.locator("#recordHeadLine")
     authed_page.wait_for_function("document.getElementById('languageSelect').options.length > 0")
@@ -140,3 +153,22 @@ def test_header_line_names_only_exceptions_and_never_wraps(
     authed_page.locator("#paneSettings .settings-page-close").click()
     expect(line).to_have_text("Transcription offline")
     expect(line).to_have_attribute("data-tone", "danger")
+
+    notice = authed_page.locator("#ffmpegNotice")
+    expect(notice).to_be_hidden()
+    status["reply"] = _NO_FFMPEG
+    authed_page.click("#paneRecord .home-settings")
+    expect(authed_page.locator("#svcAudioValue")).to_have_text("Missing")
+    authed_page.locator("#paneSettings .settings-page-close").click()
+    expect(notice).to_contain_text("Audio conversion unavailable")
+    expect(authed_page.locator("#ffmpegCommand")).to_have_text(_INSTALL)
+    authed_page.evaluate(_CLIPBOARD_SPY)
+    authed_page.click("#ffmpegCopy")
+    expect(authed_page.locator("#toast")).to_contain_text("Command copied")
+    assert authed_page.evaluate("window.__copied") == [_INSTALL]
+    surface(authed_page, "record.ffmpeg-notice")
+
+    status["reply"] = _UP
+    with authed_page.expect_request(lambda r: r.url.endswith("/api/status?recheck_ffmpeg=true")):
+        authed_page.click("#ffmpegRecheck")
+    expect(notice).to_be_hidden()

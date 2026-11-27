@@ -45,7 +45,6 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 
-from app.webapp.audio import find_ffmpeg
 from app.webapp.middleware import BearerTokenMiddleware, require_authenticated
 from app.webapp.partial_worker import PartialWorker
 from app.webapp.routers import (
@@ -66,6 +65,7 @@ from app.webapp.routers._helpers import (
 from src import activity_log, build_transcription_client, load_app_config
 from src.archive import SessionArchive
 from src.compression import StreamSafeGZipMiddleware
+from src.ffmpeg_tool import FFMPEG_INSTALL_COMMAND, find_ffmpeg
 from src.health_routes import health_router
 from src.login_lockout import LoginLockout
 from src.polish import PolishClient
@@ -173,9 +173,8 @@ async def _lifespan(app: FastAPI):
 
     if find_ffmpeg(PROJECT_ROOT) is None:
         logger.warning(
-            "⚠️  ffmpeg not found on PATH or in vendor/ffmpeg/. "
-            "Webm/opus uploads will fail until you install it. "
-            "Suggested: winget install Gyan.FFmpeg"
+            "⚠️  ffmpeg not found. Webm/opus uploads will fail until you install it: "
+            f"{FFMPEG_INSTALL_COMMAND}"
         )
 
     # Probe once now so the first /api/status read finds an answer.

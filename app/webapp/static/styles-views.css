@@ -273,7 +273,10 @@
     column-gap: var(--gap);
     align-items: start;
   }
-  #paneRecord > .home-head { grid-column: 1 / -1; }
+  /* The header and the ffmpeg notice span both columns, so the recorder and
+     Text keep their places beside each other. */
+  #paneRecord > .home-head,
+  #paneRecord > .ffmpeg-notice { grid-column: 1 / -1; }
   #paneRecord .text-card textarea.text-out { min-height: 300px; }
 
   .history-layout {

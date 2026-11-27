@@ -4,9 +4,8 @@ Whisper.cpp's `whisper-server` uses miniaudio for decoding, which does
 not support webm/opus. The browser's `MediaRecorder` produces webm/opus
 by default. So we shell out to `ffmpeg` to bridge the two formats.
 
-`ffmpeg` is detected via PATH, then `vendor/ffmpeg/ffmpeg.exe`. If
-neither is present, `transcode_to_wav` raises `AudioToolMissing` with
-a clear install hint.
+`ffmpeg` is located by `src.ffmpeg_tool`. If it is not found,
+`transcode_to_wav` raises `AudioToolMissing` with the install command.
 
 A take that is already 16 kHz mono 16-bit PCM WAV (the browser's PCM capture)
 needs no conversion, so it is copied without ffmpeg and a PC without ffmpeg can
@@ -17,15 +16,14 @@ from __future__ import annotations
 
 # Standard library imports
 import logging
-import shutil
 import struct
 import subprocess
-import sys
 import wave
 from pathlib import Path
 from typing import Optional
 
 from src import runtime_files
+from src.ffmpeg_tool import FFMPEG_INSTALL_COMMAND, find_ffmpeg
 from src.no_window import NO_WINDOW
 
 logger = logging.getLogger(__name__)
@@ -51,22 +49,6 @@ class AudioToolMissing(RuntimeError):
 
 class AudioTranscodeError(RuntimeError):
     """Raised when ffmpeg returns non-zero."""
-
-
-def find_ffmpeg(project_root: Optional[Path] = None) -> Optional[Path]:
-    """Return the absolute path to a usable ffmpeg, or ``None``."""
-    on_path = shutil.which("ffmpeg")
-    if on_path:
-        return Path(on_path)
-
-    if project_root is None:
-        project_root = Path(__file__).resolve().parent.parent.parent
-    bundled = project_root / "vendor" / "ffmpeg" / "ffmpeg.exe"
-    if not bundled.exists() and sys.platform != "win32":
-        bundled = project_root / "vendor" / "ffmpeg" / "ffmpeg"
-    if bundled.exists():
-        return bundled
-    return None
 
 
 def _scan_pcm_wav(src: Path, sample_rate: int) -> Optional[tuple[int, int]]:
@@ -162,7 +144,7 @@ def transcode_to_wav(
     tool = ffmpeg_path or find_ffmpeg()
     if tool is None:
         raise AudioToolMissing(
-            "ffmpeg not found. Install via `winget install Gyan.FFmpeg` "
+            f"ffmpeg not found. Install it in PowerShell with `{FFMPEG_INSTALL_COMMAND}` "
             "or drop `ffmpeg.exe` into `vendor/ffmpeg/`."
         )
 
