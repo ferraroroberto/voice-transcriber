@@ -91,6 +91,7 @@ flowchart TB
     SPEAKERLABEL["speaker_label.py\nstrip fabricated leading speaker labels"]
     DISFLUENCY["disfluency.py\nstrip spoken filler words (uh/um),\nconfig/disfluencies.json overrides"]
     INJECT["inject.py\nclipboard + caret paste"]
+    FFMPEGTOOL["ffmpeg_tool.py\nfinds ffmpeg (PATH, vendor/, winget folders),\nholds the one install command; installer probe"]
     STATICVER["static_versioning.py\ncontent-hash asset URLs"]
     MICGLYPH["mic_glyph.py\nruntime state-tinted tray renderer —\nsame mic.svg silhouette as brand_gen"]
     RECPIPE["recording_pipeline.py\nhandle_take(): silence-gate -> gain-boost -> transcribe\n-> finalize, shared by app.py + tray.py"]
@@ -144,6 +145,9 @@ flowchart TB
   TRAYPY --> APPCONFIG
   TRAYPY --> INJECT
   TRAYPY --> MICGLYPH
+  TRAYPY --> FFMPEGTOOL
+  AUDIOPY --> FFMPEGTOOL
+  ROUTERS --> FFMPEGTOOL
 
   subgraph vendor["vendor/whisper.cpp (gitignored, fetched by setup.bat)"]
     WHISPERBIN["whisper-server(.exe) + ggml-large-v3-turbo.bin"]

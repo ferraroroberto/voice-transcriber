@@ -64,6 +64,11 @@ class ProbeCache:
             for slot in self._slots.values():
                 self._kick(slot)
 
+    def forget(self, name: str) -> None:
+        """Drop the cached answer, so the next read probes again."""
+        with self._cond:
+            self._slots[name].at = None
+
     def read(self, name: str) -> Tuple[Any, Optional[float]]:
         """``(value, age_seconds)``; ``(None, None)`` while the probe is unknown."""
         slot = self._slots[name]

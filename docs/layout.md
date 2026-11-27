@@ -40,6 +40,7 @@ voice-transcriber/
 │   ├── inject.py                  # clipboard + caret paste
 │   ├── mic_glyph.py               # runtime state-tinted tray renderer
 │   ├── tunnel.py                  # cloudflared spawn/persist/stop
+│   ├── ffmpeg_tool.py             # finds ffmpeg (PATH, vendor/, winget folders); the one install command; the installer's probe
 │   ├── probe_cache.py             # background-refreshed cache for slow reachability probes (/api/status)
 │   ├── process_supervisor.py      # shared adopt-or-spawn primitives: ownership ladder, spawn recipe, stop, readiness (whisper + webapp managers)
 │   └── whisper_server/
@@ -64,7 +65,7 @@ voice-transcriber/
 │       ├── server.py              # wiring: create_app(), lifespan, static mount
 │       ├── manager.py             # adopt-or-spawn for uvicorn (used by tray)
 │       ├── middleware.py          # bearer-token auth, loopback bypass
-│       ├── audio.py               # ffmpeg webm->wav transcode (PCM WAV copied as-is)
+│       ├── audio.py               # ffmpeg webm->wav transcode (PCM WAV copied as-is); locating it is src/ffmpeg_tool.py
 │       ├── partial_worker.py      # rolling ~2s partial transcription
 │       ├── event_loop.py          # selector event-loop shim (Windows :8443 wedge fix)
 │       ├── routers/               # sessions · auth · config · misc · activity · analytics

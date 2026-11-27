@@ -1,7 +1,8 @@
 """Resident tray app with global hotkey.
 
 - Tray icon sits in the system tray.
-- Menu: Record / Open / Start server / Stop server / Quit.
+- Menu: Record / Open / Start server / Stop server / Quit. While ffmpeg is
+  missing it also says so and offers the install command to copy.
 - Global hotkey (default F8) supports both tap-toggle and push-to-talk on
   the same key: tap once to start, tap again to stop; or hold for ≥
   ``ptt_threshold_ms`` and release to stop. Transcribed text is copied to
@@ -53,6 +54,7 @@ from src import (
     build_transcription_client,
     transcription_unavailable_reason,
 )
+from src.ffmpeg_tool import FFMPEG_INSTALL_COMMAND, find_ffmpeg
 from src.inject import paste_at_caret
 from src.mic_glyph import draw_mic
 from src.recorder import Recording
@@ -79,6 +81,8 @@ EVT_TOGGLE_APPEND = "toggle_append"
 EVT_TOGGLE_AUTO_PASTE = "toggle_auto_paste"
 EVT_TOGGLE_SUPPRESS_HOTKEY = "toggle_suppress_hotkey"
 EVT_TOGGLE_NOTIFICATIONS = "toggle_notifications"
+EVT_COPY_FFMPEG_COMMAND = "copy_ffmpeg_command"
+EVT_CHECK_FFMPEG = "check_ffmpeg"
 EVT_QUIT = "quit"
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -116,6 +120,8 @@ class TrayApp:
         # honours the checkbox instead of silently ignoring it. Ephemeral,
         # off on every launch, same as append_mode.
         self.translate: bool = False
+        # Shows the install items in the menu; "Check again" re-reads it.
+        self.ffmpeg_missing: bool = find_ffmpeg(PROJECT_ROOT) is None
 
         # PTT hotkey state machine.
         self._hotkeys = HotkeyController(
@@ -177,6 +183,23 @@ class TrayApp:
         items = [
             pystray.MenuItem(lambda _item: self.services.model_label(), None, enabled=False),
             pystray.MenuItem("ℹ Model info…", lambda: self._enqueue(EVT_MODEL_INFO)),
+            pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                "⚠ Audio conversion unavailable",
+                None,
+                enabled=False,
+                visible=lambda _item: self.ffmpeg_missing,
+            ),
+            pystray.MenuItem(
+                "📋 Copy ffmpeg install command",
+                lambda: self._enqueue(EVT_COPY_FFMPEG_COMMAND),
+                visible=lambda _item: self.ffmpeg_missing,
+            ),
+            pystray.MenuItem(
+                "🔎 Check again",
+                lambda: self._enqueue(EVT_CHECK_FFMPEG),
+                visible=lambda _item: self.ffmpeg_missing,
+            ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(record_label, lambda: self._enqueue(EVT_TOGGLE_RECORD)),
             pystray.MenuItem("🪟 Open window", lambda: self._enqueue(EVT_OPEN_WINDOW)),
@@ -281,39 +304,59 @@ class TrayApp:
             self.set_append_mode(not self.append_mode)
         elif event == EVT_TOGGLE_AUTO_PASTE:
             self.config.auto_paste_after_hotkey = not self.config.auto_paste_after_hotkey
-            if self._icon is not None:
-                try:
-                    self._icon.update_menu()
-                except Exception:
-                    pass
+            self._refresh_menu()
         elif event == EVT_TOGGLE_SUPPRESS_HOTKEY:
             self.config.suppress_hotkey = not self.config.suppress_hotkey
             self._hotkeys.restart()
-            if self._icon is not None:
-                try:
-                    self._icon.update_menu()
-                except Exception:
-                    pass
+            self._refresh_menu()
         elif event == EVT_TOGGLE_NOTIFICATIONS:
             self.config.show_notifications = not self.config.show_notifications
-            if self._icon is not None:
-                try:
-                    self._icon.update_menu()
-                except Exception:
-                    pass
+            self._refresh_menu()
+        elif event == EVT_COPY_FFMPEG_COMMAND:
+            self._copy_ffmpeg_command()
+        elif event == EVT_CHECK_FFMPEG:
+            self._check_ffmpeg()
         elif event == EVT_QUIT:
             self.root.quit()
+
+    def _refresh_menu(self) -> None:
+        """pystray builds the Windows menu ahead of time, so a state change
+        made outside a menu click has to rebuild it."""
+        if self._icon is not None:
+            try:
+                self._icon.update_menu()
+            except Exception as exc:
+                logger.debug(f"tray menu refresh failed: {exc}")
+
+    def _copy_ffmpeg_command(self) -> None:
+        try:
+            pyperclip.copy(FFMPEG_INSTALL_COMMAND)
+        except Exception as exc:
+            logger.warning(f"⚠️  Clipboard copy failed: {exc}")
+            self._notify("Couldn't copy the command", FFMPEG_INSTALL_COMMAND)
+            return
+        self._notify(
+            "📋 ffmpeg install command copied",
+            'Paste it into PowerShell, then choose "Check again" in this menu.',
+        )
+
+    def _check_ffmpeg(self) -> None:
+        found = find_ffmpeg(PROJECT_ROOT)
+        self.ffmpeg_missing = found is None
+        self._refresh_menu()
+        if found is None:
+            logger.info("ℹ️  ffmpeg check: still not found")
+            self._notify("ffmpeg not found", "Audio conversion is still unavailable.")
+        else:
+            logger.info(f"✅ ffmpeg check: found at {found}")
+            self._notify("✅ ffmpeg found", "Audio conversion is available.")
 
     def set_append_mode(self, enabled: bool) -> None:
         """Flip the append flag and notify any open window to mirror it."""
         if self.append_mode == enabled:
             return
         self.append_mode = bool(enabled)
-        if self._icon is not None:
-            try:
-                self._icon.update_menu()
-            except Exception:
-                pass
+        self._refresh_menu()
         for cb in list(self._append_listeners):
             try:
                 cb(self.append_mode)

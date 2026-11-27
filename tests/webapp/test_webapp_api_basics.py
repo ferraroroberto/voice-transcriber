@@ -388,3 +388,16 @@ class TestApiStatus:
         assert body["ffmpeg_present"] is False  # stubbed in fixture
         assert body["llm_hub"]["reachable"] is True
         assert body["whisper"]["base_url"] == "http://stub:8090"
+
+    def test_recheck_ffmpeg_looks_again_instead_of_serving_the_cache(self, webapp_client, monkeypatch):
+        from app.webapp.routers import config as config_router
+
+        client, _, _ = webapp_client
+        first = client.get("/api/status").json()
+        assert first["ffmpeg_present"] is False
+        assert first["ffmpeg_install_command"] == "winget install --id Gyan.FFmpeg --exact --source winget"
+
+        monkeypatch.setattr(config_router, "find_ffmpeg", lambda _root=None: Path("ffmpeg"))
+
+        assert client.get("/api/status").json()["ffmpeg_present"] is False  # still cached
+        assert client.get("/api/status?recheck_ffmpeg=true").json()["ffmpeg_present"] is True

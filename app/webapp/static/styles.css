@@ -395,6 +395,40 @@ html, body {
    only the stacking rhythm between cards is this app's: the gap below each,
    none above the first, so the first card starts where every fleet app's does. */
 .card { margin: 0 0 var(--gap); }
+
+/* Record's ffmpeg notice: a tinted attention banner (design.md) holding the
+   install command in a code-listing frame, whose header carries the unpainted
+   copy icon button. */
+.ffmpeg-notice {
+  background: color-mix(in srgb, var(--attention) 16%, var(--card));
+  border-color: color-mix(in srgb, var(--attention) 30%, transparent);
+}
+.ffmpeg-notice .card-title { color: var(--attention-text); }
+.ffmpeg-notice-text { margin: var(--space-sm) 0 var(--gap); }
+.ffmpeg-listing {
+  margin-bottom: var(--gap);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+.ffmpeg-listing-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--hit-min);
+  padding: 0 var(--space-sm) 0 var(--gap);
+  color: var(--muted);
+  font-size: var(--font-caption);
+}
+.ffmpeg-command {
+  display: block;
+  padding: 0 var(--gap) var(--gap);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.8125rem; /* the 13px mono listing size, scaling with Text size */
+  overflow-wrap: anywhere;
+  -webkit-user-select: all;
+  user-select: all;
+}
 .card-head { margin-bottom: var(--space-sm); }
 
 .text-out {

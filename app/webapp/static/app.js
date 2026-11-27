@@ -20,6 +20,7 @@ import { copyText, isOn, renderTextCard, setTextView, shownText, showToast } fro
 import { icon } from './_vendored/icons/icons.js';
 import {
   applyConfigDefaults,
+  bindFfmpegNotice,
   bindSettings,
   initPromptSheet,
   loadConfig,
@@ -177,6 +178,7 @@ function bindEvents() {
   initTakeSheet();
   initDeleteAll();
   initPromptSheet();
+  bindFfmpegNotice();
 
   bindSwitches();
   bindAppearance();

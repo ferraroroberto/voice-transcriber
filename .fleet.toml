@@ -81,6 +81,16 @@ blocks = "transcription when the hub is down"
 paths  = ["vendor/whisper.cpp/models/ggml-large-v3-turbo.bin"]
 hint   = "run: .venv\\Scripts\\python.exe scripts\\setup_assets.py"
 
+# The app only shows this command and copies it; the hint repeats src/ffmpeg_tool.py's
+# FFMPEG_INSTALL_COMMAND (a test holds them equal). -P keeps src/ off sys.path, where
+# src/compression.py would shadow the standard library package shutil imports.
+[[install.check]]
+name    = "ffmpeg"
+level   = "optional"
+blocks  = "audio conversion"
+command = ["{python}", "-P", "src/ffmpeg_tool.py"]
+hint    = "run: winget install --id Gyan.FFmpeg --exact --source winget"
+
 # What `setup.bat -MigrateFrom <old folder>`, `-Replace <install>` and `-InPlace` carry over and
 # verify (docs/install.md "Migrate"). The webapp binds config/config.json's webapp.port when a PC
 # sets one, else 8443, behind its own self-signed certificate. Start is the default

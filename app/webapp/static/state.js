@@ -10,6 +10,10 @@
 
 export const els = {
   recordHeadLine:   document.getElementById('recordHeadLine'),
+  ffmpegNotice:     document.getElementById('ffmpegNotice'),
+  ffmpegCommand:    document.getElementById('ffmpegCommand'),
+  ffmpegCopy:       document.getElementById('ffmpegCopy'),
+  ffmpegRecheck:    document.getElementById('ffmpegRecheck'),
   recordBtn:        document.getElementById('recordBtn'),
   resumeBtn:        document.getElementById('resumeBtn'),
   recordLabel:      document.getElementById('recordLabel'),

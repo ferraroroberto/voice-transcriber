@@ -131,6 +131,8 @@ surfaces:
       - "the header, the recorder card, the Text card"
     links:
       - to: record.header
+      - to: record.ffmpeg-notice
+        via: while ffmpeg is missing
       - to: record.recorder
       - to: record.text-card
   - id: record.header
@@ -151,6 +153,23 @@ surfaces:
     links:
       - to: settings.page
         via: the gear
+  - id: record.ffmpeg-notice
+    area: record
+    title: Audio conversion notice
+    root: data-surface
+    reach:
+      - "shown by itself while the server reports ffmpeg missing"
+    holds:
+      - "'Audio conversion unavailable' and what to do about it"
+      - "the winget install command in a listing, with a copy button"
+      - "Check again"
+    does:
+      - "the copy button puts the command on the clipboard; the app never runs it"
+      - "Check again looks for ffmpeg again, so a fresh install is found without a restart"
+    states:
+      - "hidden while ffmpeg is found, and until the first status answer"
+      - "unchanged when a status poll fails or the probe has not answered"
+    why: a missing ffmpeg is said up front with its one fix, not after a failed take.
   - id: record.recorder
     area: record
     title: Recorder

@@ -1,7 +1,8 @@
 """Webapp config + reachability status.
 
 ``GET/POST /api/config`` read and patch ``webapp_config.json``;
-``GET /api/status`` probes whisper, the LLM hub, and ffmpeg.
+``GET /api/status`` probes whisper, the LLM hub, and ffmpeg; ``recheck_ffmpeg``
+looks for ffmpeg again instead of serving the cached answer.
 """
 
 from __future__ import annotations
@@ -12,7 +13,6 @@ from typing import Any, Dict
 # Third-party imports
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 
-from app.webapp.audio import find_ffmpeg
 from app.webapp.routers._helpers import (
     PROJECT_ROOT,
     adopt_webapp_config,
@@ -20,6 +20,7 @@ from app.webapp.routers._helpers import (
     maybe_json,
 )
 from src.app_config import resolve_iso
+from src.ffmpeg_tool import FFMPEG_INSTALL_COMMAND, find_ffmpeg
 from src.polish_prompts import load_polish_prompts
 from src.probe_cache import ProbeCache
 from src.webapp_config import WebappConfig, config_to_client_dict, update_webapp_config
@@ -114,7 +115,7 @@ def build_status_cache(app: FastAPI) -> ProbeCache:
 
 
 @router.get("/api/status")
-def status(request: Request) -> Dict[str, Any]:
+def status(request: Request, recheck_ffmpeg: bool = False) -> Dict[str, Any]:
     """Whisper, hub and ffmpeg state, served from the probe cache.
 
     A plain ``def`` so FastAPI runs it on a worker thread: the bounded wait
@@ -122,10 +123,13 @@ def status(request: Request) -> Dict[str, Any]:
     ``null`` (unknown), never ``false``; ``age_seconds`` says how old each
     answer is. ``whisper.listener`` says what holds the ASR port; ``engine``
     and ``model`` are the ASR backend's own report (``model`` is null when it
-    gives none, as an external whisper.cpp does).
+    gives none, as an external whisper.cpp does). ``recheck_ffmpeg`` drops the
+    cached ffmpeg answer first (the "Check again" button after an install).
     """
     app = request.app
     cache: ProbeCache = app.state.status_cache
+    if recheck_ffmpeg:
+        cache.forget("ffmpeg")
     whisper, whisper_age = cache.read("whisper")
     hub, hub_age = cache.read("llm_hub")
     ffmpeg, ffmpeg_age = cache.read("ffmpeg")
@@ -143,6 +147,7 @@ def status(request: Request) -> Dict[str, Any]:
         "whisper": whisper,
         "llm_hub": {"reachable": hub, "base_url": app.state.polish_client.base_url},
         "ffmpeg_present": ffmpeg,
+        "ffmpeg_install_command": FFMPEG_INSTALL_COMMAND,
         "age_seconds": {
             name: None if age is None else round(age, 1)
             for name, age in (("whisper", whisper_age), ("llm_hub", hub_age), ("ffmpeg", ffmpeg_age))

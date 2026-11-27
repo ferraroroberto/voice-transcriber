@@ -363,10 +363,12 @@ ffmpeg sniffs the actual format at transcode time. Send a truthful
 If you're a non-browser consumer with arbitrary audio, anything ffmpeg
 can decode works for the single-shot `/upload` path.
 
-> ffmpeg must be on `PATH` or in `vendor/ffmpeg/` to transcode webm, mp4
-> or any other container. The webapp logs a warning at boot if it's
-> missing; `/finish` and `/upload` return `503` for those until it's
-> installed (`winget install Gyan.FFmpeg`).
+> ffmpeg is needed to transcode webm, mp4 or any other container. It is
+> looked for on `PATH`, in `vendor/ffmpeg/` and where winget puts it
+> (`%LOCALAPPDATA%\Microsoft\WinGet`). The webapp logs a warning at boot if
+> it's missing; `/finish` and `/upload` return `503` for those until it's
+> installed (`winget install --id Gyan.FFmpeg --exact --source winget`),
+> with no restart needed afterwards.
 >
 > A take that is already **16 kHz mono 16-bit PCM WAV** needs no ffmpeg:
 > the server reads the header (never the file extension) and copies it.

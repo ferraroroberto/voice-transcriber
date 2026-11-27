@@ -100,6 +100,8 @@ still covers the same logic via the parity port in
 | `tests\test_activity_log.py` | Persistent SQLite events log — record, read, count, prune-older-than |
 | `tests\test_analytics.py` | Today's usage summary — take count / wpm / time-saved, derived from the activity log |
 | `tests\test_audio.py` | ffmpeg webm->wav transcode wrapper, incl. `CREATE_NO_WINDOW` on Windows and the PCM WAV no-ffmpeg passthrough |
+| `tests\install\test_ffmpeg_install.py` | ffmpeg is found in a faked WinGet links folder or Gyan package folder by the next look, with no restart; the checklist offers it as optional with the one install command, and its declared probe runs as a file |
+| `tests\tray\test_ffmpeg_menu.py` | The tray's ffmpeg items show only while ffmpeg is missing; Copy puts the install command on the clipboard, Check again hides them once it is found |
 | `tests\test_event_loop.py` | Selector event-loop shim wiring + accept-loop resilience — root cause of the :8443 wedge |
 | `tests\test_probe_cache.py` | `ProbeCache` on a fake clock and a stuck probe — fresh/stale/too-old reads, a probe that has not answered is unknown (never up or down), one probe in flight at a time, a failing probe stays unknown |
 | `tests\test_process_supervisor.py` | Shared adopt-or-spawn primitives — TCP probe, ownership ladder, spawn recipe, stop ladder, readiness poll, and a guard that neither manager calls `Popen` itself — composed by both `WhisperServerManager` and `WebappManager` |
@@ -134,7 +136,7 @@ still covers the same logic via the parity port in
 | `tests\test_cli_record.py` | The CLI `record` command runs takes through `handle_take` — a silent take never reaches whisper, an audible one is transcribed and emitted |
 | `tests\test_cli_server_cmd.py` | `server stop` exits 0 once the stop has run; `status` keeps mapping not-running to exit 1 |
 | `tests\test_secret_compare.py` | `secrets_equal` accepts non-ASCII text, and no code outside `src\secret_compare.py` calls `compare_digest` |
-| `tests\webapp\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status`, cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp) |
+| `tests\webapp\test_webapp_api_basics.py` | `/healthz`, `/api/config` GET+POST, `/api/status` (and its `recheck_ffmpeg` re-probe), cache hygiene + build identity (`/` revalidated, every stamped `/static/*` asset immutable, `?v=<hash>` stamps match on-disk content, `/api/version` shape + `asset_hash` equals the `app.js` stamp) |
 | `tests\webapp\test_webapp_status_responsiveness.py` | A stuck `/api/status` probe never holds up `/api/version`, `/api/analytics/summary`, `/api/config` or `/healthz` on the shared event loop, and reports the unanswered probe as `null` within its bounded wait |
 | `tests\webapp\test_design_review_synthetic_isolation.py` | The design-review synthetic instance's spawn environment keeps the archive and the activity database inside its temp state dir, checked in a fresh interpreter |
 | `tests\webapp\test_webapp_api_auth.py` | Bearer-token middleware (loopback bypass, header, query string, exempt paths); `/api/login` lock-out on a fake clock (401s, then 429 with `Retry-After`, success after the wait, the PC never locked) and the guessing alert on a fake notifier (once per streak, no secrets in the text) |

@@ -28,6 +28,8 @@ That's it. The tray launches and, if nothing is listening on `:8090` yet, spawns
 the bundled `whisper-server` with the configured model. On exit it stops the
 server it started.
 
+Browser recordings are converted with ffmpeg. While it is missing, the tray menu and the Record tab say so and offer the `winget` install command to copy; the app never runs it ([install](docs/install.md)).
+
 ## 📋 Modes of use
 
 | Command                  | What it does                                                              |
