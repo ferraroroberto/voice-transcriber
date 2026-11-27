@@ -1,6 +1,6 @@
 # Install, update and migrate Voice Transcriber
 
-Voice Transcriber installs, updates and migrates the way any app in the toolbox does: clone it and run one `setup.bat`. An update is a pull plus a restart. A migration, in the same folder or onto a fresh clone, is one `setup.bat` call. None of them ever resets or overwrites what a PC has configured. The generic installer and its `[install]` tables are described in project-scaffolding's `docs/installer.md`; this app's declarations are in `.fleet.toml`.
+Voice Transcriber installs, updates and migrates the way any app in the toolbox does: clone it and run one `setup.bat`. An update is a pull plus a restart. A migration, at the same path or into another folder, runs from a fresh clone and is one `setup.bat` call. None of them ever resets or overwrites what a PC has configured. The generic installer and its `[install]` tables are described in project-scaffolding's `docs/installer.md`; this app's declarations are in `.fleet.toml`.
 
 ## Install
 
@@ -73,15 +73,22 @@ What moves is declared in `[install.migrate]` of `.fleet.toml`, each file only w
 
 The runtime databases (`activity.sqlite3`, `usage.sqlite3`) are not in the folder. They live in the `voice-transcriber` folder of the runtime-data root (`C:\sqlite\voice-transcriber\` by default), where the new copy reads them. `vendor/` is not copied: setup downloads it again, so the PC needs a connection and about 2 GB for it. `webapp/last_tunnel_url.txt` and `webapp/auth.log` are rewritten by the app. The installer does the whole move; nothing here or in `setup.bat` deletes the old copy.
 
-**Reinstall in the same folder (the usual case).** From a plain terminal whose current folder is outside the app, after `git pull --ff-only` in the app so it has the current `setup.bat`:
+**Reinstall in the same folder (the usual case).** It works whatever version the installed copy is, because it runs from a fresh clone and never runs the old copy's code. Run these in order from `<root>`, the folder that holds `voice-transcriber`, in a plain terminal:
 
 ```powershell
-cd <PARENT FOLDER>
-.\voice-transcriber\setup.bat -InPlace -WhatIf    # read the backup name and every step; nothing changes
-.\voice-transcriber\setup.bat -InPlace
+cd <root>
+git clone https://github.com/ferraroroberto/voice-transcriber.git voice-transcriber.incoming   # run nothing in it yet
+.\voice-transcriber.incoming\setup.bat -Replace voice-transcriber -WhatIf    # read the backup name and every step; nothing changes
+.\voice-transcriber.incoming\setup.bat -Replace voice-transcriber
 ```
 
-It stops the app, keeps the replaced copy as `voice-transcriber.bak-YYYYMMDD-N`, clones this folder's `origin` into the same path and passes only when the new clone serves its own commit on `/api/version`. The path is unchanged, so the Startup shortcut and the launcher's app entry need no edit. `-WhatIf` lists every file it would copy, one line each, so a large `archive/` makes it long. The archive is copied, not moved, so it needs that much free disk again, and the migration step (copy, install, downloads, start) is cut off after 30 minutes.
+It stops the app, renames `voice-transcriber` to `voice-transcriber.bak-YYYYMMDD-N` (uncommitted edits stay there), moves `voice-transcriber.incoming` to `voice-transcriber`, migrates and passes only when the new clone serves its own commit on `/api/version`. The path is unchanged, so the Startup shortcut and the launcher's app entry need no edit.
+
+- Both copies must have the same `origin`. If `git -C voice-transcriber remote get-url origin` prints another URL than the one above (an SSH one, a fork), clone that URL instead.
+- `voice-transcriber.incoming` must be fresh: clean, with no `.venv`. The `-WhatIf` run leaves it so, ready for the real run.
+- `-WhatIf` lists every file it would copy, one line each, so a large `archive/` makes it long. The archive is copied, not moved, so it needs that much free disk again, and the migration step (copy, install, downloads, start) is cut off after 30 minutes.
+
+On an install whose `setup.bat` already has `-InPlace`, `.\voice-transcriber\setup.bat -InPlace` does the same and makes the clone itself.
 
 **Beside it (another folder, or an old copy that is not a git clone):**
 

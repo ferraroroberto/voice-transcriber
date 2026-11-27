@@ -71,7 +71,7 @@ One line per feature; each links to its reference doc.
 
 | Topic | What it covers |
 |---|---|
-| [Install, update and migrate](docs/install.md) | `setup.bat` on a fresh PC, the update commands, `-InPlace` and `-MigrateFrom` (which ignored configs, state and certificates are carried over), uninstall |
+| [Install, update and migrate](docs/install.md) | `setup.bat` on a fresh PC, the update commands, `-Replace`, `-InPlace` and `-MigrateFrom` (which ignored configs, state and certificates are carried over), uninstall |
 | [Configuration](docs/configuration.md) | `config/config.json`, the optional companion files (vocabulary, snippets, speaker blocklist, disfluencies), `config/whisper_server.yaml` (`local` vs `external` mode), which model is serving, GPU / CPU build choice, first-run checklist |
 | [Repository layout](docs/layout.md) | The `src/` (logic) + `app/` (UI surfaces) tree, file by file, the declared `webapp-tray` shape and its exceptions |
 | [Mobile web app](docs/webapp-usage.md) | Where to launch from, local HTTPS cert, iPhone Home Screen install, daily use, Append / Incognito / Tk controls, silence skip, gain boost, text size, rolling transcription, auto-stop, switching apps, the status line |

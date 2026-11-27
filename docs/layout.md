@@ -25,7 +25,7 @@ voice-transcriber/
 │   ├── installer.py               # vendored: the clone-and-setup installer setup.bat runs (stdlib only; docs/install.md)
 │   ├── installer_migrate.py       # vendored: setup.bat -MigrateFrom (copy, install, start, verify)
 │   ├── installer_declaration.py   # vendored: reads [install.endpoint] and [install.migrate] from .fleet.toml
-│   ├── installer_inplace.py       # vendored: setup.bat -InPlace (stop, rename to a backup, clone, migrate)
+│   ├── installer_inplace.py       # vendored: setup.bat -Replace / -InPlace (stop, rename to a backup, swap in a fresh clone, migrate)
 │   ├── notify/                    # vendored: Telegram notifier (the guessing alert's transport)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
 │   ├── vocabulary.py              # per-language vocab prompts + hot-reload
