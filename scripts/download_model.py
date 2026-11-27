@@ -22,6 +22,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # Run as `python scripts/download_model.py`, sys.path[0] is scripts/, not the repo root.
 sys.path.insert(0, str(PROJECT_ROOT))
 from src import runtime_files  # noqa: E402
+from src.asset_check import download_problem  # noqa: E402
 
 DEFAULT_DIR = PROJECT_ROOT / "vendor" / "whisper.cpp" / "models"
 DEFAULT_MODEL = "ggml-large-v3-turbo.bin"
@@ -50,7 +51,8 @@ def main() -> int:
     dest = Path(args.dest).resolve()
     runtime_files.make_dirs(dest)
     expected = dest / args.model
-    if expected.exists():
+    present = expected.exists()
+    if present and download_problem(expected) is None:
         log.info("Model already present at %s", expected)
         return 0
 
@@ -59,7 +61,15 @@ def main() -> int:
         repo_id=HF_REPO,
         filename=args.model,
         local_dir=str(dest),
+        # An unusable file already there must not be taken for the cached copy.
+        force_download=present,
     )
+    problem = download_problem(Path(local_path))
+    if problem:
+        # Removed so the rerun fetches it instead of finding it "present".
+        Path(local_path).unlink(missing_ok=True)
+        log.error("Downloaded %s %s; rerun setup (setup.bat).", args.model, problem)
+        return 1
     log.info("Downloaded → %s", local_path)
     return 0
 

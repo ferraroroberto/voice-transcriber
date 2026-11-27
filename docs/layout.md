@@ -13,7 +13,8 @@ voice-transcriber/
 │   ├── recorder.py                # sounddevice capture
 │   ├── transcription_client.py    # HTTP → whisper server
 │   ├── diagnostics.py             # log ring + port-owner introspection
-│   ├── polish.py                  # local-llm-hub client (system-prompt-driven polish)
+│   ├── polish.py                  # local-llm-hub client (system-prompt-driven polish); finds the hub when none is configured
+│   ├── asset_check.py             # refuses a missing, empty or corrupt download before the fetch scripts open it
 │   ├── polish_prompts.py          # loader for the polish-style library
 │   ├── archive.py                 # dated session folders + audio/text retention cleanup
 │   ├── activity_log.py            # SQLite events log, 365-day retention

@@ -38,6 +38,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from _no_window import no_window_kwargs  # noqa: E402
 
 from src import runtime_files  # noqa: E402  (_no_window put the repo root on sys.path)
+from src.asset_check import download_problem  # noqa: E402
 
 log = logging.getLogger(__name__)
 
@@ -122,6 +123,10 @@ def main() -> int:
         with tempfile.TemporaryDirectory() as tmp:
             archive = Path(tmp) / name
             _download(asset["browser_download_url"], archive)
+            problem = download_problem(archive)
+            if problem:
+                log.error("Downloaded %s %s. Nothing was extracted; rerun setup (setup.bat).", name, problem)
+                return 1
             log.info("Archive layout: %s", _archive_layout(archive))
             log.info("Extracting into %s", VENDOR_DIR)
             _extract(archive, VENDOR_DIR)

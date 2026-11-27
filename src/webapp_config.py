@@ -40,7 +40,6 @@ SAMPLE_CONFIG_PATH = (
 # DEFAULT_GAIN_BOOST_DB are re-exported (imported above) from their owning
 # domain modules — polish_prompts.py, silence.py, gain.py — rather than
 # re-declared here, so each literal has exactly one source.
-DEFAULT_LLM_HUB_URL = "http://127.0.0.1:8000"
 DEFAULT_RETENTION_DAYS = 30
 # Transcript text and meta.json outlive the audio: a few KB per take, kept
 # long enough for look-back reports and glossary mining.
@@ -94,7 +93,8 @@ class WebappConfig:
         default_factory=lambda: _sample_polish_defaults()[1]
     )
     polish_prompt_default: str = DEFAULT_POLISH_PROMPT_ID
-    llm_hub_url: str = DEFAULT_LLM_HUB_URL
+    # Empty = not set: src/polish.py then looks for a hub on this PC.
+    llm_hub_url: str = ""
     # Audio window; text lives for ``transcript_retention_days`` (never
     # shorter than this one, see ``text_retention_days``).
     history_retention_days: int = DEFAULT_RETENTION_DAYS
@@ -135,11 +135,11 @@ class WebappConfig:
 
 
 # Fields whose raw JSON value is treated as "absent" when falsy (empty
-# string / empty list), not just when the key is missing entirely — the
-# polish-model picks and the mic pick fall back to their computed default
+# string / empty list / null), not just when the key is missing entirely — the
+# polish-model picks, the mic pick and the hub URL fall back to their default
 # even when a stale/empty value was persisted.
 _OR_ABSENT_FIELDS = frozenset(
-    {"polish_model_default", "polish_models_available", "preferred_mic_id"}
+    {"polish_model_default", "polish_models_available", "preferred_mic_id", "llm_hub_url"}
 )
 
 

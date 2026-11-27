@@ -157,3 +157,20 @@ def test_every_declared_secret_is_among_the_files_copied() -> None:
     migration = installer_migrate.parse_migration(installer_migrate.read_fleet_toml(REPO_ROOT))
     for secret in migration.secrets:
         assert any(secret == item or secret.startswith(f"{item}/") for item in migration.copy), secret
+
+
+def test_a_migration_carries_vendor_so_setup_downloads_nothing(tmp_path: Path) -> None:
+    old, new = tmp_path / "old", tmp_path / "new"
+    assets = ("vendor/whisper.cpp/whisper-server.exe", "vendor/whisper.cpp/models/ggml-large-v3-turbo.bin")
+    for name in assets:
+        (old / name).parent.mkdir(parents=True, exist_ok=True)
+        (old / name).write_bytes(b"working copy")
+    new.mkdir()
+    migration = installer_migrate.parse_migration(installer_migrate.read_fleet_toml(REPO_ROOT))
+    report = installer_migrate.MigrationReport(mode="migrate", what_if=False)
+
+    installer_migrate.copy_declared(old, new, migration, report, old_running=False)
+
+    for name in assets:
+        assert (new / name).is_file(), name
+        assert (new / name).read_bytes() == b"working copy", name
