@@ -27,7 +27,9 @@
 # unwatched loops, default-pool work or a missing timing middleware above
 # .request-budget-ratchet-baseline.json; exit 3 fails too), the windows-only ratchet (no
 # test that needs Windows lacks the windows_only marker or a platform guard, beyond
-# .windows-only-ratchet-baseline.json; exit 3 fails too), the non-e2e pytest suite, then
+# .windows-only-ratchet-baseline.json; exit 3 fails too), the install standard ratchet (no
+# installer module, migration table or playbook section missing beyond
+# .ratchets/install-standard.json; exit 3 fails too), the non-e2e pytest suite, then
 # the Playwright e2e suite (Chromium + WebKit/iPhone projections) against a
 # disposable webapp the script boots itself on a free port. The e2e stage is routed by the diff
 # (scripts/e2e_route.py over the .fleet.toml [e2e] rules): nothing for a
@@ -198,6 +200,16 @@ try {
     Write-Host "==> windows only ratchet (Windows-only tests carry the marker or a guard)..." -ForegroundColor Cyan
     & $python -m scripts.windows_only_ratchet_gate
     if ($LASTEXITCODE -ne 0) { Fail "windows only ratchet failed (an unmarked Windows-only test, or a test module could not be read or parsed)." }
+
+    # Install standard ratchet: an installer module missing or behind the scaffold's, an
+    # [install.migrate] that does not parse, or a docs/install.md without its Install,
+    # Update and Migrate sections. Exit 3 (a piece could not be checked) is its own
+    # failure, never a pass or a skip. Whole tree, never routed.
+    Write-Host "==> install standard ratchet (installer modules, migration table, playbook sections)..." -ForegroundColor Cyan
+    & $python "scripts/install_standard_ratchet.py"
+    $installExit = $LASTEXITCODE
+    if ($installExit -eq 3) { Fail "install standard ratchet NOT CONFIRMED (a piece of the install standard could not be checked)." }
+    if ($installExit -ne 0) { Fail "install standard ratchet failed (a piece of the install standard is missing, or a bad table or baseline)." }
 
     # Runtime write probe, first half: what already sits untracked or ignored under the
     # code folders, so the probe after the test runs names only what they wrote.

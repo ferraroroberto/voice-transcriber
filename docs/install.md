@@ -1,14 +1,14 @@
-# Install, update and move Voice Transcriber
+# Install, update and migrate Voice Transcriber
 
-Voice Transcriber moves to another Windows PC the way any app in the toolbox does: clone it and run one `setup.bat`. An update is a pull plus a restart. Neither ever resets or overwrites what a PC has configured. The generic installer and its `[install]` table are described in project-scaffolding's `docs/installer.md`; this app's declarations are in `.fleet.toml`.
+Voice Transcriber installs, updates and migrates the way any app in the toolbox does: clone it and run one `setup.bat`. An update is a pull plus a restart. A migration, in the same folder or onto a fresh clone, is one `setup.bat` call. None of them ever resets or overwrites what a PC has configured. The generic installer and its `[install]` tables are described in project-scaffolding's `docs/installer.md`; this app's declarations are in `.fleet.toml`.
 
-## What you need
+## Install
+
+You need:
 
 - Windows 10 or 11, `git`, and Python 3.11 or newer (the `py` launcher, or `python` on `PATH`).
 - A microphone, and about 2 GB of free disk for `vendor/` (the whisper.cpp release and the `ggml-large-v3-turbo.bin` model).
 - Optional: an NVIDIA GPU (the prebuilt CUDA server is chosen automatically, else the CPU build), `cloudflared` for remote access ([remote access](remote-access.md)), and the `local-llm-hub` on `:8000` for the primary transcription path (the app falls back to its own whisper-server when the hub is down).
-
-## Fresh PC
 
 ```powershell
 git clone https://github.com/ferraroroberto/voice-transcriber.git
@@ -37,6 +37,13 @@ To start at log on, put a shortcut to `tray.bat` in the Startup folder (`shell:s
 
 `.\setup.bat -WhatIf` lists every change it would make and makes none.
 
+### Uninstall
+
+1. Turn off the log-on autostart: delete the `tray.bat` shortcut from `shell:startup`.
+2. Remove what the app registered outside its folder: the CA it installed in the Windows user trust store (`certmgr.msc`, Trusted Root Certification Authorities, "Voice Transcriber Local CA") and, if you used the tunnel, the Cloudflare tunnel and its DNS record (`cloudflared tunnel delete`).
+3. Stop the app: right-click the tray icon and choose Quit. This also stops the whisper-server it started; a whisper-server on `:8090` that belongs to `local-llm-hub` is not this app's to stop.
+4. Delete the folder. Keep a copy of the files listed under [Migrate](#migrate) first if you may want them back. The runtime databases in `C:\sqlite\voice-transcriber\` stay behind; delete that folder too when you no longer want the activity and usage logs.
+
 ## Update
 
 ```powershell
@@ -55,28 +62,43 @@ The restart command exits non-zero unless a different process now serves `HEAD`;
 - `config/vocabulary.json`, `snippets.json`, `speaker_blocklist.json` and `disfluencies.json` are your own lists: created when missing, never rewritten or reformatted.
 - A second run reports `unchanged` and writes nothing.
 
-## Migrate from an existing install
+## Migrate
 
-Use this on a PC that already runs an older copy of Voice Transcriber: one that may not be a git clone, and may live at another path. The old copy keeps running until the new one is verified, and it is deleted only when you say so.
+What moves is declared in `[install.migrate]` of `.fleet.toml`, each file only when the old copy has it:
 
-1. **Clone fresh beside it.** `git clone https://github.com/ferraroroberto/voice-transcriber.git <NEW FOLDER>`; never clone over the old folder.
-2. **Copy this PC's own files across.** From the old folder into the new one, copy only these, keeping their relative paths. All of them are gitignored, so nothing tracked is touched:
-   - configs: `config/webapp_config.json` (the bearer token, polish defaults, retention, every setting you changed in the app; it may hold secrets, so copy the file, never paste its content anywhere), `config/vocabulary.json`, `config/snippets.json`, `config/speaker_blocklist.json`, `config/disfluencies.json` (each only if the old copy has it);
-   - sign-in password: `config/app_password.json` (the salted hash);
-   - state: `archive/`, the saved takes with their audio, transcripts and history. Skip it to start with an empty history;
-   - certificates and tunnel: `webapp/certificates/`, `app/webapp/static/ca.crt` and `app/webapp/static/voice-transcriber-ca.mobileconfig` (together they keep the CA that your phone already trusts valid), and `webapp/cloudflared.yml` when the tunnel is used. `webapp/last_tunnel_url.txt` and `webapp/auth.log` are rewritten by the app and need no copy. The tunnel's credentials file lives in `%USERPROFILE%\.cloudflared\`, outside the folder: it stays put on the same PC, and a different PC needs `cloudflared tunnel login` and the credentials file copied by hand;
-   - optional, to skip a 1.6 GB download: `vendor/` (the whisper.cpp release and the model).
-   - Tracked files you edited in the old copy, if you did: `config/config.json` (for example `machine_specific_mics`, the hotkey), `config/polish_prompts.json`, `config/whisper_server.yaml`. In a git clone `git diff` in the old folder shows them; otherwise compare against the new files. Re-apply only the lines you changed instead of copying whole files over, so a later `git pull --ff-only` still has nothing to refuse.
-   - The runtime databases (`activity.sqlite3`, `usage.sqlite3`) are not in the folder: they live in the fleet runtime-data root, `C:\sqlite\voice-transcriber\` by default. On the same PC the new copy reads them where they are and there is nothing to copy; on another PC copy that folder across, or leave it to start with an empty log.
-3. **Top them up.** Run `.\setup.bat -WhatIf` in the new folder and read what it would change, then `.\setup.bat`. `webapp_config.json` gains only the keys it lacks; the values you copied stay as they were.
-4. **Stop the old copy.** Right-click its tray icon and choose Quit, and remove or disable the old copy's `tray.bat` shortcut in `shell:startup`. Do this before starting the new one: two copies on `:8443` conflict, and two connectors on one Cloudflare tunnel split its traffic between them.
-5. **Start the new one.** `.\tray.bat`, and put a shortcut to it in `shell:startup` if it should start at log on.
-6. **Verify it.** Open `https://127.0.0.1:8443`, confirm `GET /api/version` shows the new commit, check the History tab lists the copied takes, then record one real take. If anything is wrong, quit the new tray and start the old copy again: it is untouched.
-7. **Retire the old folder, only after you confirm.** Nothing in this playbook or in `setup.bat` deletes the old copy. When you are satisfied, rename it first (for example `<OLD FOLDER>.retired`) and run on the new copy for a while; delete it yourself once you are sure. An agent working through this playbook asks you before it deletes anything.
+- configs: `config/webapp_config.json`, `config/vocabulary.json`, `config/snippets.json`, `config/speaker_blocklist.json`, `config/disfluencies.json`;
+- sign-in password: `config/app_password.json` (the salted hash);
+- state: `archive/`, the saved takes with their audio, transcripts and history;
+- certificates and tunnel: `webapp/certificates/`, `app/webapp/static/ca.crt` and `app/webapp/static/voice-transcriber-ca.mobileconfig` (together they keep the CA that your phone already trusts valid), and `webapp/cloudflared.yml`.
 
-## Uninstall
+The runtime databases (`activity.sqlite3`, `usage.sqlite3`) are not in the folder. They live in the `voice-transcriber` folder of the runtime-data root (`C:\sqlite\voice-transcriber\` by default), where the new copy reads them. `vendor/` is not copied: setup downloads it again, so the PC needs a connection and about 2 GB for it. `webapp/last_tunnel_url.txt` and `webapp/auth.log` are rewritten by the app. The installer does the whole move; nothing here or in `setup.bat` deletes the old copy.
 
-1. Turn off the log-on autostart: delete the `tray.bat` shortcut from `shell:startup`.
-2. Remove what the app registered outside its folder: the CA it installed in the Windows user trust store (`certmgr.msc`, Trusted Root Certification Authorities, "Voice Transcriber Local CA") and, if you used the tunnel, the Cloudflare tunnel and its DNS record (`cloudflared tunnel delete`).
-3. Stop the app: right-click the tray icon and choose Quit. This also stops the whisper-server it started; a whisper-server on `:8090` that belongs to `local-llm-hub` is not this app's to stop.
-4. Delete the folder. Keep a copy of the configs, state and certificates listed under "Migrate" first if you may want them back. The runtime databases in `C:\sqlite\voice-transcriber\` stay behind; delete that folder too when you no longer want the activity and usage logs.
+**Reinstall in the same folder (the usual case).** From a plain terminal whose current folder is outside the app, after `git pull --ff-only` in the app so it has the current `setup.bat`:
+
+```powershell
+cd <PARENT FOLDER>
+.\voice-transcriber\setup.bat -InPlace -WhatIf    # read the backup name and every step; nothing changes
+.\voice-transcriber\setup.bat -InPlace
+```
+
+It stops the app, keeps the replaced copy as `voice-transcriber.bak-YYYYMMDD-N`, clones this folder's `origin` into the same path and passes only when the new clone serves its own commit on `/api/version`. The path is unchanged, so the Startup shortcut and the launcher's app entry need no edit. `-WhatIf` lists every file it would copy, one line each, so a large `archive/` makes it long. The archive is copied, not moved, so it needs that much free disk again, and the migration step (copy, install, downloads, start) is cut off after 30 minutes.
+
+**Beside it (another folder, or an old copy that is not a git clone):**
+
+```powershell
+git clone https://github.com/ferraroroberto/voice-transcriber.git <NEW FOLDER>
+cd <NEW FOLDER>
+.\setup.bat -MigrateFrom <OLD FOLDER> -StopOld
+```
+
+`-StopOld` is needed on the same PC: two copies cannot both run there (one tray lock, one port). To skip the download, copy the old copy's `vendor/` folder into the new clone before running it.
+
+Only you can do these steps:
+
+- **Re-apply your edits to tracked files**, if you made any: `config/config.json` (for example `machine_specific_mics`, the hotkey, `webapp.port`), `config/polish_prompts.json`, `config/whisper_server.yaml`. The installer never copies a tracked file; `git diff` in the old copy shows them. Re-apply only the lines you changed, then restart the app.
+- **Move what Git keeps locally**, if you work in this clone: local branches, stashes and ignored files not listed above stay in the backup, and a linked worktree stops working once its main folder is renamed. Finish or remove worktrees before you start.
+- **On another PC**, copy the old folder over first and use `-MigrateFrom`. Copy the runtime-data folder too, or start with empty logs. The tunnel's credentials file lives in `%USERPROFILE%\.cloudflared\`, outside the app: run `cloudflared tunnel login` and copy that file by hand.
+- **Repoint** whatever stores the old path, after a `-MigrateFrom` into another folder (the Startup shortcut to `tray.bat`, the launcher's app entry): the run lists what still points at it.
+- **Check it:** the History tab lists the copied takes, and one real take records and transcribes.
+- **Fall back** if verify fails (the report names the step): stop the new copy, rename the new folder away and the backup to the original name, and start it; it is untouched.
+- **Retire the backup** once you are sure the new copy works, by deleting it yourself. An agent working through this playbook asks you before it deletes anything.

@@ -4,7 +4,9 @@ The installer itself is tested in project-scaffolding. These tests hold what is
 specific here: the declared inputs create, keep and top up the right files, a
 second run changes nothing, `-WhatIf` writes nothing and every file the
 installer can create or back up is ignored by git. A fake runner stands in for
-`subprocess.run`, so no venv is built and nothing is downloaded.
+`subprocess.run`, so no venv is built and nothing is downloaded. The migration
+declaration is held to the two things a reinstall relies on: everything it copies
+is ignored by git, and every secret it compares is among what it copies.
 """
 
 from __future__ import annotations
@@ -16,7 +18,8 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from src import installer
+from src import installer, installer_migrate
+from src.no_window import NO_WINDOW
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXED_NOW = datetime.datetime(2026, 1, 2, 3, 4, 5)
@@ -136,3 +139,21 @@ def test_the_declared_checklist_paths_and_dependency_inputs_exist_in_the_repo() 
     for name in plan.deps_inputs:
         assert (REPO_ROOT / name).is_file(), name
     assert (REPO_ROOT / "setup.bat").is_file()
+
+
+def test_every_migrated_path_is_ignored_so_the_new_clone_stays_clean() -> None:
+    # -MigrateFrom refuses a clone with untracked files, so a rerun needs every copy ignored.
+    migration = installer_migrate.parse_migration(installer_migrate.read_fleet_toml(REPO_ROOT))
+    for item in migration.copy:
+        # A folder is probed through a file inside it: a clean checkout has no folder to match.
+        probe = item if Path(item).suffix else f"{item}/probe"
+        done = subprocess.run(
+            ["git", "check-ignore", "-q", probe], cwd=REPO_ROOT, timeout=60, check=False, creationflags=NO_WINDOW
+        )
+        assert done.returncode == 0, item
+
+
+def test_every_declared_secret_is_among_the_files_copied() -> None:
+    migration = installer_migrate.parse_migration(installer_migrate.read_fleet_toml(REPO_ROOT))
+    for secret in migration.secrets:
+        assert any(secret == item or secret.startswith(f"{item}/") for item in migration.copy), secret

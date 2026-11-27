@@ -23,6 +23,9 @@ voice-transcriber/
 │   ├── login_lockout.py           # vendored: per-client password lock-out + guessing alert
 │   ├── ps_script.py               # vendored: starts a PowerShell script under any execution policy; tray.bat uses it
 │   ├── installer.py               # vendored: the clone-and-setup installer setup.bat runs (stdlib only; docs/install.md)
+│   ├── installer_migrate.py       # vendored: setup.bat -MigrateFrom (copy, install, start, verify)
+│   ├── installer_declaration.py   # vendored: reads [install.endpoint] and [install.migrate] from .fleet.toml
+│   ├── installer_inplace.py       # vendored: setup.bat -InPlace (stop, rename to a backup, clone, migrate)
 │   ├── notify/                    # vendored: Telegram notifier (the guessing alert's transport)
 │   ├── webapp_config.py           # typed loader for config/webapp_config.json
 │   ├── vocabulary.py              # per-language vocab prompts + hot-reload
@@ -96,7 +99,7 @@ voice-transcriber/
 │   ├── webapp_config.json         # gitignored — polish model/style, retention, mic prefs
 │   └── webapp_config.sample.json  # committed schema example
 ├── docs/
-│   ├── install.md                 # fresh PC, update, migrate from an existing install, uninstall
+│   ├── install.md                 # install (with uninstall), update, migrate
 │   ├── configuration.md           # config.json, whisper_server.yaml, model, GPU/CPU, first run
 │   ├── layout.md                  # this tree
 │   ├── webapp-usage.md            # mobile web app: setup, daily use, per-feature behaviour
@@ -147,6 +150,7 @@ voice-transcriber/
 │   ├── request_budget_ratchet.py  # vendored request budget ratchet (fixed-rate polls, short polls, unwatched loops, default-pool work, timing middleware)
 │   ├── request_budget_scan.py     # vendored JS and Python readers the request budget ratchet loads
 │   ├── request_budget_ratchet_gate.py # the gate's wrapper around it: exit 3 (a file could not be read or parsed) fails
+│   ├── install_standard_ratchet.py # vendored install standard ratchet (installer modules, migration table, playbook sections)
 │   ├── windows_only_ratchet.py    # vendored windows-only ratchet (tests that need Windows without the windows_only marker or a platform guard)
 │   ├── windows_only_ratchet_gate.py # the gate's wrapper around it: exit 3 (a test module could not be read or parsed) fails
 │   ├── e2e_route.py               # the gate's wrapper around classify_e2e.py: any unreadable verdict runs the full e2e suite
