@@ -7,6 +7,7 @@ faked: `local-llm-hub` listens on :8000, `local-llm-hub-lite` on :8020.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Dict, List
 from unittest.mock import MagicMock
@@ -15,7 +16,7 @@ import pytest
 import requests
 
 from src.polish import PolishClient, PolishError
-from src.webapp_config import load_webapp_config, save_webapp_config
+from src.webapp_config import SAMPLE_CONFIG_PATH, load_webapp_config, save_webapp_config
 
 FULL = "http://127.0.0.1:8000"
 LITE = "http://127.0.0.1:8020"
@@ -55,9 +56,23 @@ class _Machine:
 def _client(tmp_path: Path, config: Dict[str, object], machine: _Machine) -> PolishClient:
     path = tmp_path / "webapp_config.json"
     path.write_text(json.dumps(config), encoding="utf-8")
+    return _client_from(path, machine)
+
+
+def _client_from(path: Path, machine: _Machine) -> PolishClient:
     client = PolishClient(load_webapp_config(path).llm_hub_url)
     client._session = machine
     return client
+
+
+def test_a_fresh_config_from_the_sample_finds_the_hub(tmp_path):
+    path = tmp_path / "webapp_config.json"
+    shutil.copyfile(SAMPLE_CONFIG_PATH, path)
+    machine = _Machine({LITE: _MODELS})
+
+    _client_from(path, machine).polish("dirty", model="m")
+
+    assert machine.posted == [LITE + "/v1/messages"]
 
 
 @pytest.mark.parametrize("config", [{}, {"llm_hub_url": ""}, {"llm_hub_url": None}], ids=["absent", "empty", "null"])
