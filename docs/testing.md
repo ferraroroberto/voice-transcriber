@@ -91,7 +91,7 @@ still covers the same logic via the parity port in
 |------|--------------|
 | `tests\webapp\test_webapp_config.py` | First-run defaults come from `webapp_config.sample.json` (not Python); regression guard that no model-name literal sneaks back into `src\webapp_config.py`; `reload_if_changed` serves a file another process rewrote |
 | `tests\test_polish.py` | Hub client request shape, `<think>` stripping, error wrapping |
-| `tests\test_hub_discovery.py` | Which hub polishes when `llm_hub_url` is not set: `:8000` first, `:8020` when it is silent or not a hub, nothing sent when neither answers, a hub that goes away looked for again; a configured URL wins even when silent |
+| `tests\hub\test_hub_discovery.py` | Which hub polishes when `llm_hub_url` is not set: `:8000` first, `:8020` when it is silent or not a hub, nothing sent when neither answers, a hub that goes away looked for again; a configured URL wins even when silent |
 | `tests\test_polish_prompts.py` | Library load, dedupe, built-in fallback |
 | `tests\test_app_config.py` | 100-language Whisper map, ISO normalisation, validation |
 | `tests\test_silence.py` | RMS dBFS gate (int16, float, 8-bit, stereo WAV) |
