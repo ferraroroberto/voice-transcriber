@@ -8,8 +8,8 @@ root (``<root>/voice-transcriber/activity.sqlite3`` — see
 :mod:`src.runtime_data`) holding one
 ``events`` table — one row per discrete thing that happened (a session was
 created, a transcription succeeded or failed, a polish call succeeded or
-failed, a session was deleted). Modeled on the home-automation project's
-``src/telemetry.py`` events table, narrowed to voice-transcriber's single
+failed, a session was deleted). Modeled on another local app's
+events table, narrowed to voice-transcriber's single
 domain (no separate numeric-readings table — there is no continuous sensor
 sampling here).
 

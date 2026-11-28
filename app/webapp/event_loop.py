@@ -11,7 +11,7 @@ subsequent connection fails, which is the ":8443 unresponsive until tray
 restart" wedge.
 
 The selector event loop's accept path has no such failure mode -- verified
-empirically (in the sister project app-launcher): 800 concurrent aborted connections against a bare
+empirically (in another local app): 800 concurrent aborted connections against a bare
 ``SelectorEventLoop`` server left it accepting fine, while the same abuse
 killed a ``ProactorEventLoop`` server after ~20. The webapp process spawns
 no asyncio subprocesses in-process (``WebappManager`` shells out via plain

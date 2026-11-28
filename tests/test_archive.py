@@ -64,8 +64,8 @@ class TestNewSession:
         assert s.meta.source is None
 
     def test_source_propagates(self, archive: SessionArchive):
-        s = archive.new_session(source="app-launcher")
-        assert s.meta.source == "app-launcher"
+        s = archive.new_session(source="my-app")
+        assert s.meta.source == "my-app"
 
 
 # ---------------------------------------------------------------------------
@@ -361,10 +361,10 @@ class TestHydrate:
 
     def test_hydrate_round_trips_source(self, archive):
         """A source recorded on create survives a write_meta → hydrate cycle."""
-        s = archive.new_session(source="app-launcher")
+        s = archive.new_session(source="my-app")
         again = archive.get(s.session_id)
         assert again is not None
-        assert again.meta.source == "app-launcher"
+        assert again.meta.source == "my-app"
 
     def test_hydrate_missing_source_is_none(self, archive):
         """Legacy sessions (meta predating the source field) hydrate with

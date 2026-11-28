@@ -36,7 +36,7 @@ and Delete as the phone's sheet) beside the list, opening on the newest
 take. Settings keeps its centred column.
 
 Each row names its source in plain text: *This app* for takes dictated
-in this UI, or a consumer's own label (e.g. `app-launcher`) for
+in this UI, or a consumer's own label (e.g. `my-app`) for
 transcriptions triggered by another app through the
 [session API](consuming-the-session-api.md). The server's generic
 fallback `api` names the transport rather than the app, so a row hides

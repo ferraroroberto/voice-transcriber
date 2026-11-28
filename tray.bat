@@ -62,7 +62,7 @@ REM ============================================================================
 
 setlocal EnableDelayedExpansion
 REM  Clear an APP_NAME the caller already carries: the usual restart route is an
-REM  agent in a session that inherited the old leaked value (app-launcher#963).
+REM  agent in a session that inherited the old leaked value.
 set "APP_NAME="
 set "SCRIPT_DIR=%~dp0"
 REM `%~dp0` always ends in a trailing backslash, which is what the path joins
@@ -81,7 +81,7 @@ REM === ADAPT (1/4): short app name, used in messages + the start window title =
 REM  Namespaced, never a bare APP_NAME: setlocal hides a variable from the
 REM  calling console but NOT from children, so the whole tray -> service chain
 REM  inherits it, and so does every session and app it spawns -- where APP_NAME
-REM  is another project's own config key (app-launcher#963).
+REM  is another project's own config key.
 set "TRAY_APP_NAME=VoiceTranscriber"
 REM === ADAPT (2/4): the args python is started with to launch the tray,
 REM     e.g. "scripts\launcher.py tray"  or  "-m tray" ===
@@ -109,7 +109,7 @@ if not exist "%TRAY_PS%" if not defined WANT_RESTART goto :standalone_start
 if not exist "%TRAY_PS%" (
     echo ERROR: missing shared tray helper "%TRAY_PS%"
     echo        --restart needs it: install fleet-config and run its install.ps1, then retry.
-    echo        See ferraroroberto/fleet-config's README for details.
+    echo        See the fleet-config README for details.
     exit /b 1
 )
 

@@ -1,6 +1,6 @@
 # Repository layout
 
-The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — same convention used by `local-llm-hub`, `grocery-shopping-automation`, and `facilitation-shuffle`. Its shape is `webapp-tray` (declared in `.fleet.toml`); the canonical tree and the placement rules for new code are in project-scaffolding's `docs/repo-layout.md`, and the structure ratchet holds this repo to them. The exceptions are listed at the end.
+The repo follows the monorepo's `src/` (logic) + `app/` (UI surfaces) split — same convention used by `local-llm-hub` and other local apps. Its shape is `webapp-tray` (declared in `.fleet.toml`); the canonical tree and the placement rules for new code are in project-scaffolding's `docs/repo-layout.md`, and the structure ratchet holds this repo to them. The exceptions are listed at the end.
 
 ```
 voice-transcriber/
