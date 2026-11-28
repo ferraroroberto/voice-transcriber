@@ -190,7 +190,7 @@ single_instance = { src = "app/tray/single_instance.py", sha = "f911e1c5adc679fe
 compression = { src = "src/compression.py", sha = "d930466848d17d47261261c490c4e9c1cce9399e", dest = "src/compression.py" }
 login_lockout = { src = "src/login_lockout.py", sha = "93208ab08bdc8591c678a08f55a0f46b3fc8a525", dest = "src/login_lockout.py" }
 login_alert = { src = "src/login_alert.py", sha = "ce64203b017ba636c82737ee7f768c9ef6f422cd", dest = "src/login_alert.py" }
-password = { src = "src/password.py", sha = "289455f1ad9aa9e3f346c495540cf0c210226265", dest = "src/password.py" }
+password = { src = "src/password.py", sha = "1dfb7afd31a2e7e536c91729c559438037b99ef0", dest = "src/password.py" }
 notify = { src = "src/notify", sha = "f911e1c5adc679fee1522e748d9f4fc4c140561d", dest = "src/notify" }
 webapp_serve = { src = "app/webapp/serve.py", sha = "056f31e029e9ca8e6df5dede1a9b64d7c61d3806", dest = "app/webapp/serve.py" }
 instruction_frontmatter = { src = "scripts/instruction_frontmatter.py", sha = "c5535ac326c398df8f44486f386ff0e0b6d4c61c", dest = "scripts/instruction_frontmatter.py" }
@@ -212,11 +212,11 @@ health_routes = { src = "src/health_routes.py", sha = "732c304a4735d4e654f5acb3b
 restart_check = { src = "src/restart_check.py", sha = "f8c2f66eae7a69f3c834386579702ed5b747d7af", dest = "src/restart_check.py" }
 ratchet_baseline = { src = "scripts/ratchet_baseline.py", sha = "48db2132dab2dfc38b6154948ca17fd1f4b9232f", dest = "scripts/ratchet_baseline.py" }
 personal_data_ratchet = { src = "scripts/personal_data_ratchet.py", sha = "f911e1c5adc679fee1522e748d9f4fc4c140561d", dest = "scripts/personal_data_ratchet.py" }
-installer = { src = "src/installer.py", sha = "87981135d4ea66f76621d9b2f400efc28b68d2d9", dest = "src/installer.py" }
-installer_migrate = { src = "src/installer_migrate.py", sha = "87981135d4ea66f76621d9b2f400efc28b68d2d9", dest = "src/installer_migrate.py" }
-installer_declaration = { src = "src/installer_declaration.py", sha = "87981135d4ea66f76621d9b2f400efc28b68d2d9", dest = "src/installer_declaration.py" }
-installer_inplace = { src = "src/installer_inplace.py", sha = "87981135d4ea66f76621d9b2f400efc28b68d2d9", dest = "src/installer_inplace.py" }
-install_standard_ratchet = { src = "scripts/install_standard_ratchet.py", sha = "87981135d4ea66f76621d9b2f400efc28b68d2d9", dest = "scripts/install_standard_ratchet.py" }
+installer = { src = "src/installer.py", sha = "1dfb7afd31a2e7e536c91729c559438037b99ef0", dest = "src/installer.py" }
+installer_migrate = { src = "src/installer_migrate.py", sha = "1dfb7afd31a2e7e536c91729c559438037b99ef0", dest = "src/installer_migrate.py" }
+installer_declaration = { src = "src/installer_declaration.py", sha = "1dfb7afd31a2e7e536c91729c559438037b99ef0", dest = "src/installer_declaration.py" }
+installer_inplace = { src = "src/installer_inplace.py", sha = "1dfb7afd31a2e7e536c91729c559438037b99ef0", dest = "src/installer_inplace.py" }
+install_standard_ratchet = { src = "scripts/install_standard_ratchet.py", sha = "1dfb7afd31a2e7e536c91729c559438037b99ef0", dest = "scripts/install_standard_ratchet.py" }
 ps_script = { src = "src/ps_script.py", sha = "2d786d295c9b8d545aaf35703889638096f251ad", dest = "src/ps_script.py" }
 
 [static_ratchet]
