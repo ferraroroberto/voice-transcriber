@@ -35,8 +35,8 @@ FastAPI + a hand-written single-page HTML/JS:
 - Tiny: uvicorn + FastAPI + a single static page. No client-side
   framework.
 
-Streamlit stays a great fit for the form-heavy apps in the monorepo
-(`grocery-shopping-automation`, `facilitation-shuffle`). It's the wrong
+Streamlit stays a great fit for the form-heavy apps in the monorepo.
+It's the wrong
 tool for a single huge-button voice recorder.
 
 ## Network exposure
@@ -46,7 +46,7 @@ One context per launcher, both live from the same `tray.bat`:
 | Context | Path | Reason |
 |---|---|---|
 | Sitting at the PC | Loopback (`https://127.0.0.1:8443`) | No tunnel needed; a local self-signed cert gives Safari/Chrome the secure context `getUserMedia` requires. |
-| Anywhere else (phone, work PC, hotel Wi-Fi) | Cloudflare named tunnel | Public HTTPS URL, no firewall changes, real edge TLS. Same pattern as `facilitation-shuffle/launch_server.bat`. |
+| Anywhere else (phone, work PC, hotel Wi-Fi) | Cloudflare named tunnel | Public HTTPS URL, no firewall changes, real edge TLS. |
 
 Remote access is Cloudflare-only: the tray has no "Copy Tailscale URL"
 entry, and the [launch table](webapp-usage.md#where-to-launch-from-where-to-reach-it) documents only the loopback and
@@ -88,8 +88,8 @@ Three launch surfaces, **identical feature surface**:
 
 ## Layout — aligned with the monorepo
 
-The other repos in `automation/` (`local-llm-hub`,
-`grocery-shopping-automation`, `facilitation-shuffle`) use:
+The other repos in `automation/` (`local-llm-hub` and
+other local apps) use:
 
 - `src/` for non-UI logic (no UI imports)
 - `app/` for UI surfaces (Streamlit, tk, FastAPI)

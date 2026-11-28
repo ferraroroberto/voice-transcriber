@@ -126,7 +126,7 @@ In the Cloudflare Zero Trust dashboard:
 2. Name it `Voice Transcriber`, hostname `voice.your-domain.net`.
 3. **Identity providers**: enable Google (or whatever you prefer).
 4. **Policy**: name it `Owner only`, action *Allow*, rule
-   `Emails → is → roberto.ferraro@gmail.com`.
+   `Emails → is → you@example.com`.
 5. Save. From now on, every request to the public URL bounces
    through a Google sign-in. Anyone not on the email allowlist
    gets a clean 403.

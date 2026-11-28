@@ -8,7 +8,7 @@ language code, plus an optional ``"all"`` bucket merged into every language.
 Schema::
 
     {
-      "all": ["Roberto", "Ferraro"],
+      "all": ["Alex", "Example"],
       "en":  ["Anthropic", "Claude", "whisper.cpp"],
       "es":  ["Anthropic"]
     }

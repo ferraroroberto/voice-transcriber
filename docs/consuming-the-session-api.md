@@ -11,7 +11,7 @@ the way [`local-llm-hub`](https://github.com/ferraroroberto/local-llm-hub)
 is the canonical LLM hub — downstream apps proxy to it over loopback
 rather than duplicating the capture/transcribe stack.
 
-First consumer: **grocery-shopping-automation**'s Audio Audit
+First consumer: another local app's Audio Audit
 integration.
 
 > **Contract status.** The `/api/sessions*` routes documented here are
@@ -101,7 +101,7 @@ Every chunk is archived to disk the moment it lands, **before**
 Request body (JSON, all optional):
 
 ```json
-{ "language": "en", "incognito": false, "source": "app-launcher" }
+{ "language": "en", "incognito": false, "source": "my-app" }
 ```
 
 - `language` — Whisper ISO code (`en`, `es`, …) or lowercase English
@@ -112,7 +112,7 @@ Request body (JSON, all optional):
 - `source` — a short label identifying who created the session, so the
   take is **attributable** in History rather than indistinguishable from
   a take dictated in the voice-transcriber UI. Pass your app's name
-  (e.g. `"app-launcher"`); it's trimmed and capped at 40 chars. When
+  (e.g. `"my-app"`); it's trimmed and capped at 40 chars. When
   omitted it defaults to `"api"` (a consumer that didn't self-identify);
   the webapp's own UI records `"webapp"`. See
   [History attribution](#history-attribution).
@@ -122,10 +122,10 @@ Response:
 ```json
 {
   "session_id": "14-32-07-a1b2c3d4",
-  "folder": "E:\\automation\\voice-transcriber\\archive\\2026\\06\\11\\14-32-07-a1b2c3d4",
+  "folder": "<repo>\\archive\\2026\\06\\11\\14-32-07-a1b2c3d4",
   "created_at": "2026-06-11T14:32:07",
   "incognito": false,
-  "source": "app-launcher"
+  "source": "my-app"
 }
 ```
 
@@ -406,13 +406,13 @@ indistinguishable from a manual one:
 
 - The webapp's own UI records `"webapp"`.
 - A session-API caller passes its own label on create — e.g.
-  `{"source": "app-launcher"}`. Pass your app's name so your takes are
+  `{"source": "my-app"}`. Pass your app's name so your takes are
   identifiable.
 - A create with no `source` defaults to `"api"`.
 
 `source` is surfaced in `GET /api/sessions` (per-session field) and in
 the webapp's History panel as plain meta text beside the word count and
-duration (e.g. `61 words · 0:27 · app-launcher`) — `"webapp"` renders as
+duration (e.g. `61 words · 0:27 · my-app`) — `"webapp"` renders as
 *This app*, and the generic `"api"` fallback is hidden from the row
 entirely since it names the transport rather than the caller; a take's
 own sheet still shows it verbatim.

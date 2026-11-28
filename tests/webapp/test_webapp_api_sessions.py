@@ -53,11 +53,11 @@ class TestCreateSession:
     def test_source_caller_label_recorded(self, webapp_client):
         client, app, _ = webapp_client
         body = client.post(
-            "/api/sessions", json={"source": "app-launcher"}
+            "/api/sessions", json={"source": "my-app"}
         ).json()
-        assert body["source"] == "app-launcher"
+        assert body["source"] == "my-app"
         same = app.state.archive.get(body["session_id"])
-        assert same.meta.source == "app-launcher"
+        assert same.meta.source == "my-app"
 
     def test_blank_source_falls_back_to_api(self, webapp_client):
         client, _, _ = webapp_client
@@ -174,10 +174,10 @@ class TestListSessions:
 
     def test_surfaces_source(self, webapp_client):
         client, app, _ = webapp_client
-        s = app.state.archive.new_session(source="app-launcher")
+        s = app.state.archive.new_session(source="my-app")
         s.write_meta()
         body = client.get("/api/sessions").json()
-        assert body["sessions"][0]["source"] == "app-launcher"
+        assert body["sessions"][0]["source"] == "my-app"
 
     def test_has_audio_false_once_audio_is_pruned(self, webapp_client):
         client, app, _ = webapp_client

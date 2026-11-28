@@ -4,7 +4,7 @@ Reads ``config/snippets.json`` (gitignored). Schema::
 
     {
       "ttyl": "talk to you later",
-      "myemail": "roberto.ferraro@gmail.com"
+      "myemail": "you@example.com"
     }
 
 Matching is case-insensitive at word boundaries; the replacement value is

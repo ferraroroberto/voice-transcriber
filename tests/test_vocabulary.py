@@ -37,21 +37,21 @@ class TestPromptForLanguage:
 
     def test_merges_all_bucket_into_language(self, isolate_vocab):
         _write(isolate_vocab, {
-            "all": ["Roberto", "Ferraro"],
+            "all": ["Alex", "Example"],
             "en": ["Anthropic", "Claude"],
         })
         out = vocab.prompt_for_language("en")
         assert out is not None
         # `all` comes first, then language-specific.
-        assert out == "Roberto, Ferraro, Anthropic, Claude"
+        assert out == "Alex, Example, Anthropic, Claude"
 
     def test_iso_code_is_case_insensitive(self, isolate_vocab):
         _write(isolate_vocab, {"en": ["whisper.cpp"]})
         assert vocab.prompt_for_language("EN") == "whisper.cpp"
 
     def test_missing_language_just_uses_all(self, isolate_vocab):
-        _write(isolate_vocab, {"all": ["Roberto"], "es": ["hola"]})
-        assert vocab.prompt_for_language("en") == "Roberto"
+        _write(isolate_vocab, {"all": ["Alex"], "es": ["hola"]})
+        assert vocab.prompt_for_language("en") == "Alex"
 
     def test_deduplicates_terms(self, isolate_vocab):
         _write(isolate_vocab, {

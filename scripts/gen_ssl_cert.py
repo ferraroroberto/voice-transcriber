@@ -1,6 +1,6 @@
 """Generate a self-signed CA + leaf cert for the webapp's HTTPS endpoint.
 
-Modeled after `grocery-shopping-automation/gen_ssl_cert.py`. Output goes
+Modeled after another local app's cert script. Output goes
 to `webapp/certificates/`:
 
     ca.pem                              local CA certificate

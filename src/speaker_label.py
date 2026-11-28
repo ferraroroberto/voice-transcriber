@@ -42,7 +42,7 @@ of the transcript and never when stripping would empty the text:
    ``src/hot_reload_json.py`` loader (also used by ``src/snippets.py`` and
    ``src/vocabulary.py``).
 
-A bare ``Roberto:`` or a real sentence that merely opens with a comma'd
+A bare ``Alex:`` or a real sentence that merely opens with a comma'd
 word (``Today: I woke up``, ``Ok, let me think``) is left untouched —
 only titled labels, the assistant-name family, and opt-in blocklist names
 are ever stripped, and never when doing so would empty the take.

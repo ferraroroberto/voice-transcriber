@@ -40,8 +40,8 @@ def test_selector_loop_factory_defers_on_other_platforms(monkeypatch):
 def test_selector_loop_factory_is_zero_arg_and_returns_an_instance():
     """Regression pin: uvicorn imports a *custom* --loop target and calls
     it as a bare Callable[[], AbstractEventLoop] -- no use_subprocess kwarg,
-    and it must return an instantiated loop, not a loop class (app-launcher
-    #388's original bug: returning the class left Runner calling unbound
+    and it must return an instantiated loop, not a loop class (the
+    original bug: returning the class left Runner calling unbound
     methods)."""
     loop = selector_loop_factory()
     try:
