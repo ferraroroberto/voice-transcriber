@@ -82,7 +82,7 @@ Four optional companion files (all gitignored, sample-tracked):
   `config/vocabulary.sample.json` for the schema.
 - `config/snippets.json` — short keys auto-expanded in the transcript
   before it hits clipboard / caret paste (e.g. `"myemail"` →
-  `"you@domain.com"`). Word-boundary, case-insensitive matching. See
+  `"you@example.com"`). Word-boundary, case-insensitive matching. See
   `config/snippets.sample.json`.
 - `config/speaker_blocklist.json` — names whisper recurrently hallucinates
   as a leading speaker label glued to the front of real speech. Two layers

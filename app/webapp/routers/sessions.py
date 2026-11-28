@@ -78,7 +78,7 @@ async def create_session(request: Request) -> Dict[str, Any]:
     language = body.get("language") or app_cfg.language
     incognito = bool(body.get("incognito", False))
     # The webapp's own record flow self-identifies as "webapp"; an
-    # external consumer can pass its own label (e.g. "app-launcher").
+    # external consumer can pass its own label (e.g. "my-app").
     # A create with no source is an API caller that didn't self-identify.
     source = _clean_source(body.get("source")) or _DEFAULT_API_SOURCE
     session = archive.new_session(

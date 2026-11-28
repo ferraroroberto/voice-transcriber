@@ -54,7 +54,7 @@ class TestTitledLabels:
 class TestNegativeCases:
     def test_bare_name_colon_is_kept(self):
         # No title, not blocklisted — could be real dictation.
-        assert sl.strip_speaker_label("Roberto: call me tomorrow") == "Roberto: call me tomorrow"
+        assert sl.strip_speaker_label("Alex: call me tomorrow") == "Alex: call me tomorrow"
 
     def test_sentence_with_colon_is_kept(self):
         assert sl.strip_speaker_label("Today: I woke up early") == "Today: I woke up early"
@@ -100,17 +100,17 @@ class TestBlocklist:
         # Couto" now strips via the committed heuristic — see
         # TestAssistantFamily — so a neutral name proves the blocklist path.)
         assert sl.strip_speaker_label("Speaker 3: hi") == "hi"
-        assert sl.strip_speaker_label("Roberto Ferraro: hi") == "Roberto Ferraro: hi"
+        assert sl.strip_speaker_label("Alex Example: hi") == "Alex Example: hi"
 
     def test_invalid_blocklist_fails_open(self, isolate_blocklist):
         isolate_blocklist.write_text("not json", encoding="utf-8")
         # Titled rule still applies; ordinary bare name kept (blocklist ignored).
         assert sl.strip_speaker_label("Dr. X: ok") == "ok"
-        assert sl.strip_speaker_label("Roberto Ferraro: hi") == "Roberto Ferraro: hi"
+        assert sl.strip_speaker_label("Alex Example: hi") == "Alex Example: hi"
 
     def test_non_dict_root_ignored(self, isolate_blocklist):
-        _write(isolate_blocklist, ["Roberto Ferraro"])
-        assert sl.strip_speaker_label("Roberto Ferraro: hi") == "Roberto Ferraro: hi"
+        _write(isolate_blocklist, ["Alex Example"])
+        assert sl.strip_speaker_label("Alex Example: hi") == "Alex Example: hi"
 
 
 class TestSeparatorVariants:

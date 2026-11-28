@@ -37,7 +37,7 @@ jobs:
       - name: Create .venv and install deps
         # Test deps are opt-in here, split out of runtime deps — both files
         # must be installed (requirements-dev.txt carries pytest +
-        # pytest-playwright). This differs from app-launcher's single file.
+        # pytest-playwright).
         run: |
           python -m venv .venv
           .\.venv\Scripts\python.exe -m pip install --upgrade pip
